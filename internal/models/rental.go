@@ -1,0 +1,104 @@
+package models
+
+import "time"
+
+const (
+	RentalActive   = "active"
+	RentalReturned = "returned"
+	RentalOverdue  = "overdue"
+)
+
+type Rental struct {
+	ID          string  `json:"id"`
+	UserID      string  `json:"user_id"`
+	MovieID     string  `json:"movie_id"`
+	MovieFormat string  `json:"movie_format"`
+	RentedAt    int64   `json:"rented_at"`
+	DueDate     int64   `json:"due_date"`
+	ReturnedAt  int64   `json:"returned_at"`
+	LateFee     float64 `json:"late_fee"`
+	RewindFee   float64 `json:"rewind_fee"`
+	NeedsRewind bool    `json:"needs_rewind"`
+	Status      string  `json:"status"`
+}
+
+type RentalResponse struct {
+	ID          string  `json:"id"`
+	UserID      string  `json:"user_id"`
+	MovieID     string  `json:"movie_id"`
+	MovieTitle  string  `json:"movie_title"`
+	MovieFormat string  `json:"movie_format"`
+	RentedAt    int64   `json:"rented_at"`
+	DueDate     int64   `json:"due_date"`
+	ReturnedAt  int64   `json:"returned_at"`
+	LateFee     float64 `json:"late_fee"`
+	RewindFee   float64 `json:"rewind_fee"`
+	NeedsRewind bool    `json:"needs_rewind"`
+	Status      string  `json:"status"`
+}
+
+func (r *Rental) ToResponse(movieTitle string) RentalResponse {
+	return RentalResponse{
+		ID:          r.ID,
+		UserID:      r.UserID,
+		MovieID:     r.MovieID,
+		MovieTitle:  movieTitle,
+		MovieFormat: r.MovieFormat,
+		RentedAt:    r.RentedAt,
+		DueDate:     r.DueDate,
+		ReturnedAt:  r.ReturnedAt,
+		LateFee:     r.LateFee,
+		RewindFee:   r.RewindFee,
+		NeedsRewind: r.NeedsRewind,
+		Status:      r.Status,
+	}
+}
+
+func (r *Rental) IsOverdue(now int64) bool {
+	return r.Status != RentalReturned && now > r.DueDate
+}
+
+func (r *Rental) CalculateLateFee(now int64) float64 {
+	if now <= r.DueDate {
+		return 0
+	}
+	daysLate := (now - r.DueDate) / int64(24*time.Hour)
+	if daysLate < 1 {
+		daysLate = 1
+	}
+	rate := DailyLateFeeRate(r.MovieFormat)
+	return float64(daysLate) * rate
+}
+
+func (r *Rental) CalculateRewindFee() float64 {
+	if r.NeedsRewind && r.MovieFormat == "VHS" {
+		return 1.00
+	}
+	return 0
+}
+
+func (r *Rental) TotalFee() float64 {
+	return r.LateFee + r.RewindFee
+}
+
+func DueDateForFormat(format string, rentedAt int64) int64 {
+	switch format {
+	case "VHS":
+		return rentedAt + int64(3*24*time.Hour)
+	case "DVD", "Blu-ray":
+		return rentedAt + int64(5*24*time.Hour)
+	default:
+		return rentedAt + int64(5*24*time.Hour)
+	}
+}
+
+func DailyLateFeeRate(format string) float64 {
+	switch format {
+	case "VHS":
+		return 2.00
+	case "DVD", "Blu-ray":
+		return 3.00
+	default:
+		return 3.00
+	}
+}

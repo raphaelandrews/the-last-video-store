@@ -14,7 +14,7 @@ Blockbuster (circa 2002). It features a rich terminal user interface powered by
 backend that runs on [Render](https://render.com).
 
 Users browse a movie catalog, rent tapes, return them, and manage their membership — all
-gated by a **6-tier Role-Based Access Control (RBAC)** system enforced through bitmask
+gated by a **7-tier Role-Based Access Control (RBAC)** system enforced through bitmask
 
 The system directly addresses the three core challenges outlined in the project scope:
 
@@ -28,26 +28,28 @@ The system directly addresses the three core challenges outlined in the project 
 
 **Catalog & Navigation**
 - Autocomplete search powered by custom Trie — type 2 letters and see instant DVD/VHS suggestions
-- Genre-based filtering via tabs: ALL, ACTION, COMEDY, HORROR, SCIFI, DRAMA
-- Format badges on every title: `📀 DVD` / `📼 VHS` — different rental rules per format
-- "New Releases" shelf — latest arrivals marked `[NEW]`, restricted by membership plan
-- "Staff Picks" curated recommendations by store attendants
-- "Last Chance" — titles about to leave the catalog permanently
+- Genre-based filtering via tabs: ALL, ACTION, COMEDY, HORROR, SCIFI, DRAMA, NEW, STAFF PICKS, LAST CHANCE
+- Format badges on every title: `📀 DVD` / `📼 VHS` / `💿 Blu-ray` — different rental rules per format
+- "New Releases" shelf — latest arrivals marked `[NEW]`, restricted by membership plan (Gold+)
+- "Staff Picks" — Manager-curated recommendations, toggled from Admin Movies panel
+- "Last Chance" — titles with only 1 copy remaining, about to leave the catalog permanently
+- Co-rental recommendations on Movie Detail: "Customers who rented this also rented..." (powered by custom Graph DS)
 
 **Rental & Return**
-- Format-aware rental durations — VHS: 3 days, DVD: 5 days (discs are more durable)
-- Automatic late fee — $2/day for VHS, $3/day for DVD (higher replacement cost)
-- Simultaneous rental limits per membership plan: Bronze=2, Silver=5, Gold=10
+- Format-aware rental durations — VHS: 3 days, DVD/Blu-ray: 5 days
+- Format-specific late fees — $2/day for VHS, $3/day for DVD/Blu-ray
+- Rewind fee — $1.00 if VHS tape returned unrewound (30% random chance, set at rental time)
+- Simultaneous rental limits per membership plan: Bronze=1, Silver=2, Gold/Employee/Supervisor=5, Manager=10, Owner=∞
 - New release waitlist — min-heap ordered by wait time, notified when copies return
 - Express return — priority deque processes the most overdue return first
 - Full rental history — per-user doubly linked list, navigable in both directions
 
 **Membership Plans**
-- **Bronze** (free) — browse catalog, rent up to 2 titles, no new releases
-- **Silver** ($9.99/mo) — rent up to 5 titles, access new releases, priority waitlist
-- **Gold** ($19.99/mo) — rent up to 10 titles, new releases, reserve upcoming titles
+- **Bronze** (free) — browse catalog, rent up to 1 title, wishlist, no new releases
+- **Silver** ($9.99/mo) — rent up to 2 titles, wishlist, no new releases
+- **Gold** ($19.99/mo) — rent up to 5 titles, new releases, waitlist, wishlist
 - Each plan gets a color-coded badge + membership card in the Profile page
-- Plan upgrades/downgrades processed by store attendants (Employee role)
+- Plan upgrades/downgrades processed by Supervisors or Managers via admin panel
 
 **Wishlist**
 - Every member (Bronze+) can add/remove titles to a personal wishlist
@@ -61,18 +63,20 @@ The system directly addresses the three core challenges outlined in the project 
 - Immutable audit trail — hash chain with SHA-256 linking, tamper-detectable
 - Bloom filter for banned members — O(k) lookup before any operation
 - bcrypt password hashing (cost 12) — passwords never stored in plaintext
-- AES-256-GCM encryption for sensitive data at rest
+- AES-256-GCM encryption for sensitive data at rest (audit logs, TOTP secrets)
+- Optional TOTP 2FA — Manager+ can enable per-account, HMAC-SHA1 time-based codes
 
 **Social & Gamification**
 - Star ratings — 0 to 5 stars, community average displayed
-- Membership plan badge — color-coded card with tier stats
+- Membership plan badge — color-coded card with tier stats (7 tiers)
 - "Now Showing" — featured title of the week in the header
 - Popcorn Points — earned on punctual returns (10 per on-time, -5 per late)
 
-**Administration (Manager / Gerente)**
-- Full CRUD on movie catalog — add, edit, remove titles with format (DVD/VHS)
-- Full CRUD on users — create, upgrade/downgrade plan, ban
-- Audit log viewer — scrollable hash chain with integrity verification
+**Administration (Supervisor / Gerente)**
+- Full CRUD on movie catalog — add, edit, remove titles with format (DVD/VHS/Blu-ray) — Manager+ only
+- Full CRUD on users — create, upgrade/downgrade plan, ban — Supervisor+
+- Audit log viewer — scrollable hash chain with integrity verification — Supervisor+
+- Staff return processing — Employee+ can process returns for any customer via priority deque
 - Live dashboard — copies rented, overdue count, daily revenue per format
 
 ---
@@ -97,56 +101,64 @@ The system directly addresses the three core challenges outlined in the project 
 - **JWT** (HS256) access tokens with 15-minute expiry
 - **Refresh tokens** (opaque, stored in BoltDB) with 7-day expiry, rotated on each use
 - **Brute-force protection**: 5 failed login attempts → 30-minute lockout (per IP + per user)
-- **AES-256-GCM** encryption for sensitive data at rest (audit logs, refresh tokens)
+- **TOTP 2FA** (optional): Time-based one-time password via HMAC-SHA1 — Manager+ can enable per-account; adds second authentication step on login
+- **AES-256-GCM** encryption for sensitive data at rest (audit logs, refresh tokens, TOTP secrets)
 
-### 2.2 RBAC — 6-tier Hierarchy with Bitmask (Membership Plans + Staff)
+### 2.2 RBAC — 7-tier Hierarchy with Bitmask (Membership Plans + Staff)
 
-Permissions are encoded as bitmask integers checked in O(1) via bitwise `&`.
+Permissions are encoded as 6-bit integers checked in O(1) via bitwise `&`.
 The system models a real Blockbuster store: customers join a **membership plan** (Bronze / Silver / Gold),
-while employees and managers are **store staff** with operational privileges.
+while store staff (Employee / Supervisor / Manager / Owner) have operational privileges.
+Gold and Employee no longer share the same bitmask — `PermStaff` cleanly distinguishes staff from premium customers.
 
 ```
                     ┌─────────┐
-                    │  OWNER  │  0b11111 → All permissions (Dono)
+                    │  OWNER  │  0b111111 → Supreme authority (Dono)
                     └────┬────┘
                     ┌────┴────┐
-                    │ MANAGER │  0b01111 → CRUD movies, manage staff (Gerente)
+                    │ MANAGER │  0b111111 → Full CRUD + staff + audit (Gerente)
                     └────┬────┘
-              ┌─────────┴─────────┐
-         ┌────┴────┐        ┌────┴────┐
-         │EMPLOYEE │        │  GOLD   │  0b00111 → Rent up to 5, new releases, wishlist
-         │(Atend.) │        └────┬────┘
-         └────┬────┘        ┌────┴────┐
-              │             │ SILVER  │  0b00011 → Rent up to 2, wishlist
-              │             └────┬────┘
-              │                  │
-              └────────┬─────────┘
-                  ┌────┴────┐
-                  │ BRONZE  │  0b00001 → Browse catalog, wishlist only
-                  └─────────┘
+                    ┌────┴────┐
+                    │SUPERVIS.│  0b011111 → Manage users + staff + audit
+                    └────┬────┘
+                    ┌────┴────┐
+                    │EMPLOYEE │  0b010111 → Staff: process any return
+                    │(Atend.) │
+                    └────┬────┘
+               ┌─────────┴──────────────┐
+          ┌────┴────┐              ┌────┴────┐
+          │  GOLD   │ 0b000111     │ SILVER  │ 0b000011
+          │Cl. Ouro │              │Cl. Prata│
+          └─────────┘              └────┬────┘
+                                        │
+                                   ┌────┴────┐
+                                   │ BRONZE  │ 0b000001
+                                   └─────────┘
 ```
 
-| Tier | Role (PT-BR) | Bitmask | Max Rentals | New Releases | Wishlist | Audit |
-|------|-------------|:-------:|:-----------:|:---:|:---:|:---:|
-| Bronze | Cliente Bronze | `0b00001` | 0 | ❌ | ✅ | ❌ |
-| Silver | Cliente Prata | `0b00011` | 2 | ❌ | ✅ | ❌ |
-| Gold | Cliente Ouro | `0b00111` | 5 | ✅ | ✅ | ❌ |
-| Employee | Atendente | `0b00111` | 5 | ✅ | ✅ | ❌ |
-| Manager | Gerente | `0b01111` | 10 | ✅ | ✅ | ✅ |
-| Owner | Dono | `0b11111` | ∞ | ✅ | ✅ | ✅ |
+| Tier | Role (PT-BR) | Bitmask | Max Rentals | New Releases | Wishlist | Audit | Staff |
+|------|-------------|:-------:|:-----------:|:---:|:---:|:---:|:---:|
+| Bronze | Cliente Bronze | `0b000001` | 1 | ❌ | ✅ | ❌ | — |
+| Silver | Cliente Prata | `0b000011` | 2 | ❌ | ✅ | ❌ | — |
+| Gold | Cliente Ouro | `0b000111` | 5 | ✅ | ✅ | ❌ | — |
+| Employee | Atendente | `0b010111` | 5 | ✅ | ✅ | ❌ | ✅ |
+| Supervisor | Supervisor | `0b011111` | 5 | ✅ | ✅ | ✅ | ✅ |
+| Manager | Gerente | `0b111111` | 10 | ✅ | ✅ | ✅ | ✅ |
+| Owner | Dono | `0b111111` | ∞ | ✅ | ✅ | ✅ | ✅ |
 
-**Note:** Gold (Cliente Ouro) and Employee (Atendente) share the same bitmask (`0b00111`) for catalog/rental permissions.
-The distinction is role-based: Employees are staff who can process returns for **any** customer,
-view the full rental ledger, and access the return priority deque. Gold members are customers with
-premium rental privileges but no staff capabilities. Enforced via `Role` string field check.
+**Key distinction:** The 6th bit `PermStaff` (0b010000) cleanly separates employees from Gold members.
+No string-based role checks needed — all permission logic is pure bitmask arithmetic.
+Supervisor is a new intermediate role with `PermManageUsers` + `PermStaff` but without `PermAdmin` (cannot CRUD movies).
+Manager and Owner share the same bitmask (`0b111111`); the distinction is symbolic — Owner is the store proprietor.
 
-| Permission Bit | Constant | Bronze | Silver | Gold | Employee | Manager | Owner |
-|:---:|:---|:---:|:---:|:---:|:---:|:---:|:---:|
-| `0b00001` | `PermBrowse` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `0b00010` | `PermRent` | — | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `0b00100` | `PermReserve` | — | — | ✅ | ✅ | ✅ | ✅ |
-| `0b01000` | `PermManageUsers` | — | — | — | — | ✅ | ✅ |
-| `0b10000` | `PermAdmin` | — | — | — | — | — | ✅ |
+| Permission Bit | Constant | Bronze | Silver | Gold | Employee | Supervisor | Manager | Owner |
+|:---:|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| `0b000001` | `PermBrowse` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `0b000010` | `PermRent` | — | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `0b000100` | `PermReserve` | — | — | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `0b001000` | `PermManageUsers` | — | — | — | — | ✅ | ✅ | ✅ |
+| `0b010000` | `PermStaff` | — | — | — | ✅ | ✅ | ✅ | ✅ |
+| `0b100000` | `PermAdmin` | — | — | — | — | — | ✅ | ✅ |
 
 When a user attempts an action, the middleware computes:
 
@@ -160,37 +172,39 @@ if session.Permissions & PermRent == 0 {
 
 **Membership Plans (Planos de Sócio)**
 
-| Plan | Monthly Fee | Max Rentals | New Releases | VHS Late Fee | DVD Late Fee | VHS Duration | DVD Duration |
-|------|:----------:|:-----------:|:---:|:---:|:---:|:---:|:---:|
-| Bronze | Free | 0 | ❌ | — | — | — | — |
-| Silver | $9.99 | 2 | ❌ | $2/day | $3/day | 3 days | 5 days |
-| Gold | $19.99 | 5 | ✅ | $2/day | $3/day | 3 days | 5 days |
+| Plan | Monthly Fee | Max Rentals | New Releases | VHS Late Fee | DVD/BD Late Fee | VHS Duration | DVD/BD Duration | Rewind Fee |
+|------|:----------:|:-----------:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Bronze | Free | 1 | ❌ | $2/day | $3/day | 3 days | 5 days | $1.00 |
+| Silver | $9.99 | 2 | ❌ | $2/day | $3/day | 3 days | 5 days | $1.00 |
+| Gold | $19.99 | 5 | ✅ | $2/day | $3/day | 3 days | 5 days | $1.00 |
 
-- Plan upgrades performed by **Attendants (Atendente)** or **Managers (Gerente)** via admin panel
+- Plan upgrades performed by **Supervisors** (Supervisor) or **Managers (Gerente)** via admin panel
 - Plan downgrades also require staff approval
 - Membership fees tracked on Profile page (cosmetic — no real payment integration)
 
 **DVD vs VHS Format Rules**
 
 Each movie stores its `Format`: `DVD`, `VHS`, or `Blu-ray`. This affects rental duration,
-late fees, and inventory tracking:
+late fees, rewind fees, and inventory tracking:
 - VHS tapes: 3-day rental window (analog tapes wear faster)
 - DVDs / Blu-rays: 5-day rental (discs are more durable)
 - Late fees: VHS = $2/day, DVD/Blu-ray = $3/day (higher replacement cost)
+- **Rewind fee:** Returning a VHS tape unrewound costs $1.00 (30% random chance on return, set at rental time)
 - Inventory tracked per format (e.g., 3 VHS + 2 DVD copies of The Matrix)
 - Format badge on every movie card: `📼 VHS` / `📀 DVD` / `💿 Blu-ray`
 
 **Rental Limits (Limite de Locações Simultâneas)**
-- Bronze: 0 active rentals (browse + wishlist only)
+- Bronze: 1 simultaneous rental
 - Silver: 2 simultaneous rentals
-- Gold / Employee: 5
+- Gold / Employee / Supervisor: 5
 - Manager: 10
 - Owner: unlimited
 - Exceeding limit triggers: `"Rental limit reached (X/Y)"` modal
 
 **Late Fees (Multa por Atraso)**
-- Auto-calculated on return: `days_overdue × daily_rate` (per format)
+- Auto-calculated on return: `days_overdue × daily_rate` (per format: VHS=$2/day, DVD/Blu-ray=$3/day)
 - Popcorn Points deducted for late returns (-5 per late)
+- **Rewind fee:** $1.00 added if VHS tape was returned unrewound (`NeedsRewind` flag on rental)
 
 **Waitlist (Fila de Espera para Lançamentos)**
 - Gold members can join waitlist when all copies of a new release are rented
@@ -222,6 +236,7 @@ Each includes table-driven unit tests and benchmarks.
 | **Bloom Filter** | `internal/ds/bloom/bloom.go` | Banned-user fast check before any DB query | Add/Contains: O(k) |
 | **Bitmask** | `internal/ds/bitmask/bitmask.go` | RBAC permission flags — single integer comparison | Check: O(1) |
 | **Hash Chain** | `internal/crypto/hashchain.go` | Immutable audit log — each entry links to previous via SHA-256 | Append: O(1), Verify: O(n) |
+| **Graph (Undirected)** | `internal/ds/graph/graph.go` | Co-rental recommendation engine — edge weight = # of users who rented both movies; BFS for similarity search | AddEdge: O(1), GetRecommendations: O(V+E) |
 
 ---
 
@@ -289,7 +304,7 @@ Both binaries ship as single statically-linked executables — no runtime depend
 ║  │   Match Point (2005) ★★★☆☆  │  │  🍿 Popcorn Points: 142         │ ║
 ║  └──────────────────────────────┘  └──────────────────────────────────┘ ║
 ║                                                                          ║
-║  ┌─[ALL]──[ACTION]──[COMEDY]──[HORROR]──[SCIFI]──[NEW]──[STAFF PICKS]─┐ ║
+║  ┌─[ALL]──[ACTION]──[COMEDY]──[HORROR]──[SCIFI]──[NEW]──[STAFF ★]──[⏳ LAST]─┐ ║
 ║  │                                                                      │ ║
 ║  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐               │ ║
 ║  │  │ ░░░░░░░░ │ │ ░░░░░░░░ │ │ ░░░░░░░░ │ │ ░░░░░░░░ │               │ ║
@@ -321,29 +336,31 @@ Both binaries ship as single statically-linked executables — no runtime depend
         └─────┬─────┘
               ▼
    ┌─────────────────────┐
-   │  LOGIN / REGISTER   │
+   │  LOGIN / REGISTER   │  (+ TOTP prompt if 2FA enabled)
    └─────────┬───────────┘
              ▼
-   ┌─────────────────────────────────────────────────────────────┐
-   │                       BROWSE CATALOG                         │
-   │  (search bar + genre tabs + responsive movie card grid)      │
-   └───┬───────────────┬───────────────┬───────────────┬─────────┘
-       ▼               ▼               ▼               ▼
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│ MOVIE       │ │ MY RENTALS  │ │   PROFILE   │ │ ADMIN PANEL │
-│ DETAIL      │ │ (return,    │ │ (stats,     │ │ (manager+)  │
-│ (rent,      │ │  history,   │ │  tier badge,│ │             │
-│  rate,      │ │  late fees) │ │  popcorn)   │ ├──────┬──────┤
-│  waitlist)  │ │             │ │             │ │USERS │MOVIES│
-└─────────────┘ └─────────────┘ └─────────────┘ └──┬───┴──┬───┘
-                                                   │      │
-                                                   └──┬───┘
-                                                      ▼
-                                               ┌─────────────┐
-                                               │ AUDIT LOG   │
-                                               │ (hash chain │
-                                               │  viewer)    │
-                                               └─────────────┘
+   ┌───────────────────────────────────────────────────────────────────┐
+   │                          BROWSE CATALOG                            │
+   │  (search bar + genre tabs + responsive movie card grid +           │
+   │   wishlist sidebar + staff picks / last chance tabs)               │
+   └────┬──────────────┬──────────────┬──────────────┬──────────────────┘
+        ▼              ▼              ▼              ▼
+ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐
+ │ MOVIE       │ │ MY RENTALS  │ │   PROFILE   │ │   ADMIN PANEL   │
+ │ DETAIL      │ │ (return,    │ │ (stats,     │ │                 │
+ │ (rent,      │ │  history,   │ │  tier badge,│ ├────────┬────────┤
+ │  waitlist,  │ │  late fees, │ │  popcorn,   │ │ USERS  │ MOVIES │
+ │  recommend) │ │  rewind fee)│ │  TOTP)      │ │(suprv+)|(mgr+)  │
+ └─────────────┘ └─────────────┘ └─────────────┘ └───┬────┴────┬───┘
+                                                     │         │
+                                                     └────┬────┘
+                                                          ▼
+                                                   ┌─────────────┐
+                                                   │ AUDIT LOG   │
+                                                   │ (hash chain │
+                                                   │  viewer,    │
+                                                   │  suprv+)    │
+                                                   └─────────────┘
 ```
 
 ---
@@ -363,7 +380,9 @@ thelastvideostore/
 │   ├── auth/
 │   │   ├── password.go              # bcrypt hash + verify
 │   │   ├── session.go               # JWT create, validate, refresh
-│   │   └── permissions.go           # Bitmask constants + role hierarchy
+│   │   ├── permissions.go           # Bitmask constants + role hierarchy
+│   │   ├── totp.go                  # TOTP 2FA implementation (HMAC-SHA1, time-based)
+│   │   └── lockout.go               # Brute-force lockout tracking
 │   │
 │   ├── crypto/
 │   │   ├── aes.go                   # AES-256-GCM encrypt/decrypt
@@ -391,6 +410,9 @@ thelastvideostore/
 │   │   └── bitmask/
 │   │       ├── bitmask.go           # Generic bitmask operations
 │   │       └── bitmask_test.go
+│   │   └── graph/
+│   │       ├── graph.go             # Undirected weighted graph (co-rental recommendations)
+│   │       └── graph_test.go
 │   │
 │   ├── models/
 │   │   ├── user.go                  # User struct, roles, permissions
@@ -472,120 +494,132 @@ thelastvideostore/
 
 ---
 
-### Phase 1 — Data Structures (from scratch)
+### Phase 1 — Data Structures (from scratch)  [x]
 
-**Goal:** Implement all 8 custom data structures with full test coverage and benchmarks. No third-party collections — everything built with raw Go slices, maps, and nodes.
+**Goal:** Implement all 9 custom data structures with full test coverage and benchmarks. No third-party collections — everything built with raw Go slices, maps, and nodes.
 
 ---
 
-#### Task 1.1: Initialize Go module & project skeleton
+#### Task 1.1: Initialize Go module & project skeleton  [x]
 
-- Create project root directory `thelastvideostore/`
-- Run `go mod init github.com/thelastvideostore` (or local module path)
-- Create directory tree: `internal/ds/{trie,lru,deque,heap,list,bloom,bitmask}`, `internal/crypto`
-- Create `cmd/server/` and `cmd/client/` placeholder `main.go` files (just `package main; func main() {}`)
-- Verify: `go build ./...` compiles without errors
+- [x] Create project root directory `thelastvideostore/`
+- [x] Run `go mod init github.com/thelastvideostore` (or local module path)
+- [x] Create directory tree: `internal/ds/{trie,lru,deque,heap,list,bloom,bitmask,graph}`, `internal/crypto`
+- [x] Create `cmd/server/` and `cmd/client/` placeholder `main.go` files (just `package main; func main() {}`)
+- [x] Verify: `go build ./...` compiles without errors
 
-#### Task 1.2: Implement Bitmask
+#### Task 1.2: Implement Bitmask (6-bit)  [x]
 
-- Create `internal/ds/bitmask/bitmask.go`
-- Define `type Permission uint16`
-- Implement functions: `Has(p, flag Permission) bool`, `Set(p, flag Permission) Permission`, `Clear(p, flag Permission) Permission`, `Toggle(p, flag Permission) Permission`
-- Define permission constants: `PermBrowse`, `PermRent`, `PermReserve`, `PermManageUsers`, `PermAdmin`
-- Define tier constants: `TierBronze = PermBrowse`, `TierSilver = PermBrowse | PermRent`, `TierGold = PermBrowse | PermRent | PermReserve`, `TierEmployee = PermBrowse | PermRent | PermReserve`, `TierManager = PermBrowse | PermRent | PermReserve | PermManageUsers`, `TierOwner = 0b11111`
-- Define tier labels map: `map[Permission]string` — "Bronze", "Silver", "Gold", "Employee", "Manager", "Owner"
-- Create `internal/ds/bitmask/bitmask_test.go`
-- Test table: `struct{ name string; base Permission; flag Permission; wantHas bool; wantSet Permission }`
-- Test all combos: Bronze missing Rent, Owner has Admin, set/clear/toggle operations
-- Benchmark: `Has`, `Set`, `Clear` — confirm O(1) performance
-- Verify: `go test -v -bench=. ./internal/ds/bitmask/`
+- [x] Create `internal/ds/bitmask/bitmask.go`
+- [x] Define `type Permission uint16`
+- [x] Implement functions: `Has(p, flag Permission) bool`, `Set(p, flag Permission) Permission`, `Clear(p, flag Permission) Permission`, `Toggle(p, flag Permission) Permission`
+- [x] Define 6 permission constants: `PermBrowse = 0b000001`, `PermRent = 0b000010`, `PermReserve = 0b000100`, `PermManageUsers = 0b001000`, `PermStaff = 0b010000`, `PermAdmin = 0b100000`
+- [x] Define tier constants: `TierBronze = PermBrowse`, `TierSilver = PermBrowse | PermRent`, `TierGold = PermBrowse | PermRent | PermReserve`, `TierEmployee = PermBrowse | PermRent | PermReserve | PermStaff`, `TierSupervisor = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff`, `TierManager = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermAdmin`, `TierOwner = TierManager` (same bits, symbolic difference)
+- [x] Define tier labels map: `map[Permission]string` — "Bronze", "Silver", "Gold", "Employee", "Supervisor", "Manager", "Owner"
+- [x] Create `internal/ds/bitmask/bitmask_test.go`
+- [x] Test table: `struct{ name string; base Permission; flag Permission; wantHas bool; wantSet Permission }`
+- [x] Test all combos: Bronze missing Rent, Owner has Admin, set/clear/toggle operations, Gold != Employee (Staff bit distinguishes them)
+- [x] Benchmark: `Has`, `Set`, `Clear` — confirm O(1) performance
+- [x] Verify: `go test -v -bench=. ./internal/ds/bitmask/`
 
-#### Task 1.3: Implement Doubly Linked List
+#### Task 1.3: Implement Doubly Linked List  [x]
 
-- Create `internal/ds/list/linkedlist.go`
-- Define generic `Node[T any]` struct with `Value T`, `Prev *Node[T]`, `Next *Node[T]`
-- Define `List[T any]` struct with `Head *Node[T]`, `Tail *Node[T]`, `Len int`
-- Implement: `New[T]()`, `PushBack(v T) *Node[T]`, `PushFront(v T) *Node[T]`, `Remove(node *Node[T]) T`, `PopFront() T`, `PopBack() T`, `Find(pred func(T) bool) *Node[T]`, `Slice() []T`
-- Ensure proper nil handling on empty list operations (return zero value + false ok pattern)
-- Create `internal/ds/list/linkedlist_test.go`
-- Test: push/remove interleaved, pop front/back, find by predicate, iteration via Slice, empty list edge cases
-- Benchmark: `PushBack` x 10000, `Find` on 1000-element list
-- Verify: `go test -v -bench=. ./internal/ds/list/`
+- [x] Create `internal/ds/list/linkedlist.go`
+- [x] Define generic `Node[T any]` struct with `Value T`, `Prev *Node[T]`, `Next *Node[T]`
+- [x] Define `List[T any]` struct with `Head *Node[T]`, `Tail *Node[T]`, `Len int`
+- [x] Implement: `New[T]()`, `PushBack(v T) *Node[T]`, `PushFront(v T) *Node[T]`, `Remove(node *Node[T]) T`, `PopFront() T`, `PopBack() T`, `Find(pred func(T) bool) *Node[T]`, `Slice() []T`
+- [x] Ensure proper nil handling on empty list operations (return zero value + false ok pattern)
+- [x] Create `internal/ds/list/linkedlist_test.go`
+- [x] Test: push/remove interleaved, pop front/back, find by predicate, iteration via Slice, empty list edge cases
+- [x] Benchmark: `PushBack` x 10000, `Find` on 1000-element list
+- [x] Verify: `go test -v -bench=. ./internal/ds/list/`
 
-#### Task 1.4: Implement Deque (Ring Buffer)
+#### Task 1.4: Implement Deque (Ring Buffer)  [x]
 
-- Create `internal/ds/deque/deque.go`
-- Define `Deque[T any]` struct with ring buffer backing slice: `buf []T`, `head int`, `tail int`, `size int`, `cap int`
-- Implement: `New[T](capacity int)`, `PushBack(v T)`, `PushFront(v T)`, `PopFront() T`, `PopBack() T`, `PeekFront() T`, `PeekBack() T`, `Len() int`, `IsEmpty() bool`
-- Auto-grow: double capacity when full, handle wrap-around indices correctly
-- Return `(T, bool)` for pop/peek on empty deque
-- Create `internal/ds/deque/deque_test.go`
-- Test: push/pop interleaved mixes, empty deque pops, wrap-around after capacity, grow triggers, peek non-destructive
-- Benchmark: push/pop 10000 items from both ends
-- Verify: `go test -v -bench=. ./internal/ds/deque/`
+- [x] Create `internal/ds/deque/deque.go`
+- [x] Define `Deque[T any]` struct with ring buffer backing slice: `buf []T`, `head int`, `tail int`, `size int`, `cap int`
+- [x] Implement: `New[T](capacity int)`, `PushBack(v T)`, `PushFront(v T)`, `PopFront() T`, `PopBack() T`, `PeekFront() T`, `PeekBack() T`, `Len() int`, `IsEmpty() bool`
+- [x] Auto-grow: double capacity when full, handle wrap-around indices correctly
+- [x] Return `(T, bool)` for pop/peek on empty deque
+- [x] Create `internal/ds/deque/deque_test.go`
+- [x] Test: push/pop interleaved mixes, empty deque pops, wrap-around after capacity, grow triggers, peek non-destructive
+- [x] Benchmark: push/pop 10000 items from both ends
+- [x] Verify: `go test -v -bench=. ./internal/ds/deque/`
 
-#### Task 1.5: Implement Min-Heap
+#### Task 1.5: Implement Min-Heap  [x]
 
-- Create `internal/ds/heap/heap.go`
-- Define generic `Heap[T any]` struct with `items []T`, `less func(a, b T) bool` (min-heap by default)
-- Implement: `New[T](lessFn)`, `Push(v T)`, `Pop() T`, `Peek() T`, `Len() int`, `IsEmpty() bool`
-- Internal: `siftUp(index int)`, `siftDown(index int)`
-- Create `internal/ds/heap/heap_test.go`
-- Test: sequential push → pop returns sorted order, empty heap pop returns zero value, Peek on empty, priority ordering via custom `less` (e.g., structs ordered by timestamp)
-- Benchmark: push 10000 then pop 10000
-- Verify: `go test -v -bench=. ./internal/ds/heap/`
+- [x] Create `internal/ds/heap/heap.go`
+- [x] Define generic `Heap[T any]` struct with `items []T`, `less func(a, b T) bool` (min-heap by default)
+- [x] Implement: `New[T](lessFn)`, `Push(v T)`, `Pop() T`, `Peek() T`, `Len() int`, `IsEmpty() bool`
+- [x] Internal: `siftUp(index int)`, `siftDown(index int)`
+- [x] Create `internal/ds/heap/heap_test.go`
+- [x] Test: sequential push → pop returns sorted order, empty heap pop returns zero value, Peek on empty, priority ordering via custom `less` (e.g., structs ordered by timestamp)
+- [x] Benchmark: push 10000 then pop 10000
+- [x] Verify: `go test -v -bench=. ./internal/ds/heap/`
 
-#### Task 1.6: Implement Trie (Prefix Tree)
+#### Task 1.6: Implement Trie (Prefix Tree)  [x]
 
-- Create `internal/ds/trie/trie.go`
-- Define `TrieNode` struct: `children map[rune]*TrieNode`, `isEnd bool`, `value any` (store movie ID or title)
-- Define `Trie` struct: `root *TrieNode`
-- Implement: `New()`, `Insert(word string, value any)`, `Search(word string) (any, bool)`, `StartsWith(prefix string) bool`, `Autocomplete(prefix string) []any` (returns all values under prefix subtree via DFS), `Delete(word string) bool`
-- Create `internal/ds/trie/trie_test.go`
-- Test: insert + search exact match, search missing, startsWith true/false, autocomplete returns all matches for prefix "mat", delete removes exact word but not prefixes, case sensitivity (lowercase only enforced)
-- Benchmark: insert 5000 words, autocomplete with 2-char prefix
-- Verify: `go test -v -bench=. ./internal/ds/trie/`
+- [x] Create `internal/ds/trie/trie.go`
+- [x] Define `TrieNode` struct: `children map[rune]*TrieNode`, `isEnd bool`, `value any` (store movie ID or title)
+- [x] Define `Trie` struct: `root *TrieNode`
+- [x] Implement: `New()`, `Insert(word string, value any)`, `Search(word string) (any, bool)`, `StartsWith(prefix string) bool`, `Autocomplete(prefix string) []any` (returns all values under prefix subtree via DFS), `Delete(word string) bool`
+- [x] Create `internal/ds/trie/trie_test.go`
+- [x] Test: insert + search exact match, search missing, startsWith true/false, autocomplete returns all matches for prefix "mat", delete removes exact word but not prefixes, case sensitivity (lowercase only enforced)
+- [x] Benchmark: insert 5000 words, autocomplete with 2-char prefix
+- [x] Verify: `go test -v -bench=. ./internal/ds/trie/`
 
-#### Task 1.7: Implement LRU Cache
+#### Task 1.7: Implement LRU Cache  [x]
 
-- Create `internal/ds/lru/lru.go`
-- Define `entry[K comparable, V any]` struct: `key K`, `value V`
-- Define `Cache[K comparable, V any]` struct: `capacity int`, `items map[K]*list.Node[entry[K,V]]`, `order *list.List[entry[K,V]]` (reuses our DoublyLinkedList from Task 1.3)
-- Implement: `New[K,V](capacity int)`, `Get(key K) (V, bool)`, `Put(key K, value V)`, `Remove(key K) bool`, `Len() int`, `Contains(key K) bool`
-- On Get: move node to front of order (most recently used)
-- On Put when full: evict tail of order (least recently used)
-- Create `internal/ds/lru/lru_test.go`
-- Test: put+get returns value, get missing returns zero, eviction when capacity exceeded (put 4 items capacity 3 → first evicted), update existing key moves to front, remove works, Contains works
-- Benchmark: put 10000 items with capacity 1000, get hit rate test
-- Verify: `go test -v -bench=. ./internal/ds/lru/`
+- [x] Create `internal/ds/lru/lru.go`
+- [x] Define `entry[K comparable, V any]` struct: `key K`, `value V`
+- [x] Define `Cache[K comparable, V any]` struct: `capacity int`, `items map[K]*list.Node[entry[K,V]]`, `order *list.List[entry[K,V]]` (reuses our DoublyLinkedList from Task 1.3)
+- [x] Implement: `New[K,V](capacity int)`, `Get(key K) (V, bool)`, `Put(key K, value V)`, `Remove(key K) bool`, `Len() int`, `Contains(key K) bool`
+- [x] On Get: move node to front of order (most recently used)
+- [x] On Put when full: evict tail of order (least recently used)
+- [x] Create `internal/ds/lru/lru_test.go`
+- [x] Test: put+get returns value, get missing returns zero, eviction when capacity exceeded (put 4 items capacity 3 → first evicted), update existing key moves to front, remove works, Contains works
+- [x] Benchmark: put 10000 items with capacity 1000, get hit rate test
+- [x] Verify: `go test -v -bench=. ./internal/ds/lru/`
 
-#### Task 1.8: Implement Bloom Filter
+#### Task 1.8: Implement Bloom Filter  [x]
 
-- Create `internal/ds/bloom/bloom.go`
-- Define `BloomFilter` struct: `bitset []uint64`, `size uint64` (total bits), `hashCount int`
-- Implement: `New(size uint64, hashCount int)`, `Add(data []byte)`, `Contains(data []byte) bool`
-- Use double-hashing technique: `h1 = fnv.New64a`, `h2 = fnv.New64` (or murmurhash via hash/fnv + shift)
-- Combined hash: `h1 + i*h2` for i from 0 to hashCount-1
-- Set/check bits via `bitset[bitIndex/64] & (1 << (bitIndex % 64))`
-- Create `internal/ds/bloom/bloom_test.go`
-- Test: add string → contains returns true, empty filter contains nothing, multiple adds don't collide, estimate false-positive rate on 1000 items with 10000-bit filter and 3 hash functions
-- Benchmark: Add 10000 items, Contains 10000 items
-- Verify: `go test -v -bench=. ./internal/ds/bloom/`
+- [x] Create `internal/ds/bloom/bloom.go`
+- [x] Define `BloomFilter` struct: `bitset []uint64`, `size uint64` (total bits), `hashCount int`
+- [x] Implement: `New(size uint64, hashCount int)`, `Add(data []byte)`, `Contains(data []byte) bool`
+- [x] Use double-hashing technique: `h1 = fnv.New64a`, `h2 = fnv.New64` (or murmurhash via hash/fnv + shift)
+- [x] Combined hash: `h1 + i*h2` for i from 0 to hashCount-1
+- [x] Set/check bits via `bitset[bitIndex/64] & (1 << (bitIndex % 64))`
+- [x] Create `internal/ds/bloom/bloom_test.go`
+- [x] Test: add string → contains returns true, empty filter contains nothing, multiple adds don't collide, estimate false-positive rate on 1000 items with 10000-bit filter and 3 hash functions
+- [x] Benchmark: Add 10000 items, Contains 10000 items
+- [x] Verify: `go test -v -bench=. ./internal/ds/bloom/`
 
-#### Task 1.9: Implement Hash Chain (Audit Trail)
+#### Task 1.9: Implement Hash Chain (Audit Trail)  [x]
 
-- Create `internal/crypto/hashchain.go`
-- Define `HashChain` struct: `entries []HashChainEntry`, `lastHash []byte`
-- Define `HashChainEntry` struct: `Timestamp int64`, `Action string`, `ActorID string`, `TargetID string`, `Data string`, `Hash []byte`, `PrevHash []byte`
-- Implement: `New()`, `Append(action, actorID, targetID, data string) HashChainEntry`, `Verify() bool` (recomputes all hashes from genesis), `GetAll() []HashChainEntry`, `Len() int`
-- Hash function: `SHA-256(prevHash || timestamp || action || actorID || targetID || data)`
-- Genesis block: first entry has `PrevHash = []byte("GENESIS")`
-- Create `internal/crypto/hashchain_test.go`
-- Test: genesis entry has correct PrevHash, append links correctly, verify passes on intact chain, verify fails if entry tampered, middle insertion detected
-- Benchmark: append 1000 entries + verify
-- Verify: `go test -v -bench=. ./internal/crypto/hashchain.go` (or move test to same package)
+- [x] Create `internal/crypto/hashchain.go`
+- [x] Define `HashChain` struct: `entries []HashChainEntry`, `lastHash []byte`
+- [x] Define `HashChainEntry` struct: `Timestamp int64`, `Action string`, `ActorID string`, `TargetID string`, `Data string`, `Hash []byte`, `PrevHash []byte`
+- [x] Implement: `New()`, `Append(action, actorID, targetID, data string) HashChainEntry`, `Verify() bool` (recomputes all hashes from genesis), `GetAll() []HashChainEntry`, `Len() int`
+- [x] Hash function: `SHA-256(prevHash || timestamp || action || actorID || targetID || data)`
+- [x] Genesis block: first entry has `PrevHash = []byte("GENESIS")`
+- [x] Create `internal/crypto/hashchain_test.go`
+- [x] Test: genesis entry has correct PrevHash, append links correctly, verify passes on intact chain, verify fails if entry tampered, middle insertion detected
+- [x] Benchmark: append 1000 entries + verify
+- [x] Verify: `go test -v -bench=. ./internal/crypto/hashchain.go` (or move test to same package)
 
-#### Phase 1 validation:
+#### Task 1.10: Implement Undirected Weighted Graph (Co-rental Recommendations)  [x]
+
+- [x] Create `internal/ds/graph/graph.go`
+- [x] Define `Graph` struct: `vertices map[string]*Vertex`
+- [x] Define `Vertex` struct: `ID string`, `Edges map[string]int` (neighbor ID → co-rental weight), `Data interface{}`
+- [x] Implement: `New()`, `AddVertex(id string)`, `AddEdge(v1, v2 string)`, `IncrementEdge(v1, v2 string)` (increments edge weight by 1), `GetNeighbors(id string) map[string]int`, `BFS(start string) []string` (visit order), `GetRecommendations(id string, k int) []string` (top-k neighbors by edge weight, excluding self and already-connected zero-weight), `HasVertex(id string) bool`, `VertexCount() int`, `EdgeCount() int`
+- [x] Application: when building co-rental graph, `IncrementEdge(movieA, movieB)` for every rental pair, building up co-rental counts
+- [x] Create `internal/ds/graph/graph_test.go`
+- [x] Test: add vertices and edges, increment weights, get neighbors sorted by weight, BFS visits correct order, GetRecommendations returns top-k by weight, empty graph operations return gracefully
+- [x] Benchmark: build graph with 100 vertices and 500 edges, GetRecommendations on dense vertex
+- [x] Verify: `go test -v -bench=. ./internal/ds/graph/`
+
+#### Phase 1 validation:  [x]
 
 ```bash
 go test -v -race -bench=. ./internal/ds/... ./internal/crypto/...
@@ -594,77 +628,79 @@ go test -v -race -bench=. ./internal/ds/... ./internal/crypto/...
 
 ---
 
-### Phase 2 — Models & Database Layer
+### Phase 2 — Models & Database Layer  [x]
 
 **Goal:** Define all data models as Go structs and implement full CRUD persistence with BoltDB.
 
 ---
 
-#### Task 2.1: Install dependencies
+#### Task 2.1: Install dependencies  [x]
 
-- Run `go get github.com/boltdb/bolt` (or `go.etcd.io/bbolt` for maintained fork)
-- Run `go get github.com/google/uuid`
-- Run `go get golang.org/x/crypto`
-- Run `go get github.com/go-chi/chi/v5`
-- Run `go get github.com/golang-jwt/jwt/v5`
-- Verify: `go mod tidy` succeeds
+- [x] Run `go get github.com/boltdb/bolt` (or `go.etcd.io/bbolt` for maintained fork)
+- [x] Run `go get github.com/google/uuid`
+- [x] Run `go get golang.org/x/crypto`
+- [x] Run `go get github.com/go-chi/chi/v5`
+- [x] Run `go get github.com/golang-jwt/jwt/v5`
+- [x] Verify: `go mod tidy` succeeds
 
-#### Task 2.2: Create config package
+#### Task 2.2: Create config package  [x]
 
-- Create `internal/config/config.go`
-- Define `Config` struct: `DBPath string`, `JWTSecret string`, `AESKey string`, `ServerPort string`, `APIBaseURL string`
-- Implement `Load() *Config`: reads from env vars with sensible defaults
-- Defaults: `DBPath="thelastvideostore.db"`, `ServerPort="8080"`, `APIBaseURL="http://localhost:8080"`
-- Add `MustLoad()` variant that panics on missing required vars
+- [x] Create `internal/config/config.go`
+- [x] Define `Config` struct: `DBPath string`, `JWTSecret string`, `AESKey string`, `ServerPort string`, `APIBaseURL string`
+- [x] Implement `Load() *Config`: reads from env vars with sensible defaults
+- [x] Defaults: `DBPath="thelastvideostore.db"`, `ServerPort="8080"`, `APIBaseURL="http://localhost:8080"`
+- [x] Add `MustLoad()` variant that panics on missing required vars
 
-#### Task 2.3: Create user model
+#### Task 2.3: Create user model  [x]
 
-- Create `internal/models/user.go`
-- Define `User` struct: `ID`, `Username`, `PasswordHash`, `Tier` (Permission bitmask), `MaxRentals` int, `RentalCount` int, `Banned` bool, `CreatedAt` int64, `UpdatedAt` int64
-- Define JSON tags for API serialization: `json:"id"`, `json:"username"`, `json:"tier"`, `json:"max_rentals"`, `json:"rental_count"`, `json:"banned"` (never expose `PasswordHash`)
-- Define `UserResponse` struct (omits password hash for API responses)
-- Define helper: `CanRent() bool`, `CanReserve() bool`, `TierName() string`
+- [x] Create `internal/models/user.go`
+- [x] Define `User` struct: `ID`, `Username`, `PasswordHash`, `Tier` (Permission bitmask), `MaxRentals` int, `RentalCount` int, `Banned` bool, `TOTPEnabled` bool, `TOTPSecret` string (AES encrypted at rest), `CreatedAt` int64, `UpdatedAt` int64
+- [x] Define JSON tags for API serialization: `json:"id"`, `json:"username"`, `json:"tier"`, `json:"max_rentals"`, `json:"rental_count"`, `json:"banned"`, `json:"totp_enabled"` (never expose `PasswordHash` or `TOTPSecret`)
+- [x] Define `UserResponse` struct (omits password hash and TOTP secret for API responses)
+- [x] Define helper: `CanRent() bool`, `CanReserve() bool`, `TierName() string`, `HasStaffAccess() bool` (checks `PermStaff` bit)
 
-#### Task 2.4: Create movie model
+#### Task 2.4: Create movie model  [x]
 
-- Create `internal/models/movie.go`
-- Define `Movie` struct: `ID`, `Title`, `Year` int, `Genre` string, `Format` string (VHS, DVD, Blu-ray), `Director`, `Cast` []string, `Synopsis` string, `Rating` float64 (avg), `RatingCount` int, `Available` bool, `CopiesTotal` int, `CopiesAvailable` int, `IsNewRelease` bool, `CoverArt` string (ASCII art placeholder string), `CreatedAt` int64
-- Define format constants: `FormatVHS`, `FormatDVD`, `FormatBluRay`
-- Define genre constants: `Action`, `Comedy`, `Horror`, `SciFi`, `Drama`, `Thriller`, `Romance`, `Animation`
-- Define `MovieResponse` DTO struct for API
+- [x] Create `internal/models/movie.go`
+- [x] Define `Movie` struct: `ID`, `Title`, `Year` int, `Genre` string, `Format` string (VHS, DVD, Blu-ray), `Director`, `Cast` []string, `Synopsis` string, `Rating` float64 (avg), `RatingCount` int, `Available` bool, `CopiesTotal` int, `CopiesAvailable` int, `IsNewRelease` bool, `CoverArt` string (ASCII art placeholder string), `CreatedAt` int64
+- [x] Define format constants: `FormatVHS`, `FormatDVD`, `FormatBluRay`
+- [x] Define genre constants: `Action`, `Comedy`, `Horror`, `SciFi`, `Drama`, `Thriller`, `Romance`, `Animation`
+- [x] Define `MovieResponse` DTO struct for API
 
-#### Task 2.5: Create rental model
+#### Task 2.5: Create rental model  [x]
 
-- Create `internal/models/rental.go`
-- Define `Rental` struct: `ID`, `UserID`, `MovieID`, `MovieFormat` string, `RentedAt` int64, `DueDate` int64, `ReturnedAt` int64 (0 = not returned), `LateFee` float64, `Status` string (active, returned, overdue)
-- Define rental status constants: `RentalActive`, `RentalReturned`, `RentalOverdue`
-- Define helper: `IsOverdue(now int64) bool`, `CalculateLateFee(now int64) float64` (uses format-specific daily rate: VHS=$2/day, DVD/Blu-ray=$3/day)
-- Define helper: `DueDateForFormat(format string, rentedAt int64) int64` (VHS: +3 days, DVD/Blu-ray: +5 days)
+- [x] Create `internal/models/rental.go`
+- [x] Define `Rental` struct: `ID`, `UserID`, `MovieID`, `MovieFormat` string, `RentedAt` int64, `DueDate` int64, `ReturnedAt` int64 (0 = not returned), `LateFee` float64, `RewindFee` float64, `NeedsRewind` bool (30% chance for VHS, set at rental time), `Status` string (active, returned, overdue)
+- [x] Define rental status constants: `RentalActive`, `RentalReturned`, `RentalOverdue`
+- [x] Define helper: `IsOverdue(now int64) bool`, `CalculateLateFee(now int64) float64` (uses format-specific daily rate: VHS=$2/day, DVD/Blu-ray=$3/day)
+- [x] Define helper: `DueDateForFormat(format string, rentedAt int64) int64` (VHS: +3 days, DVD/Blu-ray: +5 days)
+- [x] Define helper: `CalculateRewindFee() float64` — returns $1.00 if `NeedsRewind && MovieFormat == FormatVHS`, else $0.00
+- [x] Define helper: `TotalFee() float64` — `LateFee + RewindFee`
 
-#### Task 2.5a: Create wishlist model
+#### Task 2.5a: Create wishlist model  [x]
 
-- Create `internal/models/wishlist.go`
-- Define `WishlistItem` struct: `ID`, `UserID`, `MovieID`, `AddedAt` int64
-- Using doubly linked list structure for ordered storage per user
+- [x] Create `internal/models/wishlist.go`
+- [x] Define `WishlistItem` struct: `ID`, `UserID`, `MovieID`, `AddedAt` int64
+- [x] Using doubly linked list structure for ordered storage per user
 
-#### Task 2.6: Create audit model
+#### Task 2.6: Create audit model  [x]
 
-- Create `internal/models/audit.go`
-- Define `AuditEntry` struct: `ID`, `Timestamp` int64, `Action` string, `ActorID`, `TargetID`, `Data`, `Hash`, `PrevHash` (mirrors HashChainEntry for DB persistence)
-- Define action constants: `ActionLogin`, `ActionLogout`, `ActionRent`, `ActionReturn`, `ActionRegister`, `ActionPromote`, `ActionDemote`, `ActionBan`, `ActionAddMovie`, `ActionEditMovie`, `ActionDeleteMovie`
+- [x] Create `internal/models/audit.go`
+- [x] Define `AuditEntry` struct: `ID`, `Timestamp` int64, `Action` string, `ActorID`, `TargetID`, `Data`, `Hash`, `PrevHash` (mirrors HashChainEntry for DB persistence)
+- [x] Define action constants: `ActionLogin`, `ActionLogout`, `ActionRent`, `ActionReturn`, `ActionRegister`, `ActionPromote`, `ActionDemote`, `ActionBan`, `ActionAddMovie`, `ActionEditMovie`, `ActionDeleteMovie`, `ActionTOTPEnabled`, `ActionTOTPDisabled`, `ActionAddToWishlist`, `ActionRemoveFromWishlist`, `ActionAddStaffPick`, `ActionRemoveStaffPick`
 
-#### Task 2.7: Create BoltDB store layer
+#### Task 2.7: Create BoltDB store layer  [x]
 
-- Create `internal/store/store.go`
-- Define `Store` struct wrapping `*bolt.DB`
-- Implement `Open(path string) (*Store, error)` — opens BoltDB, creates all buckets: `users`, `movies`, `rentals`, `audit_logs`, `sessions`, `banned`, `movies_by_genre`, `movies_by_title`
-- Implement `Close() error`
-- Implement helper: `bucketName` constants
+- [x] Create `internal/store/store.go`
+- [x] Define `Store` struct wrapping `*bolt.DB`
+- [x] Implement `Open(path string) (*Store, error)` — opens BoltDB, creates all buckets: `users`, `movies`, `rentals`, `audit_logs`, `sessions`, `banned`, `movies_by_genre`, `movies_by_title`, `staff_picks`, `wishlists`, `totp_secrets`
+- [x] Implement `Close() error`
+- [x] Implement helper: `bucketName` constants
 
-#### Task 2.8: Implement user store
+#### Task 2.8: Implement user store  [x]
 
-- Create `internal/store/users.go`
-- Methods on `*Store`:
+- [x] Create `internal/store/users.go`
+- [x] Methods on `*Store`:
   - `CreateUser(user *models.User) error` — serializes to JSON, stores in `users` bucket by ID, also indexes by username in same bucket via `username:<name>` key
   - `GetUserByID(id string) (*models.User, error)`
   - `GetUserByUsername(username string) (*models.User, error)` — looks up `username:<name>` key to get ID, then fetches user
@@ -677,10 +713,10 @@ go test -v -race -bench=. ./internal/ds/... ./internal/crypto/...
   - `LockUserUntil(username string, until int64) error` — stores lock expiry in `sessions` bucket
   - `IsUserLocked(username string) (bool, error)` — checks lock expiry
 
-#### Task 2.9: Implement movie store
+#### Task 2.9: Implement movie store  [x]
 
-- Create `internal/store/movies.go`
-- Methods on `*Store`:
+- [x] Create `internal/store/movies.go`
+- [x] Methods on `*Store`:
   - `CreateMovie(movie *models.Movie) error` — stores in `movies` bucket, adds to `movies_by_genre` index, adds to `movies_by_title` index
   - `GetMovieByID(id string) (*models.Movie, error)`
   - `UpdateMovie(movie *models.Movie) error` — updates in all indexes
@@ -689,10 +725,10 @@ go test -v -race -bench=. ./internal/ds/... ./internal/crypto/...
   - `SearchMoviesByPrefix(prefix string, limit int) ([]*models.Movie, error)` — uses `movies_by_title` bucket for prefix scan (BoltDB supports prefix iteration via `Seek`)
   - `GetNewReleases() ([]*models.Movie, error)` — filters by `IsNewRelease = true` (scan all, filter in memory)
 
-#### Task 2.10: Implement rental store
+#### Task 2.10: Implement rental store  [x]
 
-- Create `internal/store/rentals.go`
-- Methods on `*Store`:
+- [x] Create `internal/store/rentals.go`
+- [x] Methods on `*Store`:
   - `CreateRental(rental *models.Rental) error` — stores in `rentals` bucket
   - `GetRentalByID(id string) (*models.Rental, error)`
   - `UpdateRental(rental *models.Rental) error`
@@ -701,34 +737,56 @@ go test -v -race -bench=. ./internal/ds/... ./internal/crypto/...
   - `GetOverdueRentals() ([]*models.Rental, error)` — iterates all, filters by `DueDate < now && Status == active`
   - `CountActiveRentalsByUser(userID string) (int, error)` — count of non-returned rentals
 
-#### Task 2.11: Implement audit store
+#### Task 2.11: Implement audit store  [x]
 
-- Create `internal/store/audit.go`
-- Methods: `AppendAuditEntry(entry *models.AuditEntry) error`, `GetAllAuditEntries() ([]*models.AuditEntry, error)`, `GetAuditEntriesByUser(userID string) ([]*models.AuditEntry, error)`
-- Each append: encrypt entry data with AES before storing (call `crypto.AESEncrypt`), store encrypted blob in BoltDB
+- [x] Create `internal/store/audit.go`
+- [x] Methods: `AppendAuditEntry(entry *models.AuditEntry) error`, `GetAllAuditEntries() ([]*models.AuditEntry, error)`, `GetAuditEntriesByUser(userID string) ([]*models.AuditEntry, error)`
+- [x] Each append: encrypt entry data with AES before storing (call `crypto.AESEncrypt`), store encrypted blob in BoltDB
 
-#### Task 2.12: Implement session store
+#### Task 2.12: Implement session store  [x]
 
-- Extend `internal/store/store.go` or create `internal/store/sessions.go`
-- Methods:
+- [x] Extend `internal/store/store.go` or create `internal/store/sessions.go`
+- [x] Methods:
   - `SaveRefreshToken(userID, tokenID string, expiresAt int64) error` — stores in `sessions` bucket
   - `ValidateRefreshToken(userID, tokenID string) (bool, error)` — checks if token exists and not expired
   - `InvalidateRefreshToken(userID, tokenID string) error` — removes from bucket
   - `InvalidateAllUserSessions(userID string) error` — removes all tokens for user
   - `IsTokenRevoked(tokenID string) (bool, error)` — checks `revoked` sub-bucket
 
-#### Task 2.12a: Implement wishlist store
+#### Task 2.12a: Implement wishlist store  [x]
 
-- Create `internal/store/wishlist.go`
-- Methods:
+- [x] Create `internal/store/wishlist.go`
+- [x] Methods:
   - `AddToWishlist(userID, movieID string) error` — appends to user's wishlist in BoltDB
   - `RemoveFromWishlist(userID, movieID string) error`
   - `GetWishlist(userID string) ([]*models.WishlistItem, error)` — returns ordered items
   - `IsInWishlist(userID, movieID string) (bool, error)`
   - `GetWishlistSize(userID string) (int, error)`
-- Wishlist stored as ordered entries per user in `wishlists` bucket
+- [x] Wishlist stored as ordered entries per user in `wishlists` bucket
 
-#### Phase 2 validation:
+#### Task 2.12b: Implement staff picks & last chance store  [x]
+
+- [x] Extend `internal/store/movies.go` or create `internal/store/staffpicks.go`
+- [x] Methods:
+  - `AddStaffPick(movieID string) error` — adds movie ID to `staff_picks` bucket
+  - `RemoveStaffPick(movieID string) error`
+  - `GetStaffPicks() ([]*models.Movie, error)` — resolves IDs to full movie objects
+  - `IsStaffPick(movieID string) bool`
+  - `GetLastChanceMovies() ([]*models.Movie, error)` — queries movies where `CopiesAvailable == 1 && !IsNewRelease`
+- [x] Staff Picks bucket keyed by movie ID, value = timestamp of when it was picked
+
+#### Task 2.12c: Implement TOTP store operations  [x]
+
+- [x] Extend `internal/store/store.go` or create `internal/store/totp.go`
+- [x] Methods:
+  - `SaveTOTPSecret(userID string, encryptedSecret []byte) error` — stores in `totp_secrets` bucket, AES encrypted
+  - `GetTOTPSecret(userID string) ([]byte, error)` — retrieves encrypted secret
+  - `DeleteTOTPSecret(userID string) error`
+  - `IncrementTOTPFailures(userID string) (int, error)` — TOTP-specific lockout after 3 failures
+  - `ResetTOTPFailures(userID string) error`
+  - `LockTOTPUserUntil(userID string, until int64) error` — 10-minute TOTP lockout
+
+#### Phase 2 validation:  [x]
 
 ```bash
 go test -v ./internal/models/... ./internal/store/...
@@ -769,10 +827,12 @@ go test -v ./internal/models/... ./internal/store/...
 - Create `internal/auth/permissions.go`
 - Re-export bitmask constants from `internal/ds/bitmask` (or import directly — decide which package owns these)
 - Define `RequirePermission(userPerms Permission, required Permission) bool` — simple `userPerms & required != 0`
-- Define `TierName(perm Permission) string` — returns "Bronze", "Silver", "Gold", "Employee", "Manager", "Owner"
+- Define `TierName(perm Permission) string` — returns "Bronze", "Silver", "Gold", "Employee", "Supervisor", "Manager", "Owner"
 - Define `MaxRentalsForTier(perm Permission) int`:
-  - Bronze: 0, Silver: 2, Gold: 5, Employee: 5, Manager: 10, Owner: MaxInt
+  - Bronze: 1, Silver: 2, Gold: 5, Employee: 5, Supervisor: 5, Manager: 10, Owner: MaxInt
 - Define `CanAccessAdmin(perm Permission) bool` — Manager or Owner
+- Define `IsStaff(perm Permission) bool` — checks `PermStaff` bit (Employee, Supervisor, Manager, Owner)
+- Define `CanManageUsers(perm Permission) bool` — checks `PermManageUsers` bit (Supervisor, Manager, Owner)
 
 #### Task 3.4: Implement AES-256-GCM encryption
 
@@ -801,6 +861,19 @@ go test -v ./internal/models/... ./internal/store/...
 - Connect hash chain to BoltDB store: every state-changing operation appends an entry
 - Encrypt audit entries with AES before persisting (call `Encrypt` from Task 3.4)
 - Implement `VerifyAuditChain(store *store.Store) (bool, error)` — reads all entries, recomputes hashes, compares
+
+#### Task 3.7: Implement TOTP 2FA (optional, Manager+ feature)
+
+- Create `internal/auth/totp.go`
+- Implement using only Go stdlib (`crypto/hmac`, `crypto/sha1`, `crypto/rand`, `encoding/base32`, `time`)
+- `GenerateTOTPSecret() (string, error)` — generates 20 random bytes, returns base32-encoded string (e.g., `"JBSWY3DPEHPK3PXP"`)
+- `GenerateTOTPCode(secret string, t time.Time) (string, error)` — HMAC-SHA1 of (counter = unix/30), returns 6-digit code per RFC 6238
+- `ValidateTOTPCode(secret string, code string) bool` — checks current code ± 1 interval (30s skew tolerance)
+- `GenerateTOTPURL(issuer, accountName, secret string) string` — returns `otpauth://totp/...` URL for QR generation
+- Create `internal/auth/totp_test.go`
+- Test: generate secret, generate code, validate same code, reject expired code, reject wrong code, consistent output for same time step
+- Integration: on login, if user has `TOTPEnabled`, after password validation prompt for TOTP code before issuing tokens
+- Profile page: Manager+ can enable/disable TOTP, view setup key, verify setup with one test code
 
 #### Phase 3 validation:
 
@@ -851,6 +924,9 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Reads permissions from context
   - Calls `bitmask.Has(perms, required)`
   - Returns 403 with `"⛔ ACCESS DENIED — Insufficient clearance"` if check fails
+- `RequireStaff()` — middleware requiring `PermStaff`:
+  - Used on return-processing endpoints where staff can return any customer's rentals
+- `TOTPMiddleware()` — if user has `TOTPEnabled`, validates TOTP header `X-TOTP-Code` on login step 2
 - `RateLimitMiddleware(rate int)` — token bucket:
   - Per-IP counting via in-memory `map[string]*tokenBucket` with mutex
   - 100 req/min default
@@ -873,12 +949,21 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Call `CheckLoginAttempts` → 429 if locked
   - Find user by username → 401 if not found
   - `CheckPassword` → if fail: `RecordFailedAttempt`, return 401
+  - If user has `TOTPEnabled == true`:
+    - Require `X-TOTP-Code` header
+    - Decrypt TOTP secret from store
+    - Validate code via `auth.ValidateTOTPCode` → if fail: return 401 `"Invalid TOTP code"`
   - `RecordSuccessfulLogin` → resets attempts
   - Check banned (Bloom + DB) → 403
   - Generate `TokenPair` via `auth.GenerateTokenPair`
   - Save refresh token to store (`SaveRefreshToken`)
   - Append to audit: `ActionLogin`
-  - Return `LoginResponse` with tokens + user
+  - Return `LoginResponse` with tokens + user (include `totp_required: true/false` during initial password auth so the TUI knows to prompt)
+- `POST /api/v1/auth/login/totp`:
+  - Temporary session token from step 1 (5-min expiry, no full access)
+  - Accept `{code: "123456"}`
+  - Validate TOTP → if valid, issue real token pair
+  - If invalid → increment TOTP failure counter (lock after 3 TOTP failures)
 - `POST /api/v1/auth/refresh`:
   - Accept refresh token from body
   - Validate, check not revoked
@@ -903,11 +988,18 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Requires JWT (any tier)
   - Call `SearchMoviesByPrefix(q, 10)` — uses BoltDB prefix scan on `movies_by_title`
   - Return `[]models.MovieResponse`
+- `GET /api/v1/movies/staff-picks`:
+  - Requires JWT
+  - Returns movies curated by Manager/Owner via dedicated BoltDB bucket `staff_picks`
+  - Store picks as movie IDs; resolve to full movie objects on read
+- `GET /api/v1/movies/last-chance`:
+  - Requires JWT
+  - Returns movies where `CopiesAvailable == 1 && !IsNewRelease` — titles about to leave catalog
 - `GET /api/v1/movies/{id}`:
   - Call `GetMovieByID(id)` → 404 if not found
   - Return `MovieResponse`
 - `POST /api/v1/movies`:
-  - Requires `RequirePermission(PermManageUsers)` (Manager+)
+  - Requires `RequirePermission(PermAdmin)` (Manager+)
   - Parse `CreateMovieRequest`
   - Validate: title required, year 1900–current, valid genre
   - Create Movie with UUID, `CopiesAvailable = CopiesTotal`, `Available = true`
@@ -915,21 +1007,28 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Append audit: `ActionAddMovie`
   - Return 201 with `MovieResponse`
 - `PUT /api/v1/movies/{id}`:
-  - Requires Manager+
+  - Requires `PermAdmin` (Manager+)
   - Parse `UpdateMovieRequest`, apply partial updates (only set non-nil fields)
   - Append audit: `ActionEditMovie`
   - Return updated `MovieResponse`
 - `DELETE /api/v1/movies/{id}`:
-  - Requires Owner only (`PermAdmin`)
+  - Requires `PermAdmin` (Manager+)
   - Delete from store
   - Append audit: `ActionDeleteMovie`
   - Return 200
+- `POST /api/v1/movies/{id}/staff-pick`:
+  - Requires `PermAdmin` (Manager+)
+  - Adds movie ID to `staff_picks` bucket
+  - Return 200 with `{staff_pick: true}`
+- `DELETE /api/v1/movies/{id}/staff-pick`:
+  - Requires `PermAdmin` (Manager+)
+  - Removes movie ID from `staff_picks` bucket
 
 #### Task 4.5: Implement rental handlers
 
 - Create `api/rental_handler.go`
 - `POST /api/v1/rentals/rent`:
-  - Requires `RequirePermission(PermRent)` (Bronze cannot rent)
+  - Requires `RequirePermission(PermRent)`
   - Parse `RentRequest`
   - Get user from context
   - Count active rentals → if >= `MaxRentalsForTier(user.Tier)` → 403 "Rental limit reached"
@@ -937,24 +1036,27 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Check `movie.CopiesAvailable > 0` → 409 "No copies available"
   - Check `movie.IsNewRelease` and user doesn't have `PermReserve` → 403 "Gold plan required for new releases"
   - Create Rental: `DueDate = DueDateForFormat(movie.Format, now)` (VHS: +3d, DVD/Blu-ray: +5d), `Status = active`
+  - If `movie.Format == FormatVHS`: randomly set `NeedsRewind = true` (30% chance) to simulate unrewound tape
   - Decrement `movie.CopiesAvailable`; if 0 → set `Available = false`
   - Increment `user.RentalCount`
   - Update movie + user in store
   - Save rental
   - Append audit: `ActionRent`
-  - Return rental with due date
+  - Return rental with due date (+ rewind flag if VHS)
 - `POST /api/v1/rentals/return`:
   - Requires `PermRent`
   - Parse `ReturnRequest`
   - Get rental → 404
-  - Verify rental belongs to user (or user is Employee+)
+  - Verify rental belongs to user (or user has `PermStaff` — Employee, Supervisor, Manager, Owner)
   - Set `ReturnedAt = now`
-  - If `now > DueDate` → calculate `LateFee = days * 2.00`
+  - If `now > DueDate` → calculate `LateFee = daysLate × dailyRate` where `dailyRate = $2.00` for VHS, `$3.00` for DVD/Blu-ray
+  - If `NeedsRewind` → set `RewindFee = 1.00` (VHS rewind fee)
+  - Calculate `TotalFee = LateFee + RewindFee`; if >0, display breakdown to user
   - Increment `movie.CopiesAvailable`; set `Available = true`
   - Decrement `user.RentalCount`
   - Save rental, movie, user
   - Append audit: `ActionReturn`
-  - Return rental with late fee if applicable
+  - Return rental with fee breakdown (late fee + rewind fee)
 - `GET /api/v1/rentals/history`:
   - Requires JWT
   - Call `GetRentalHistoryByUser(userID)`
@@ -964,27 +1066,32 @@ go test -v ./internal/auth/... ./internal/crypto/...
 
 - Create `api/user_handler.go`
 - `GET /api/v1/users`:
-  - Requires Manager+
+  - Requires Supervisor+ (`PermManageUsers`)
   - Call `ListUsers()`
   - Return list (omit password hashes)
 - `POST /api/v1/users`:
-  - Requires Manager+
+  - Requires Supervisor+ (`PermManageUsers`)
   - Parse `RegisterRequest` + optional tier
   - Same validation as register, but can set initial tier
   - Append audit: action depending on tier
   - Return 201
 - `PUT /api/v1/users/{id}`:
-  - Requires Manager+
+  - Requires Supervisor+ (`PermManageUsers`)
   - Parse `UpdateUserRequest`
   - If tier changed → append audit `ActionPromote`/`ActionDemote`
   - If banned → append audit `ActionBan`, add to Bloom filter
   - Save user
   - Return updated user
 - `DELETE /api/v1/users/{id}`:
-  - Requires Owner (`PermAdmin`)
+  - Requires Manager+ (`PermAdmin`)
   - Delete user from store
   - Append audit
   - Return 200
+- `POST /api/v1/users/{id}/totp`:
+  - Requires the user themselves OR Manager+
+  - `{enabled: true}` → generate TOTP secret, store AES-encrypted, return secret & otpauth URL for QR setup
+  - `{enabled: false}` → clear TOTP secret, disable
+  - Append audit: `ActionTOTPEnabled` / `ActionTOTPDisabled`
 
 #### Task 4.7: Implement wishlist handler
 
@@ -1009,12 +1116,13 @@ go test -v ./internal/auth/... ./internal/crypto/...
 - Create `api/router.go`
 - Build Chi router:
   - Apply `CORSMiddleware`, `LoggingMiddleware`, `RateLimitMiddleware(100)` globally
-  - Group `/api/v1/auth`: register, login (no auth), refresh, logout (JWT)
-  - Group `/api/v1/movies`: GET list/search (JWT), POST/PUT/DELETE (JWT + Manager+)
+  - Group `/api/v1/auth`: register (no auth), login (no auth), login/totp (temporary session), refresh (JWT), logout (JWT)
+  - Group `/api/v1/movies`: GET list/search/staff-picks/last-chance (JWT), POST/PUT/DELETE/staff-pick (JWT + PermAdmin)
   - Group `/api/v1/rentals`: all require JWT
   - Group `/api/v1/wishlist`: all require JWT (Bronze+)
-  - Group `/api/v1/users`: all require JWT + Manager+
-  - Group `/api/v1/audit`: JWT + Manager+
+  - Group `/api/v1/users`: GET/POST/PUT (JWT + Supervisor+), DELETE (JWT + PermAdmin), TOTP endpoints (JWT, self or Manager+)
+  - Group `/api/v1/audit`: JWT + Supervisor+
+  - Group `/api/v1/recommendations/{movieID}`: JWT — returns co-rental recommendations from Graph DS
   - Health check: `GET /health` returns `{"status":"ok"}`
 - Create `cmd/server/main.go`:
   - Load config via `config.Load()`
@@ -1217,10 +1325,12 @@ go build ./cmd/client && ./client
 - Create `tui/components/footer.go`
 - `FooterView(width int, page Page, session *SessionState) string`:
   - Context-sensitive keybinding bar:
-    - Login: `[TAB] switch field  [ENTER] login  [R] register  [ESC] quit`
-    - Browse: `[↓↑] navigate  [ENTER] details  [S] search  [R] my rentals  [P] profile  [Q] quit`
-    - Admin: adds `[U] users  [M] movies  [A] audit`
-    - Movie detail: `[ENTER] rent  [ESC] back  [H] history`
+    - Login: `[TAB] switch field  [ENTER] login  [R] register  [ESC] quit` (+ `[T] TOTP` if prompted)
+    - Browse: `[↓↑] navigate  [ENTER] details  [S] search  [R] my rentals  [W] wishlist  [P] profile  [Q] quit`
+    - Admin (Supervisor+): adds `[U] users  [M] movies  [A] audit`
+    - Admin (Manager+): adds `[S] staff picks` toggle on selected movie
+    - Movie detail: `[ENTER] rent  [ESC] back  [W] add to wishlist` (shows recommendations panel if available)
+    - Profile: `[T] toggle TOTP  [L] logout  [ESC] back`
   - Styled with dim text on surface background
 
 #### Task 6.6: Search bar component
@@ -1256,7 +1366,7 @@ go build ./cmd/client && ./client
 
 - Create `tui/components/tabs.go`
 - `TabsView(tabs []string, activeIndex int, width int) string`:
-  - Genre tabs: `ALL | ACTION | COMEDY | HORROR | SCIFI | DRAMA | NEW | STAFF PICKS`
+  - Genre tabs: `ALL | ACTION | COMEDY | HORROR | SCIFI | DRAMA | NEW | STAFF PICKS | LAST CHANCE`
   - Active tab: cyan background, bold text
   - Inactive: dim text
   - Styled with lipgloss borders connecting to content below
@@ -1288,8 +1398,9 @@ go build ./cmd/client && ./client
   - `W`: add selected movie to wishlist / toggle wishlist sidebar
   - `R`: navigate to `PageMyRentals`
   - `P`: navigate to `PageProfile`
-  - If admin: `U` → `PageAdminUsers`, `M` → `PageAdminMovies`, `A` → `PageAuditLog`
-- Admin links only visible if `session.HasPermission(PermManageUsers)`
+  - Supervisor+: `U` → `PageAdminUsers`, `A` → `PageAuditLog`
+  - Manager+: `U` → `PageAdminUsers`, `M` → `PageAdminMovies`, `A` → `PageAuditLog`
+- Admin links only visible if `session.HasPermission(PermManageUsers)` or `session.HasPermission(PermAdmin)`
 
 #### Task 6.11: Movie detail page
 
@@ -1297,17 +1408,19 @@ go build ./cmd/client && ./client
 - Full-screen movie view:
   - Title (large, bold)
   - `[NEW RELEASE]` or `[AVAILABLE]` or `[RENTED OUT]` badge
-  - Year · Genre · Director
+  - Year · Genre · Director · Format badge
   - Star rating: `★★★★½ (4.5/5 from 1,247 ratings)`
   - Synopsis (wrapped text, 3-4 lines)
   - Cast: comma-separated
   - Copies available: `📼 3 of 5 copies available`
+  - **Co-rental recommendations** (bottom panel): "Customers who rented this also:" — 3-5 recommended titles from Graph DS, ordered by co-rental weight
 - Actions:
   - `ENTER` → rent movie (calls `RentMovie` API):
     - Success → "📼 RENTED! Due: Jun 17 2002" modal, then navigate to browse
     - 403 "Limit reached" → show error modal
     - 403 "Gold plan required" → show promo to upgrade
     - 409 "No copies" → offer "Join waitlist? [Y/N]"
+  - `W` → add/remove from wishlist
   - `ESC` → back to browse
 
 #### Task 6.12: My rentals page
@@ -1315,12 +1428,12 @@ go build ./cmd/client && ./client
 - Create `tui/pages/my_rentals.go`
 - Fetches `GetRentalHistory()` on init
 - Lists active rentals at top with:
-  - Movie title, rental date, due date, status `🟢 Active` / `🔴 Overdue`, late fee if applicable
-- Lists rental history below (returned) with `ReturnedAt` date
+  - Movie title, rental date, due date, format badge, status `🟢 Active` / `🔴 Overdue`, `🔄 VHS` rewind indicator if applicable
+- Lists rental history below (returned) with `ReturnedAt` date, late fee, rewind fee (if any)
 - Selected rental can be returned:
   - Press `ENTER` on active rental → confirmation modal "Return The Matrix?"
   - Confirm → calls `ReturnMovie` API
-  - Success: "📼 Returned! Late fee: $4.00" or "📼 Returned on time! +10 popcorn points"
+  - Success: "📼 Returned! Late fee: $4.00 (VHS: 2 days × $2/day) + Rewind fee: $1.00" or "📼 Returned on time! +10 popcorn points"
   - Movie grid and rental count refresh
 - `ESC` → back to browse
 
@@ -1341,13 +1454,17 @@ go build ./cmd/client && ./client
   ║  🍿 Popcorn Points: 142  ║
   ║  ⏱ Total movies: 27     ║
   ║  $ Late fees paid: $6   ║
+  ║  $ Rewind fees: $2      ║
+  ║  🔒 2FA: Enabled         ║
   ╚══════════════════════════╝
   ```
-- Membership plan badge in corresponding color (Bronze=#CD7F32, Silver=#C0C0C0, Gold=#FFD700, Employee=magenta, Manager=yellow, Owner=cyan)
+- Membership plan badge in corresponding color (Bronze=#CD7F32, Silver=#C0C0C0, Gold=#FFD700, Employee=magenta, Supervisor=orange, Manager=yellow, Owner=cyan)
 - Popcorn points mock calculation: 10 per on-time return, -5 per late
 - Stats pulled from rental history, grouped by format (DVD/VHS/Blu-ray)
-- `ESC` → back to browse
+- Rewind fees tracked separately from late fees
 - `L` → logout → clear session → navigate to `PageLogin`
+- `T` → toggle TOTP setup (Manager+ only) — shows secret key, otpauth URL, verification prompt
+- `ESC` → back to browse
 
 #### Task 6.14: Modal component
 
@@ -1373,16 +1490,16 @@ go build ./cmd/client && ./client
 
 - Create `tui/components/badge.go`
 - `TierBadgeView(tierName string) string`:
-  - Color-coded pill: `[ BRONZE ]` (bronze brown), `[ SILVER ]` (silver gray), `[ GOLD ]` (gold yellow), `[ ATENDENTE ]` (magenta), `[ GERENTE ]` (yellow), `[ DONO ]` (cyan)
-  - Styled with lipgloss background + foreground + padding
+- Color-coded pill: `[ BRONZE ]` (bronze brown), `[ SILVER ]` (silver gray), `[ GOLD ]` (gold yellow), `[ ATENDENTE ]` (magenta), `[ SUPERVISOR ]` (orange), `[ GERENTE ]` (yellow), `[ DONO ]` (cyan)
+- Styled with lipgloss background + foreground + padding
 
 #### Task 6.17: Admin users page
 
 - Create `tui/pages/admin_users.go`
-- Requires `PermManageUsers` — if insufficient, show `AccessDeniedModal`
+- Requires `PermManageUsers` (Supervisor+) — if insufficient, show `AccessDeniedModal`
 - Fetches `GetUsers()` from API
 - Displays table:
-  - Columns: Username | Tier | Rentals | Banned | Actions
+  - Columns: Username | Tier | Rentals | Banned | TOTP | Actions
   - Each row selectable with `↓↑`
 - Actions on selected user:
   - `P` → promote (increment tier, max Owner)
@@ -1390,16 +1507,18 @@ go build ./cmd/client && ./client
   - `B` → toggle ban
   - Confirmation modal for each action
 - Calls `UpdateUser` API, refreshes list on success
+- TOTP status column: `🔒` if enabled, `—` if disabled
 
 #### Task 6.18: Admin movies page
 
 - Create `tui/pages/admin_movies.go`
-- Requires `PermManageUsers`
-- Table of all movies: Title | Year | Genre | Copies | Available
+- Requires `PermAdmin` (Manager+) — if insufficient (Supervisor), show `AccessDeniedModal`
+- Table of all movies: Title | Year | Genre | Copies | Available | Staff Pick
 - Actions:
   - `A` → add movie form (text inputs for all fields) → calls `CreateMovie`
   - `ENTER` → edit selected movie (populated form) → calls `UpdateMovie`
-  - `D` → delete movie (confirmation modal, Owner only) → calls `DeleteMovie`
+  - `D` → delete movie (confirmation modal) → calls `DeleteMovie`
+  - `S` → toggle Staff Pick (Manager+)
 - Form navigation: TAB between fields, ENTER to submit, ESC to cancel
 
 #### Task 6.19: Audit log page
@@ -1422,16 +1541,20 @@ go run ./cmd/client
 # Full manual walkthrough:
 # 1. Splash → Login (as bronze) → Browse (see grid)
 # 2. Search "mat" → see Matrix, Matilda, Match Point
-# 3. Click Matrix → Movie Detail → Rent → ACCESS DENIED (bronze)
-# 4. Logout → Login as gold → Rent Matrix → success
-# 5. View My Rentals → see Matrix due date (format-specific)
-# 6. Return Matrix → see late fee or on-time confirmation
-# 7. Profile → see plan badge (Gold), stats, popcorn points
-# 8. Logout → Login as manager (Gerente) → Admin Users → upgrade silver to Gold
-# 9. Admin Movies → add a new Blu-ray title
-# 10. Audit Log → verify chain intact
-# 11. Login as banned → "Account suspended"
-# 12. All pages responsive to terminal resize
+# 3. Click Matrix → Movie Detail → Rent → success (Bronze can rent 1 title)
+# 4. Try to rent a New Release as Bronze → "Gold plan required for new releases"
+# 5. Logout → Login as gold → Rent Matrix → success
+# 6. Add movie to wishlist → sidebar shows "Available now!" when back in stock
+# 7. View My Rentals → see Matrix due date (format-specific)
+# 8. Return Matrix → see late fee or on-time confirmation (+ popcorn or -5 late)
+# 9. Profile → see plan badge (Gold), stats, popcorn points, TOTP setup option
+# 10. Logout → Login as supervisor → Admin Users → upgrade silver to Gold
+# 11. Logout → Login as manager (Gerente) → Admin Movies → add a new Blu-ray title
+# 12. Manager: set Staff Picks, browse → see on "Staff Picks" tab
+# 13. Audit Log → verify chain intact
+# 14. Login as banned → "Account suspended"
+# 15. Enable TOTP on manager account → login with 2FA → success
+# 16. All pages responsive to terminal resize
 ```
 
 ---
@@ -1451,15 +1574,16 @@ go run ./cmd/client
 
 #### Task 7.2: Define seed data — users
 
-- Create 7 test users (hardcoded in `data/seed.go`):
+- Create 8 test users (hardcoded in `data/seed.go`):
   ```
-  bronze   / password1  → TierBronze,  MaxRentals=0  (Cliente Bronze — browse + wishlist only)
-  silver   / password2  → TierSilver,  MaxRentals=2  (Cliente Prata — rent up to 2, wishlist)
-  gold     / password3  → TierGold,    MaxRentals=5  (Cliente Ouro — new releases, waitlist, wishlist)
-  employee / password4  → TierEmployee,MaxRentals=5  (Atendente — staff: process any return)
-  manager  / password5  → TierManager, MaxRentals=10 (Gerente — manage users, movies, view audit)
-  owner    / password6  → TierOwner,   MaxRentals=99 (Dono — all permissions)
-  banned   / password7  → TierBronze,  Banned=true   (Blocked account)
+  bronze    / password1  → TierBronze,     MaxRentals=1  (Cliente Bronze — browse + 1 rental + wishlist)
+  silver    / password2  → TierSilver,     MaxRentals=2  (Cliente Prata — rent up to 2, wishlist)
+  gold      / password3  → TierGold,       MaxRentals=5  (Cliente Ouro — new releases, waitlist, wishlist)
+  employee  / password4  → TierEmployee,   MaxRentals=5  (Atendente — staff: process any return)
+  supervisor/ password8  → TierSupervisor, MaxRentals=5  (Supervisor — manage users, view audit)
+  manager   / password5  → TierManager,    MaxRentals=10 (Gerente — CRUD movies + manage users + view audit)
+  owner     / password6  → TierOwner,      MaxRentals=99 (Dono — all permissions)
+  banned    / password7  → TierBronze,     Banned=true   (Blocked account)
   ```
 - All passwords hashed with bcrypt
 - Add banned user to Bloom filter
@@ -1476,14 +1600,15 @@ go run ./cmd/client
     - `os.Remove(config.DBPath)` to start fresh
     - Open store
     - Call seed functions
-    - Print summary: "Seeded 40 movies and 7 users."
+    - Print summary: "Seeded 40 movies and 8 users."
     - Close store
 
-#### Task 7.4: Integration test flow 1 — Bronze denied
+#### Task 7.4: Integration test flow 1 — Bronze rental limit
 
-- Login as bronze → Browse → Select movie → Press ENTER to rent
-- Expected: Modal "⛔ ACCESS DENIED — Insufficient clearance"
-- Verify: No rental created, audit log shows denied attempt
+- Login as bronze → Browse → Rent a movie (DVD) → Success (1 rental allowed)
+- Try to rent a second movie → Expected: Modal "Rental limit reached (1/1)"
+- Try to rent a New Release → Expected: "Gold plan required for new releases"
+- Verify: Only 1 active rental in DB
 
 #### Task 7.5: Integration test flow 2 — Silver rental limit
 
@@ -1497,24 +1622,26 @@ go run ./cmd/client
 - Expected: "Account suspended. Contact store management."
 - Verify: Bloom filter check passes (banned flag detected), JWT not issued
 
-#### Task 7.7: Integration test flow 4 — Plan upgrade (Silver → Gold)
+#### Task 7.7: Integration test flow 4 — Plan upgrade by Supervisor (Silver → Gold)
 
-- Login as manager (Gerente) → Admin Users → Select silver → Press P to promote
+- Login as supervisor → Admin Users → Select silver → Press P to promote
 - Expected: Confirmation modal "Upgrade silver to Gold?" → Confirm → User tier updated
+- Try to access Admin Movies as supervisor → ACCESS DENIED (no PermAdmin)
 - Login as (formerly silver) → Verify can now rent 5 movies, see new releases, join waitlist
 - Verify: Audit log entry `ActionPromote` recorded
 
 #### Task 7.8: Integration test flow 5 — Audit chain
 
-- Login as manager → Audit Log → Press V to verify
+- Login as supervisor → Audit Log → Press V to verify
 - Expected: "✅ Chain intact" with entry count
 - Tamper test (manual): corrupt one audit entry hash in BoltDB → Verify → "❌ Chain broken at entry #42"
 
-#### Task 7.9: Integration test flow 6 — Employee return with deque
+#### Task 7.9: Integration test flow 6 — Employee return with deque & rewind fee
 
 - Login as employee (Atendente) → Return overdue movies for multiple customers
 - Expected: Most overdue is processed first (deque pop from back)
-- Verify: API returns list sorted by priority; late fees auto-calculated per format
+- One VHS rental has `NeedsRewind=true` → on return, $1.00 rewind fee added
+- Verify: API returns list sorted by priority; late fees auto-calculated per format ($2/day VHS, $3/day DVD); rewind fee shown separately
 
 #### Task 7.10: Integration test flow 7 — New release waitlist
 
@@ -1522,13 +1649,27 @@ go run ./cmd/client
 - Expected: "Join waitlist?" modal → Confirm → Added to heap with timestamp
 - Verify: Heap peek returns user with oldest timestamp
 
+#### Task 7.11: Integration test flow 8 — Co-rental recommendations (Graph)
+
+- Login as gold → Rent The Matrix + The Matrix Reloaded (both action/sci-fi)
+- Navigate to The Matrix detail page → See "Customers who rented this also:" section
+- Verify: Graph edge between The Matrix and The Matrix Reloaded incremented; recommendations shown ordered by co-rental weight
+
+#### Task 7.12: Integration test flow 9 — TOTP 2FA setup & login
+
+- Login as manager → Profile → Enable TOTP
+- Expected: ASCII art display of TOTP secret + otpauth URL (for QR scanning)
+- Logout → Login as manager → After password, prompted for TOTP code
+- Enter correct code → Access granted
+- Enter wrong code → "Invalid TOTP code" → After 3 failures → "TOTP locked for 10 minutes"
+
 #### Phase 7 validation:
 
 ```bash
 go run ./data/seed.go                       # Seeds database
 go run ./cmd/server &                        # Start API
 go run ./cmd/client                          # Start TUI
-# Execute all 7 integration test flows manually
+# Execute all 9 integration test flows manually
 ```
 
 ---
@@ -1654,19 +1795,22 @@ vendor/
 - Prepare demo script for presentation:
   1. Start server + seed data
   2. Launch client, show splash screen (VHS-style intro)
-  3. Login as bronze → browse catalog → try to rent → ACCESS DENIED
+  3. Login as bronze → browse catalog → rent 1 movie (Bronze now rents!) → try second → "Rental limit reached (1/1)"
   4. Demo search autocomplete: type "mat" → Trie shows Matrix, Matilda, Match Point
   5. Logout → login as silver → rent 2 movies (1 DVD + 1 VHS, different due dates)
-  6. Add a movie to wishlist → show wishlist sidebar
+  6. Add a movie to wishlist → show wishlist sidebar with "Available now!" notification
   7. View My Rentals → see format badges, due dates, late fee warnings
-  8. Return a movie → see Popcorn Points earned
-  9. View Profile → membership card, tier badge, rental stats
-  10. Logout → login as manager (Gerente) → upgrade silver to Gold plan → verify new limits
-  11. Show Audit Log → verify hash chain integrity
-  12. Login as banned → "Account suspended"
-  13. Admin movie CRUD: add a new Blu-ray title
-  14. Terminal resize demo (responsive movie grid)
-  15. Mention cross-platform: show Linux + Windows binaries
+  8. Return a VHS movie → "REWIND FEE: $1.00" (30% chance), Popcorn Points breakdown
+  9. View Profile → membership card, Gold tier badge, rental stats, TOTP setup option
+  10. Logout → login as supervisor → Admin Users → upgrade silver to Gold plan
+  11. Try Supervisor to access Admin Movies → ACCESS DENIED (no PermAdmin — Manager only)
+  12. Logout → login as manager → manage catalog, set Staff Picks, browse Staff Picks tab
+  13. Show Audit Log → verify hash chain integrity
+  14. Movie detail → show co-rental recommendations (Graph data structure in action)
+  15. Enable TOTP on manager account → logout → login with 2FA → success
+  16. Login as banned → "Account suspended"
+  17. Terminal resize demo (responsive movie grid + wishlist sidebar)
+  18. Mention cross-platform: show Linux + Windows binaries
 
 #### Task 8.9: Optional polish items
 
@@ -1674,6 +1818,8 @@ vendor/
 - Easter egg: Konami code (↑↑↓↓←→←→BA) shows secret "Employee Picks" menu
 - ASCII movie posters (hardcoded simple art for top 5 movies)
 - On-exit animation: "BE KIND, REWIND" in large ASCII
+- TOTP QR code rendered as ASCII QR in terminal (via qrcode-terminal-go or custom block characters)
+- Co-rental graph visualization: render small ASCII graph on Movie Detail showing connected titles
 
 #### Phase 8 validation:
 
@@ -1694,15 +1840,15 @@ docker run -p 8080:8080 -e JWT_SECRET=test -e AES_KEY=0123456789abcdef0123456789
 
 | # | Requirement | The Last Video Store Implementation | Evidence in Presentation |
 |---|------------------------|--------------------------|--------------------------|
-| 1 | **Interface** | Full Bubble Tea TUI with 10 interactive screens, CRT effects, search, grids, modals | Navigate catalog → rent → return → view profile — all in terminal |
-| 2 | **Modo de segurança de acesso** | bcrypt + JWT + RBAC bitmask + brute-force lockout + AES-256-GCM + Bloom filter ban list | Show login fail → lockout → ACCESS DENIED modal → manager promotes user → access granted |
-| 3 | **Cybersecurity** | 6-layer security: hashing, token auth, bitmask RBAC, encryption at rest, immutable audit via hash chain, input sanitization | Demonstrate hash chain integrity check, AES-encrypted audit entries, Bloom filter banning |
-| 4 | **Data Structures** | 8 structures implemented from scratch: Trie, LRU, Deque, MinHeap, DoublyLinkedList, BloomFilter, Bitmask, HashChain | Show `_test.go` passing, explain each structure's role with visual examples |
+| 1 | **Interface** | Full Bubble Tea TUI with 10+ interactive screens, CRT effects, search, grids, modals, wishlist sidebar | Navigate catalog → rent → return → view profile — all in terminal |
+| 2 | **Modo de segurança de acesso** | bcrypt + JWT + 7-tier RBAC bitmask + brute-force lockout + AES-256-GCM + Bloom filter ban list + optional TOTP 2FA | Show login fail → lockout → ACCESS DENIED modal → Supervisor promotes user → access granted → TOTP 2FA demo |
+| 3 | **Cybersecurity** | 7-layer security: hashing, token auth, bitmask RBAC, encryption at rest, immutable audit via hash chain, input sanitization, TOTP 2FA | Demonstrate hash chain integrity check, AES-encrypted audit entries, Bloom filter banning, TOTP setup + verification |
+| 4 | **Data Structures** | 9 structures implemented from scratch: Trie, LRU, Deque, MinHeap, DoublyLinkedList, BloomFilter, Bitmask, HashChain, Graph | Show `_test.go` passing, explain each structure's role (Graph for co-rental recommendations) |
 | 5 | **Read file line by line** | BoltDB stores movies persistently; API reads paginated results; TUI renders each as a card | Browse catalog with search autocomplete (Trie in action) |
-| 6 | **Allow only authorized** | JWT middleware + bitmask on every route; 403 returned with structured error | Bronze (Cliente Bronze) tries to rent → "Permissão Negada"; Silver/Gold rents successfully |
-| 7 | **Show user and file data** | Profile screen: username, membership plan badge, rental history (linked list), popcorn points | Navigate to Profile, scroll rental history, show plan badge (Bronze/Silver/Gold) |
-| 8 | **User registration via file/DB** | BoltDB persistent store + `/auth/register` endpoint | Register new user → login → Bronze plan automatically assigned |
-| 9 | **Add/remove access** | Admin user panel: upgrade plan (Silver→Gold), downgrade, ban (add to Bloom filter) | Manager upgrades Bronze → Silver → Gold; new limits immediately active |
+| 6 | **Allow only authorized** | JWT middleware + 6-bit bitmask on every route; PermStaff distinguishes Employee from Gold cleanly | Bronze rents 1 movie → reaches limit; New Release requires Gold; Supervisor manages users but NOT movies |
+| 7 | **Show user and file data** | Profile screen: username, 7-tier plan badge, rental history (linked list), popcorn points, rewind fees, TOTP status | Navigate to Profile, scroll rental history, show plan badge (Bronze/Silver/Gold/Employee/Supervisor/Manager/Owner) |
+| 8 | **User registration via file/DB** | BoltDB persistent store + `/auth/register` endpoint | Register new user → login → Bronze plan automatically assigned (MaxRentals=1) |
+| 9 | **Add/remove access** | Admin user panel: upgrade/downgrade plan (Supervisor+), ban (add to Bloom filter), toggle TOTP | Supervisor upgrades Bronze → Silver → Gold; Manager CRUD movies + set Staff Picks |
 | 10 | **Cross-platform** | Go cross-compilation: Linux + Windows binaries | Show both binaries; run on Linux, optionally demo on Windows |
 
 ---
@@ -1721,4 +1867,6 @@ docker run -p 8080:8080 -e JWT_SECRET=test -e AES_KEY=0123456789abcdef0123456789
 | Linting | golangci-lint | Comprehensive Go linter aggregator |
 | Version Control | Git + GitHub | Standard |
 
-*Document version 4.1 — The Last Video Store Project Implementation Plan — Last updated: 2026-06-14*
+*Document version 5.0 — The Last Video Store Project Implementation Plan — Last updated: 2026-06-14*
+*
+*Major v5 changes: 7-tier RBAC (6-bit bitmask + Supervisor + PermStaff), Bronze=1 rental, Graph DS, TOTP 2FA, Rewind Fee, Staff Picks/Last Chance endpoints*
