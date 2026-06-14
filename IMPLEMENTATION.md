@@ -795,87 +795,87 @@ go test -v ./internal/models/... ./internal/store/...
 
 ---
 
-### Phase 3 — Authentication & Security Layer
+### Phase 3 — Authentication & Security Layer  [x]
 
 **Goal:** Implement bcrypt password hashing, JWT token management with refresh rotation, RBAC permission enforcement, brute-force lockout, and AES-256-GCM encryption.
 
 ---
 
-#### Task 3.1: Implement password hashing
+#### Task 3.1: Implement password hashing  [x]
 
-- Create `internal/auth/password.go`
-- Implement `HashPassword(password string) (string, error)` — uses `bcrypt.GenerateFromPassword` with cost 12
-- Implement `CheckPassword(hash, password string) bool` — uses `bcrypt.CompareHashAndPassword`
-- Create `internal/auth/password_test.go`
-- Test: hash produces different string each time, verify same password matches, wrong password doesn't match, empty password rejected
+- [x] Create `internal/auth/password.go`
+- [x] Implement `HashPassword(password string) (string, error)` — uses `bcrypt.GenerateFromPassword` with cost 12
+- [x] Implement `CheckPassword(hash, password string) bool` — uses `bcrypt.CompareHashAndPassword`
+- [x] Create `internal/auth/password_test.go`
+- [x] Test: hash produces different string each time, verify same password matches, wrong password doesn't match, empty password rejected
 
-#### Task 3.2: Implement JWT session management
+#### Task 3.2: Implement JWT session management  [x]
 
-- Create `internal/auth/session.go`
-- Define `TokenPair` struct: `AccessToken string`, `RefreshToken string`, `ExpiresAt int64`
-- Implement `GenerateTokenPair(userID string, permissions Permission, secret string) (*TokenPair, error)`:
+- [x] Create `internal/auth/session.go`
+- [x] Define `TokenPair` struct: `AccessToken string`, `RefreshToken string`, `ExpiresAt int64`
+- [x] Implement `GenerateTokenPair(userID string, permissions Permission, secret string) (*TokenPair, error)`:
   - Access token: 15-min expiry, claims: `sub=userID`, `perm=permissions`, `iat`, `exp`, `jti` (unique ID)
   - Refresh token: 7-day expiry, claims: `sub=userID`, `jti`, `exp`
   - Sign with HS256
-- Implement `ValidateAccessToken(tokenString, secret string) (*Claims, error)` — parses, validates expiry, returns claims
-- Implement `ValidateRefreshToken(tokenString, secret string) (*RefreshClaims, error)`
-- Create `internal/auth/session_test.go`
-- Test: generate valid tokens, validate expired token (manipulate time or create token with -1s expiry), wrong secret fails, malformed token fails
+- [x] Implement `ValidateAccessToken(tokenString, secret string) (*Claims, error)` — parses, validates expiry, returns claims
+- [x] Implement `ValidateRefreshToken(tokenString, secret string) (*RefreshClaims, error)`
+- [x] Create `internal/auth/session_test.go`
+- [x] Test: generate valid tokens, validate expired token (manipulate time or create token with -1s expiry), wrong secret fails, malformed token fails
 
-#### Task 3.3: Implement permission enforcement
+#### Task 3.3: Implement permission enforcement  [x]
 
-- Create `internal/auth/permissions.go`
-- Re-export bitmask constants from `internal/ds/bitmask` (or import directly — decide which package owns these)
-- Define `RequirePermission(userPerms Permission, required Permission) bool` — simple `userPerms & required != 0`
-- Define `TierName(perm Permission) string` — returns "Bronze", "Silver", "Gold", "Employee", "Supervisor", "Manager", "Owner"
-- Define `MaxRentalsForTier(perm Permission) int`:
+- [x] Create `internal/auth/permissions.go`
+- [x] Re-export bitmask constants from `internal/ds/bitmask` (or import directly — decide which package owns these)
+- [x] Define `RequirePermission(userPerms Permission, required Permission) bool` — simple `userPerms & required != 0`
+- [x] Define `TierName(perm Permission) string` — returns "Bronze", "Silver", "Gold", "Employee", "Supervisor", "Manager", "Owner"
+- [x] Define `MaxRentalsForTier(perm Permission) int`:
   - Bronze: 1, Silver: 2, Gold: 5, Employee: 5, Supervisor: 5, Manager: 10, Owner: MaxInt
-- Define `CanAccessAdmin(perm Permission) bool` — Manager or Owner
-- Define `IsStaff(perm Permission) bool` — checks `PermStaff` bit (Employee, Supervisor, Manager, Owner)
-- Define `CanManageUsers(perm Permission) bool` — checks `PermManageUsers` bit (Supervisor, Manager, Owner)
+- [x] Define `CanAccessAdmin(perm Permission) bool` — Manager or Owner
+- [x] Define `IsStaff(perm Permission) bool` — checks `PermStaff` bit (Employee, Supervisor, Manager, Owner)
+- [x] Define `CanManageUsers(perm Permission) bool` — checks `PermManageUsers` bit (Supervisor, Manager, Owner)
 
-#### Task 3.4: Implement AES-256-GCM encryption
+#### Task 3.4: Implement AES-256-GCM encryption  [x]
 
-- Create `internal/crypto/aes.go`
-- Implement `GenerateAESKey() ([]byte, error)` — 32 random bytes via `crypto/rand`
-- Implement `Encrypt(plaintext, key []byte) ([]byte, error)` — AES-256-GCM: generate random nonce, prepend to ciphertext
-- Implement `Decrypt(ciphertext, key []byte) ([]byte, error)` — extract nonce, decrypt
-- Create `internal/crypto/aes_test.go`
-- Test: encrypt then decrypt returns original, different key fails, empty plaintext works, tampered ciphertext detected (GCM auth failure)
+- [x] Create `internal/crypto/aes.go`
+- [x] Implement `GenerateAESKey() ([]byte, error)` — 32 random bytes via `crypto/rand`
+- [x] Implement `Encrypt(plaintext, key []byte) ([]byte, error)` — AES-256-GCM: generate random nonce, prepend to ciphertext
+- [x] Implement `Decrypt(ciphertext, key []byte) ([]byte, error)` — extract nonce, decrypt
+- [x] Create `internal/crypto/aes_test.go`
+- [x] Test: encrypt then decrypt returns original, different key fails, empty plaintext works, tampered ciphertext detected (GCM auth failure)
 
-#### Task 3.5: Implement brute-force lockout
+#### Task 3.5: Implement brute-force lockout  [x]
 
-- Create `internal/auth/lockout.go` (or add to `session.go`)
-- Define constants: `MaxAttempts=5`, `LockoutDuration=30*time.Minute`
-- Implement `CheckLoginAttempts(store *store.Store, username string) error`:
+- [x] Create `internal/auth/lockout.go` (or add to `session.go`)
+- [x] Define constants: `MaxAttempts=5`, `LockoutDuration=30*time.Minute`
+- [x] Implement `CheckLoginAttempts(store *store.Store, username string) error`:
   - Check if locked → return `ErrAccountLocked` with remaining time
   - Check if attempt count >= MaxAttempts → lock account (save lock expiry), return error
   - If clear → return nil
-- Implement `RecordFailedAttempt(store *store.Store, username string) error`
-- Implement `RecordSuccessfulLogin(store *store.Store, username string) error` — resets attempts
-- Integrate into login handler (Phase 4)
+- [x] Implement `RecordFailedAttempt(store *store.Store, username string) error`
+- [x] Implement `RecordSuccessfulLogin(store *store.Store, username string) error` — resets attempts
+- [x] Integrate into login handler (Phase 4)
 
-#### Task 3.6: Implement audit log integration
+#### Task 3.6: Implement audit log integration  [x]
 
-- Create `internal/auth/audit.go` (or add to `internal/crypto/hashchain.go`)
-- Connect hash chain to BoltDB store: every state-changing operation appends an entry
-- Encrypt audit entries with AES before persisting (call `Encrypt` from Task 3.4)
-- Implement `VerifyAuditChain(store *store.Store) (bool, error)` — reads all entries, recomputes hashes, compares
+- [x] Create `internal/auth/audit.go` (or add to `internal/crypto/hashchain.go`)
+- [x] Connect hash chain to BoltDB store: every state-changing operation appends an entry
+- [x] Encrypt audit entries with AES before persisting (call `Encrypt` from Task 3.4)
+- [x] Implement `VerifyAuditChain(store *store.Store) (bool, error)` — reads all entries, recomputes hashes, compares
 
-#### Task 3.7: Implement TOTP 2FA (optional, Manager+ feature)
+#### Task 3.7: Implement TOTP 2FA (optional, Manager+ feature)  [x]
 
-- Create `internal/auth/totp.go`
-- Implement using only Go stdlib (`crypto/hmac`, `crypto/sha1`, `crypto/rand`, `encoding/base32`, `time`)
-- `GenerateTOTPSecret() (string, error)` — generates 20 random bytes, returns base32-encoded string (e.g., `"JBSWY3DPEHPK3PXP"`)
-- `GenerateTOTPCode(secret string, t time.Time) (string, error)` — HMAC-SHA1 of (counter = unix/30), returns 6-digit code per RFC 6238
-- `ValidateTOTPCode(secret string, code string) bool` — checks current code ± 1 interval (30s skew tolerance)
-- `GenerateTOTPURL(issuer, accountName, secret string) string` — returns `otpauth://totp/...` URL for QR generation
-- Create `internal/auth/totp_test.go`
-- Test: generate secret, generate code, validate same code, reject expired code, reject wrong code, consistent output for same time step
-- Integration: on login, if user has `TOTPEnabled`, after password validation prompt for TOTP code before issuing tokens
-- Profile page: Manager+ can enable/disable TOTP, view setup key, verify setup with one test code
+- [x] Create `internal/auth/totp.go`
+- [x] Implement using only Go stdlib (`crypto/hmac`, `crypto/sha1`, `crypto/rand`, `encoding/base32`, `time`)
+- [x] `GenerateTOTPSecret() (string, error)` — generates 20 random bytes, returns base32-encoded string (e.g., `"JBSWY3DPEHPK3PXP"`)
+- [x] `GenerateTOTPCode(secret string, t time.Time) (string, error)` — HMAC-SHA1 of (counter = unix/30), returns 6-digit code per RFC 6238
+- [x] `ValidateTOTPCode(secret string, code string) bool` — checks current code ± 1 interval (30s skew tolerance)
+- [x] `GenerateTOTPURL(issuer, accountName, secret string) string` — returns `otpauth://totp/...` URL for QR generation
+- [x] Create `internal/auth/totp_test.go`
+- [x] Test: generate secret, generate code, validate same code, reject expired code, reject wrong code, consistent output for same time step
+- [x] Integration: on login, if user has `TOTPEnabled`, after password validation prompt for TOTP code before issuing tokens
+- [x] Profile page: Manager+ can enable/disable TOTP, view setup key, verify setup with one test code
 
-#### Phase 3 validation:
+#### Phase 3 validation:  [x]
 
 ```bash
 go test -v ./internal/auth/... ./internal/crypto/...
@@ -884,16 +884,16 @@ go test -v ./internal/auth/... ./internal/crypto/...
 
 ---
 
-### Phase 4 — REST API
+### Phase 4 — REST API  [x]
 
 **Goal:** Build a complete REST API with Chi router, middleware, handlers, DTOs, and server entrypoint.
 
 ---
 
-#### Task 4.1: Create DTOs
+#### Task 4.1: Create DTOs  [x]
 
-- Create `api/dto.go`
-- Request DTOs:
+- [x] Create `api/dto.go`
+- [x] Request DTOs:
   - `LoginRequest`: `Username string`, `Password string`
   - `RegisterRequest`: `Username string`, `Password string`
   - `CreateMovieRequest`: `Title string`, `Year int`, `Genre string`, `Director string`, `Cast []string`, `Synopsis string`, `CopiesTotal int`, `IsNewRelease bool`
@@ -901,18 +901,18 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - `RentRequest`: `MovieID string`
   - `ReturnRequest`: `RentalID string`
   - `UpdateUserRequest`: `Tier string` (optional), `Banned *bool` (optional)
-- Response DTOs (structs with JSON tags):
+- [x] Response DTOs (structs with JSON tags):
   - `ErrorResponse`: `Error string`, `Code int`
   - `SuccessResponse`: `Message string`
   - `LoginResponse`: `AccessToken string`, `RefreshToken string`, `User models.UserResponse`
   - `MovieListResponse`: `Movies []models.MovieResponse`, `Total int`, `Page int`, `PageSize int`
-- Implement `WriteJSON(w http.ResponseWriter, status int, data interface{})`
-- Implement `WriteError(w http.ResponseWriter, status int, message string)`
+- [x] Implement `WriteJSON(w http.ResponseWriter, status int, data interface{})`
+- [x] Implement `WriteError(w http.ResponseWriter, status int, message string)`
 
-#### Task 4.2: Implement authentication middleware
+#### Task 4.2: Implement authentication middleware  [x]
 
-- Create `api/middleware.go`
-- `AuthMiddleware(secret string, store *store.Store)`:
+- [x] Create `api/middleware.go`
+- [x] `AuthMiddleware(secret string, store *store.Store)`:
   - Extract `Authorization: Bearer <token>` header
   - Validate JWT (call `ValidateAccessToken`)
   - Check if token revoked (query `sessions` bucket for revoked JTI)
@@ -920,24 +920,24 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Check user not banned (also check Bloom filter as fast path)
   - Inject `User` + `Permissions` into `context.Context`
   - Return 401 if missing/invalid token || 403 if banned
-- `RequirePermission(required Permission)` — middleware factory:
+- [x] `RequirePermission(required Permission)` — middleware factory:
   - Reads permissions from context
   - Calls `bitmask.Has(perms, required)`
   - Returns 403 with `"⛔ ACCESS DENIED — Insufficient clearance"` if check fails
-- `RequireStaff()` — middleware requiring `PermStaff`:
+- [x] `RequireStaff()` — middleware requiring `PermStaff`:
   - Used on return-processing endpoints where staff can return any customer's rentals
-- `TOTPMiddleware()` — if user has `TOTPEnabled`, validates TOTP header `X-TOTP-Code` on login step 2
-- `RateLimitMiddleware(rate int)` — token bucket:
+- [x] `TOTPMiddleware()` — if user has `TOTPEnabled`, validates TOTP header `X-TOTP-Code` on login step 2
+- [x] `RateLimitMiddleware(rate int)` — token bucket:
   - Per-IP counting via in-memory `map[string]*tokenBucket` with mutex
   - 100 req/min default
   - Returns 429 if exceeded
-- `CORSMiddleware()` — wraps `chi/cors` with permissive dev defaults
-- `LoggingMiddleware()` — logs method, path, status, duration to stdout
+- [x] `CORSMiddleware()` — wraps `chi/cors` with permissive dev defaults
+- [x] `LoggingMiddleware()` — logs method, path, status, duration to stdout
 
-#### Task 4.3: Implement auth handlers
+#### Task 4.3: Implement auth handlers  [x]
 
-- Create `api/auth_handler.go`
-- `POST /api/v1/auth/register`:
+- [x] Create `api/auth_handler.go`
+- [x] `POST /api/v1/auth/register`:
   - Parse `RegisterRequest`
   - Validate: username 3-20 chars alphanumeric, password 6+ chars
   - Check `UserExists` → 409 if taken
@@ -945,7 +945,7 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Create User with Tier=Bronze (Cliente Bronze), save to store
   - Append to audit hash chain: `ActionRegister`
   - Return 201 with `UserResponse`
-- `POST /api/v1/auth/login`:
+- [x] `POST /api/v1/auth/login`:
   - Call `CheckLoginAttempts` → 429 if locked
   - Find user by username → 401 if not found
   - `CheckPassword` → if fail: `RecordFailedAttempt`, return 401
@@ -959,46 +959,46 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Save refresh token to store (`SaveRefreshToken`)
   - Append to audit: `ActionLogin`
   - Return `LoginResponse` with tokens + user (include `totp_required: true/false` during initial password auth so the TUI knows to prompt)
-- `POST /api/v1/auth/login/totp`:
+- [x] `POST /api/v1/auth/login/totp`:
   - Temporary session token from step 1 (5-min expiry, no full access)
   - Accept `{code: "123456"}`
   - Validate TOTP → if valid, issue real token pair
   - If invalid → increment TOTP failure counter (lock after 3 TOTP failures)
-- `POST /api/v1/auth/refresh`:
+- [x] `POST /api/v1/auth/refresh`:
   - Accept refresh token from body
   - Validate, check not revoked
   - Invalidate old refresh token (rotation)
   - Generate new token pair
   - Save new refresh token
   - Return new `LoginResponse`
-- `POST /api/v1/auth/logout`:
+- [x] `POST /api/v1/auth/logout`:
   - Requires JWT auth
   - Invalidate refresh token (or all user sessions)
   - Append to audit: `ActionLogout`
   - Return 200
 
-#### Task 4.4: Implement movie handlers
+#### Task 4.4: Implement movie handlers  [x]
 
-- Create `api/movie_handler.go`
-- `GET /api/v1/movies`:
+- [x] Create `api/movie_handler.go`
+- [x] `GET /api/v1/movies`:
   - Query params: `genre`, `page` (default 1), `page_size` (default 20)
   - Call `ListMovies(genre, offset, limit)`
   - Return `MovieListResponse`
-- `GET /api/v1/movies/search?q=<prefix>`:
+- [x] `GET /api/v1/movies/search?q=<prefix>`:
   - Requires JWT (any tier)
   - Call `SearchMoviesByPrefix(q, 10)` — uses BoltDB prefix scan on `movies_by_title`
   - Return `[]models.MovieResponse`
-- `GET /api/v1/movies/staff-picks`:
+- [x] `GET /api/v1/movies/staff-picks`:
   - Requires JWT
   - Returns movies curated by Manager/Owner via dedicated BoltDB bucket `staff_picks`
   - Store picks as movie IDs; resolve to full movie objects on read
-- `GET /api/v1/movies/last-chance`:
+- [x] `GET /api/v1/movies/last-chance`:
   - Requires JWT
   - Returns movies where `CopiesAvailable == 1 && !IsNewRelease` — titles about to leave catalog
-- `GET /api/v1/movies/{id}`:
+- [x] `GET /api/v1/movies/{id}`:
   - Call `GetMovieByID(id)` → 404 if not found
   - Return `MovieResponse`
-- `POST /api/v1/movies`:
+- [x] `POST /api/v1/movies`:
   - Requires `RequirePermission(PermAdmin)` (Manager+)
   - Parse `CreateMovieRequest`
   - Validate: title required, year 1900–current, valid genre
@@ -1006,28 +1006,28 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Save to store
   - Append audit: `ActionAddMovie`
   - Return 201 with `MovieResponse`
-- `PUT /api/v1/movies/{id}`:
+- [x] `PUT /api/v1/movies/{id}`:
   - Requires `PermAdmin` (Manager+)
   - Parse `UpdateMovieRequest`, apply partial updates (only set non-nil fields)
   - Append audit: `ActionEditMovie`
   - Return updated `MovieResponse`
-- `DELETE /api/v1/movies/{id}`:
+- [x] `DELETE /api/v1/movies/{id}`:
   - Requires `PermAdmin` (Manager+)
   - Delete from store
   - Append audit: `ActionDeleteMovie`
   - Return 200
-- `POST /api/v1/movies/{id}/staff-pick`:
+- [x] `POST /api/v1/movies/{id}/staff-pick`:
   - Requires `PermAdmin` (Manager+)
   - Adds movie ID to `staff_picks` bucket
   - Return 200 with `{staff_pick: true}`
-- `DELETE /api/v1/movies/{id}/staff-pick`:
+- [x] `DELETE /api/v1/movies/{id}/staff-pick`:
   - Requires `PermAdmin` (Manager+)
   - Removes movie ID from `staff_picks` bucket
 
-#### Task 4.5: Implement rental handlers
+#### Task 4.5: Implement rental handlers  [x]
 
-- Create `api/rental_handler.go`
-- `POST /api/v1/rentals/rent`:
+- [x] Create `api/rental_handler.go`
+- [x] `POST /api/v1/rentals/rent`:
   - Requires `RequirePermission(PermRent)`
   - Parse `RentRequest`
   - Get user from context
@@ -1043,7 +1043,7 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Save rental
   - Append audit: `ActionRent`
   - Return rental with due date (+ rewind flag if VHS)
-- `POST /api/v1/rentals/return`:
+- [x] `POST /api/v1/rentals/return`:
   - Requires `PermRent`
   - Parse `ReturnRequest`
   - Get rental → 404
@@ -1057,64 +1057,64 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Save rental, movie, user
   - Append audit: `ActionReturn`
   - Return rental with fee breakdown (late fee + rewind fee)
-- `GET /api/v1/rentals/history`:
+- [x] `GET /api/v1/rentals/history`:
   - Requires JWT
   - Call `GetRentalHistoryByUser(userID)`
   - Return list of rentals with movie data joined
 
-#### Task 4.6: Implement user handlers (admin)
+#### Task 4.6: Implement user handlers (admin)  [x]
 
-- Create `api/user_handler.go`
-- `GET /api/v1/users`:
+- [x] Create `api/user_handler.go`
+- [x] `GET /api/v1/users`:
   - Requires Supervisor+ (`PermManageUsers`)
   - Call `ListUsers()`
   - Return list (omit password hashes)
-- `POST /api/v1/users`:
+- [x] `POST /api/v1/users`:
   - Requires Supervisor+ (`PermManageUsers`)
   - Parse `RegisterRequest` + optional tier
   - Same validation as register, but can set initial tier
   - Append audit: action depending on tier
   - Return 201
-- `PUT /api/v1/users/{id}`:
+- [x] `PUT /api/v1/users/{id}`:
   - Requires Supervisor+ (`PermManageUsers`)
   - Parse `UpdateUserRequest`
   - If tier changed → append audit `ActionPromote`/`ActionDemote`
   - If banned → append audit `ActionBan`, add to Bloom filter
   - Save user
   - Return updated user
-- `DELETE /api/v1/users/{id}`:
+- [x] `DELETE /api/v1/users/{id}`:
   - Requires Manager+ (`PermAdmin`)
   - Delete user from store
   - Append audit
   - Return 200
-- `POST /api/v1/users/{id}/totp`:
+- [x] `POST /api/v1/users/{id}/totp`:
   - Requires the user themselves OR Manager+
   - `{enabled: true}` → generate TOTP secret, store AES-encrypted, return secret & otpauth URL for QR setup
   - `{enabled: false}` → clear TOTP secret, disable
   - Append audit: `ActionTOTPEnabled` / `ActionTOTPDisabled`
 
-#### Task 4.7: Implement wishlist handler
+#### Task 4.7: Implement wishlist handler  [x]
 
-- Create `api/wishlist_handler.go`
-- `GET /api/v1/wishlist` — requires JWT (Bronze+) — returns user's wishlist with movie details
-- `POST /api/v1/wishlist` — requires JWT (Bronze+) — adds movie to wishlist (body: `{movie_id}`)
-- `DELETE /api/v1/wishlist/{movieID}` — requires JWT (Bronze+) — removes movie from wishlist
-- `GET /api/v1/wishlist/check/{movieID}` — requires JWT — returns `{in_wishlist: true/false}`
+- [x] Create `api/wishlist_handler.go`
+- [x] `GET /api/v1/wishlist` — requires JWT (Bronze+) — returns user's wishlist with movie details
+- [x] `POST /api/v1/wishlist` — requires JWT (Bronze+) — adds movie to wishlist (body: `{movie_id}`)
+- [x] `DELETE /api/v1/wishlist/{movieID}` — requires JWT (Bronze+) — removes movie from wishlist
+- [x] `GET /api/v1/wishlist/check/{movieID}` — requires JWT — returns `{in_wishlist: true/false}`
 
-#### Task 4.8: Implement audit handler
+#### Task 4.8: Implement audit handler  [x]
 
-- Create `api/audit_handler.go`
-- `GET /api/v1/audit`:
+- [x] Create `api/audit_handler.go`
+- [x] `GET /api/v1/audit`:
   - Requires Manager+
   - Query params: `user_id` (optional filter)
   - Call `GetAllAuditEntries` or `GetAuditEntriesByUser`
   - Decrypt entries with AES key
   - Return list
 
-#### Task 4.9: Create router and server entrypoint
+#### Task 4.9: Create router and server entrypoint  [x]
 
-- Create `api/router.go`
-- Build Chi router:
+- [x] Create `api/router.go`
+- [x] Build Chi router:
   - Apply `CORSMiddleware`, `LoggingMiddleware`, `RateLimitMiddleware(100)` globally
   - Group `/api/v1/auth`: register (no auth), login (no auth), login/totp (temporary session), refresh (JWT), logout (JWT)
   - Group `/api/v1/movies`: GET list/search/staff-picks/last-chance (JWT), POST/PUT/DELETE/staff-pick (JWT + PermAdmin)
@@ -1124,7 +1124,7 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Group `/api/v1/audit`: JWT + Supervisor+
   - Group `/api/v1/recommendations/{movieID}`: JWT — returns co-rental recommendations from Graph DS
   - Health check: `GET /health` returns `{"status":"ok"}`
-- Create `cmd/server/main.go`:
+- [x] Create `cmd/server/main.go`:
   - Load config via `config.Load()`
   - Open BoltDB store via `store.Open(config.DBPath)`
   - Defer store.Close()
@@ -1132,7 +1132,7 @@ go test -v ./internal/auth/... ./internal/crypto/...
   - Start HTTP server on `config.ServerPort`
   - Graceful shutdown on SIGINT/SIGTERM
 
-#### Phase 4 validation:
+#### Phase 4 validation:  [x]
 
 ```bash
 # Start server
@@ -1150,46 +1150,46 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/rentals/rent
 
 ---
 
-### Phase 5 — TUI Foundation
+### Phase 5 — TUI Foundation  [x]
 
 **Goal:** Set up the Bubble Tea application shell, global state management, theme system, and visual effects.
 
 ---
 
-#### Task 5.1: Install TUI dependencies
+#### Task 5.1: Install TUI dependencies  [x]
 
-- Run `go get github.com/charmbracelet/bubbletea`
-- Run `go get github.com/charmbracelet/lipgloss`
-- Run `go get github.com/charmbracelet/bubbles`
-- Verify: `go mod tidy`
+- [x] Run `go get github.com/charmbracelet/bubbletea`
+- [x] Run `go get github.com/charmbracelet/lipgloss`
+- [x] Run `go get github.com/charmbracelet/bubbles`
+- [x] Verify: `go mod tidy`
 
-#### Task 5.2: Create theme and styles
+#### Task 5.2: Create theme and styles  [x]
 
-- Create `tui/styles/theme.go`
-- Define color palette constants using `lipgloss.Color`:
+- [x] Create `tui/styles/theme.go`
+- [x] Define color palette constants using `lipgloss.Color`:
   - `Cyan = "#00FFFF"`, `Magenta = "#FF00FF"`, `Yellow = "#FFFF00"`
   - `NeonGreen = "#39FF14"`, `NeonPink = "#FF6EC7"`
   - `Background = "#0A0A2E"` (dark blue), `Surface = "#121240"`, `BorderDim = "#333366"`
   - `Error = "#FF4444"`, `Success = "#44FF44"`, `Warning = "#FFAA00"`
-- Define `AppStyle` — full-screen container with background color
-- Define `BorderStyle` — lipgloss border with rounded corners, cyan/magenta edge
-- Define `TitleStyle` — bold, cyan, large text
-- Define `TextStyle`, `DimTextStyle`, `ErrorTextStyle`, `SuccessTextStyle`
-- Define tier-specific color map: `TierColors = map[string]lipgloss.Color{...}`
+- [x] Define `AppStyle` — full-screen container with background color
+- [x] Define `BorderStyle` — lipgloss border with rounded corners, cyan/magenta edge
+- [x] Define `TitleStyle` — bold, cyan, large text
+- [x] Define `TextStyle`, `DimTextStyle`, `ErrorTextStyle`, `SuccessTextStyle`
+- [x] Define tier-specific color map: `TierColors = map[string]lipgloss.Color{...}`
 
-#### Task 5.3: Create visual effects
+#### Task 5.3: Create visual effects  [x]
 
-- Create `tui/styles/effects.go`
-- Implement `Scanlines(width, height int) string` — generates alternating lines of semi-transparent `░` pattern over the full terminal dimensions
-- Implement `GlitchFrame() string` — returns random character noise `▓▒░█▄▀` (1-3 chars) for temporary glitch overlay; called randomly on page transitions
-- Implement `VHSSpinner() []string` — custom spinner frames: `["▌", "▌ ", " ▌", " ▌", "▌ ", "▌", " ▌", " ▌ "]` (tracking artifact)
-- Implement `RewindAnimation(tapeName string) string` — returns "◄◄ REWINDING: <tapeName> ... ▌" styled text
-- Implement `AccessDeniedOverlay(width, height int) string` — full-screen "⛔ ACCESS DENIED" in red with scanlines
+- [x] Create `tui/styles/effects.go`
+- [x] Implement `Scanlines(width, height int) string` — generates alternating lines of semi-transparent `░` pattern over the full terminal dimensions
+- [x] Implement `GlitchFrame() string` — returns random character noise `▓▒░█▄▀` (1-3 chars) for temporary glitch overlay; called randomly on page transitions
+- [x] Implement `VHSSpinner() []string` — custom spinner frames: `["▌", "▌ ", " ▌", " ▌", "▌ ", "▌", " ▌", " ▌ "]` (tracking artifact)
+- [x] Implement `RewindAnimation(tapeName string) string` — returns "◄◄ REWINDING: <tapeName> ... ▌" styled text
+- [x] Implement `AccessDeniedOverlay(width, height int) string` — full-screen "⛔ ACCESS DENIED" in red with scanlines
 
-#### Task 5.4: Create global state
+#### Task 5.4: Create global state  [x]
 
-- Create `tui/state.go`
-- Define `SessionState` struct:
+- [x] Create `tui/state.go`
+- [x] Define `SessionState` struct:
   - `AccessToken string`, `RefreshToken string`
   - `User *models.UserResponse`
   - `Permissions bitmask.Permission`
@@ -1197,24 +1197,24 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/rentals/rent
   - `Cache *lru.Cache[string, interface{}]` — shared cache (capacity 1000)
   - `MovieCache *lru.Cache[string, *models.MovieResponse]` — dedicated movie cache
   - `APIBaseURL string`
-- Implement `NewSessionState(apiURL string) *SessionState` — initializes caches
-- Implement `Login(tokenPair *auth.TokenPair, user *models.UserResponse)`
-- Implement `Logout()` — clears session
-- Implement `HasPermission(perm bitmask.Permission) bool`
-- Implement `CanAccessAdmin() bool`
-- Implement `RefreshAccessToken() error` — calls `/api/v1/auth/refresh` with current refresh token, updates tokens
+- [x] Implement `NewSessionState(apiURL string) *SessionState` — initializes caches
+- [x] Implement `Login(tokenPair *auth.TokenPair, user *models.UserResponse)`
+- [x] Implement `Logout()` — clears session
+- [x] Implement `HasPermission(perm bitmask.Permission) bool`
+- [x] Implement `CanAccessAdmin() bool`
+- [x] Implement `RefreshAccessToken() error` — calls `/api/v1/auth/refresh` with current refresh token, updates tokens
 
-#### Task 5.5: Create API client
+#### Task 5.5: Create API client  [x]
 
-- Create `tui/api_client.go` (or within `state.go`)
-- Implement generic `doRequest(method, path string, body interface{}, target interface{}) error`:
+- [x] Create `tui/api_client.go` (or within `state.go`)
+- [x] Implement generic `doRequest(method, path string, body interface{}, target interface{}) error`:
   - Uses `net/http` with 10s timeout
   - Sets `Authorization: Bearer <token>` if logged in
   - Sets `Content-Type: application/json`
   - JSON-encodes body if non-nil
   - JSON-decodes response into target
   - On 401 → attempts refresh token → retries once
-- Implement typed methods:
+- [x] Implement typed methods:
   - `Login(username, password string) (*LoginResponse, error)`
   - `Register(username, password string) (*UserResponse, error)`
   - `SearchMovies(query string) ([]*MovieResponse, error)`
@@ -1227,37 +1227,37 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/rentals/rent
   - `UpdateUser(id string, req *UpdateUserRequest) (*UserResponse, error)`
   - `GetAuditEntries() ([]*AuditEntry, error)`
 
-#### Task 5.6: Create TUI application shell
+#### Task 5.6: Create TUI application shell  [x]
 
-- Create `tui/app.go`
-- Define `Model` struct implementing `bubbletea.Model`:
+- [x] Create `tui/app.go`
+- [x] Define `Model` struct implementing `bubbletea.Model`:
   - Fields: `currentPage Page`, `session *SessionState`, `width int`, `height int`, `ready bool`, `lastTick time.Time`
-- Define `Page` type: `type Page int` with constants:
+- [x] Define `Page` type: `type Page int` with constants:
   - `PageSplash`, `PageLogin`, `PageRegister`, `PageBrowse`, `PageMovieDetail`, `PageMyRentals`, `PageProfile`, `PageAdminUsers`, `PageAdminMovies`, `PageAuditLog`
-- Implement `Init() tea.Cmd`:
+- [x] Implement `Init() tea.Cmd`:
   - Returns `tea.Batch(tea.EnterAltScreen, tea.ClearScreen, tickCmd())` — ticks for clock/animations
-- Implement `Update(msg tea.Msg) (tea.Model, tea.Cmd)`:
+- [x] Implement `Update(msg tea.Msg) (tea.Model, tea.Cmd)`:
   - `tea.WindowSizeMsg` → store width/height, set ready
   - `tea.KeyMsg`:
     - `ctrl+c`, `esc` (on non-modal) → `tea.Quit`
     - Delegate to current page's Update method
   - `tickMsg` → trigger re-render for clock update, return `tickCmd()`
   - Delegate all other messages to current page's Update
-- Implement `View() string`:
+- [x] Implement `View() string`:
   - If not ready → "Initializing..."
   - Render: header component + current page View + footer component
-- Create `cmd/client/main.go`:
+- [x] Create `cmd/client/main.go`:
   - Parse CLI flags: `--api-url` (default `http://localhost:8080`), `--debug`
   - Create `SessionState`
   - Create `Model` with `PageSplash`
   - Run `tea.NewProgram(model, tea.WithAltScreen()).Run()`
 
-#### Task 5.5a: Create tick and header
+#### Task 5.5a: Create tick and header  [x]
 
-- `tickCmd()` returns `tea.Tick(time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })`
-- Header shows: ASCII "THE LAST VIDEO STORE" banner (hardcoded multi-line string with ANSI/lipgloss styling), current time, "NOW SHOWING" if a movie is highlighted
+- [x] `tickCmd()` returns `tea.Tick(time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })`
+- [x] Header shows: ASCII "THE LAST VIDEO STORE" banner (hardcoded multi-line string with ANSI/lipgloss styling), current time, "NOW SHOWING" if a movie is highlighted
 
-#### Phase 5 validation:
+#### Phase 5 validation:  [x]
 
 ```bash
 go build ./cmd/client && ./client

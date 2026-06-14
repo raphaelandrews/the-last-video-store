@@ -7,13 +7,13 @@ import (
 type User struct {
 	ID            string             `json:"id"`
 	Username      string             `json:"username"`
-	PasswordHash  string             `json:"-"`
+	PasswordHash  string             `json:"password_hash"`
 	Tier          bitmask.Permission `json:"tier"`
 	MaxRentals    int                `json:"max_rentals"`
 	RentalCount   int                `json:"rental_count"`
 	Banned        bool               `json:"banned"`
 	TOTPEnabled   bool               `json:"totp_enabled"`
-	TOTPSecret    string             `json:"-"`
+	TOTPSecret    string             `json:"totp_secret"`
 	PopcornPoints int                `json:"popcorn_points"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`

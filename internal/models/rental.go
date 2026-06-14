@@ -1,7 +1,5 @@
 package models
 
-import "time"
-
 const (
 	RentalActive   = "active"
 	RentalReturned = "returned"
@@ -62,7 +60,8 @@ func (r *Rental) CalculateLateFee(now int64) float64 {
 	if now <= r.DueDate {
 		return 0
 	}
-	daysLate := (now - r.DueDate) / int64(24*time.Hour)
+	const day = int64(24 * 3600)
+	daysLate := (now - r.DueDate) / day
 	if daysLate < 1 {
 		daysLate = 1
 	}
@@ -82,13 +81,14 @@ func (r *Rental) TotalFee() float64 {
 }
 
 func DueDateForFormat(format string, rentedAt int64) int64 {
+	const day = int64(24 * 3600)
 	switch format {
 	case "VHS":
-		return rentedAt + int64(3*24*time.Hour)
+		return rentedAt + 3*day
 	case "DVD", "Blu-ray":
-		return rentedAt + int64(5*24*time.Hour)
+		return rentedAt + 5*day
 	default:
-		return rentedAt + int64(5*24*time.Hour)
+		return rentedAt + 5*day
 	}
 }
 
