@@ -24,6 +24,8 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 	userHandler := NewUserHandler(store, cfg, hc)
 	wishlistHandler := NewWishlistHandler(store, cfg, hc)
 	auditHandler := NewAuditHandler(store, cfg)
+	merchHandler := &MerchHandler{Store: store}
+	inventoryHandler := &InventoryHandler{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -60,6 +62,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 			r.Route("/rentals", func(r chi.Router) {
 				r.Post("/rent", rentalHandler.Rent)
 				r.Post("/return", rentalHandler.Return)
+				r.Post("/extend", rentalHandler.Extend)
 				r.Get("/history", rentalHandler.History)
 			})
 
@@ -89,6 +92,15 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 			r.Route("/audit", func(r chi.Router) {
 				r.Use(RequirePermission(bitmask.PermManageUsers))
 				r.Get("/", auditHandler.List)
+			})
+
+			r.Route("/merch", func(r chi.Router) {
+				r.Get("/", merchHandler.List)
+				r.Post("/redeem", merchHandler.Redeem)
+			})
+
+			r.Route("/inventory", func(r chi.Router) {
+				r.Get("/", inventoryHandler.List)
 			})
 		})
 	})

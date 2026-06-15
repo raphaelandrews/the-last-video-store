@@ -13,25 +13,56 @@ type (
 	BrowseReloadMsg struct{}
 )
 
+type BrowseMode int
+
+const (
+	ModeAll BrowseMode = iota
+	ModeStaffPicks
+	ModeLastChance
+)
+
 type BrowseModel struct {
-	Movies   []models.MovieResponse
-	Selected int
-	Total    int
-	Loading  bool
-	Status   string
+	Movies     []models.MovieResponse
+	Selected   int
+	Total      int
+	Loading    bool
+	Status     string
+	Page       int
+	PageSize   int
+	TotalPages int
+	Mode       BrowseMode
 }
 
-func NewBrowseModel() *BrowseModel { return &BrowseModel{Selected: -1, Loading: true} }
+func NewBrowseModel() *BrowseModel {
+	return &BrowseModel{Selected: -1, Loading: true, Page: 1, PageSize: 40}
+}
 
-func (m *BrowseModel) SetMovies(movies []models.MovieResponse, total int) {
+func (m *BrowseModel) SetMovies(movies []models.MovieResponse, total int, page int) {
 	m.Movies = movies
 	m.Total = total
+	m.Page = page
+	if m.Mode == ModeAll {
+		m.TotalPages = (total + m.PageSize - 1) / m.PageSize
+		m.Status = fmt.Sprintf("page %d/%d · %d movies", page, m.TotalPages, total)
+	} else {
+		m.TotalPages = 1
+		label := "Staff Picks"
+		if m.Mode == ModeLastChance {
+			label = "Last Chance"
+		}
+		m.Status = fmt.Sprintf("%s · %d movies", label, total)
+	}
 	m.Loading = false
-	m.Status = fmt.Sprintf("%d movies", total)
 	if len(movies) > 0 && m.Selected < 0 {
 		m.Selected = 0
 	}
+	if len(movies) == 0 {
+		m.Selected = -1
+	}
 }
+
+func (m *BrowseModel) HasNextPage() bool { return m.Page < m.TotalPages }
+func (m *BrowseModel) HasPrevPage() bool { return m.Page > 1 }
 
 func (m *BrowseModel) MoveUp() {
 	m.Selected--

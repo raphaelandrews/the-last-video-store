@@ -183,6 +183,53 @@ func (s *Store) CountActiveRentalsByUser(userID string) (int, error) {
 	return count, err
 }
 
+func (s *Store) ExtendRental(rentalID, userID string, extensionDays int64, cost int) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		rb := tx.Bucket(bucketRentals)
+		data := rb.Get([]byte(rentalID))
+		if data == nil {
+			return fmt.Errorf("rental not found")
+		}
+		var rental models.Rental
+		if err := json.Unmarshal(data, &rental); err != nil {
+			return err
+		}
+		if rental.UserID != userID {
+			return fmt.Errorf("not your rental")
+		}
+		if rental.Status == models.RentalReturned {
+			return fmt.Errorf("already returned")
+		}
+
+		ub := tx.Bucket(bucketUsers)
+		userData := ub.Get([]byte(userID))
+		if userData == nil {
+			return fmt.Errorf("user not found")
+		}
+		var user models.User
+		if err := json.Unmarshal(userData, &user); err != nil {
+			return err
+		}
+		if user.PopcornPoints < cost {
+			return fmt.Errorf("need %d popcorn points, have %d", cost, user.PopcornPoints)
+		}
+
+		user.PopcornPoints -= cost
+		rental.DueDate += extensionDays * 24 * 3600
+		if rental.Status == models.RentalOverdue {
+			rental.Status = models.RentalActive
+		}
+
+		updatedUser, _ := json.Marshal(&user)
+		ub.Put([]byte(userID), updatedUser)
+
+		updatedRental, _ := json.Marshal(&rental)
+		rb.Put([]byte(rentalID), updatedRental)
+
+		return nil
+	})
+}
+
 func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }

@@ -36,6 +36,8 @@ func (m *SearchbarModel) Blur() {
 	m.selected = -1
 }
 
+func (m *SearchbarModel) Value() string { return m.input.Value() }
+
 func (m *SearchbarModel) IsActive() bool { return m.active }
 
 func (m *SearchbarModel) Update(msg tea.Msg) {
@@ -55,6 +57,13 @@ func (m *SearchbarModel) SelectedMovieID() string {
 		return m.results[m.selected].ID
 	}
 	return ""
+}
+
+func (m *SearchbarModel) SelectedMovie() *models.MovieResponse {
+	if m.selected >= 0 && m.selected < len(m.results) {
+		return &m.results[m.selected]
+	}
+	return nil
 }
 
 func (m *SearchbarModel) MoveSelection(delta int) {

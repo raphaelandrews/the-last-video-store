@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
@@ -9,6 +10,7 @@ import (
 )
 
 type ReturnRequestMsg struct{ RentalID string }
+type ExtendRentalMsg struct{ RentalID string }
 type RentalsReloadMsg struct{}
 
 type MyRentalsModel struct {
@@ -63,16 +65,31 @@ func (m *MyRentalsModel) View(w, h int) string {
 			st = styles.HighlightStyle
 		}
 		status := "🟢 active"
-		if r.Status == "overdue" {
-			status = "🔴 overdue"
-		} else if r.Status == "returned" {
+		due := ""
+		now := time.Now().Unix()
+		const day = int64(24 * 3600)
+		daysLeft := (r.DueDate - now) / day
+		if r.Status == "returned" {
 			status = "✓ returned"
+		} else if daysLeft < 0 {
+			status = "🔴 overdue"
+			due = fmt.Sprintf(" by %d days", -daysLeft)
+		} else if daysLeft <= 2 {
+			status = "🟡 due soon"
+			due = fmt.Sprintf(" in %d day(s)", daysLeft)
+		} else {
+			due = fmt.Sprintf(" in %d days", daysLeft)
 		}
-		line := fmt.Sprintf("%s%-30s %s  %s", prefix, truncStr(r.MovieTitle, 28),
-			styles.FormatBadge(r.MovieFormat), status)
+		freeTag := ""
+		if r.IsFreeRental {
+			freeTag = " 🎟️ FREE"
+		}
+
+		line := fmt.Sprintf("%s%-30s %s  %s%s%s", prefix, truncStr(r.MovieTitle, 28),
+			styles.FormatBadge(r.MovieFormat), status, due, freeTag)
 		fee := r.LateFee + r.RewindFee
 		if fee > 0 {
-			line += fmt.Sprintf("  $%.2f", fee)
+			line += fmt.Sprintf("  💵 $%.2f", fee)
 		}
 		rows = append(rows, st.Render(line))
 	}

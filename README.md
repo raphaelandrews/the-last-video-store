@@ -12,9 +12,9 @@ Blockbuster. It features a rich terminal user interface powered by
 [Charmbracelet Bubble Tea](https://github.com/charmbracelet/bubbletea) and a REST API
 backend that runs on [Render](https://render.com).
 
-Users browse a 40+ movie catalog, rent VHS/DVD/Blu-ray tapes, return them, manage their membership,
-and explore co-rental recommendations — all gated by a **7-tier Role-Based Access Control (RBAC)**
-system enforced through 6-bit bitmask operations.
+Users browse a ~135 movie catalog, rent VHS/DVD/Blu-ray tapes, earn 🍿 Popcorn Points on returns,
+redeem rewards (free rentals, tier upgrades, collectibles), and manage their membership —
+all gated by a **7-tier Role-Based Access Control (RBAC)** system enforced through 6-bit bitmask operations.
 
 ## Quick Start
 
@@ -22,7 +22,7 @@ system enforced through 6-bit bitmask operations.
 # Clone and enter
 git clone https://github.com/anomalyco/the-last-video-store && cd the-last-video-store
 
-# Seed the database
+# Seed the database (~135 movies, 8 users, merchandise catalog)
 go run ./data/seed.go
 
 # Start the API server
@@ -33,18 +33,28 @@ go run ./cmd/client/
 # or: go run ./cmd/client/ --api-url http://localhost:8080
 ```
 
+All 8 test users share the password: `123`
+
 ## Features
 
-- 🎞️ **40+ Movies** — VHS, DVD, Blu-ray with cover art and synopses
-- 🔍 **Trie Autocomplete** — Type 2 letters for instant search suggestions
+- 🎞️ **~135 Movies** — VHS, DVD, Blu-ray spanning 1937–2022, 8 genres
+- 🔍 **Live Search** — `/` opens search bar, type for instant prefix results
+- 📄 **Paginated Browse** — 40 movies per page, `N`/`B` navigation
 - 📼 **Format-Aware Rentals** — VHS: 3 days, DVD/Blu-ray: 5 days
+- ⏱️ **Due Date Countdown** — "due in N days", "due soon", "overdue by N days"
+- 📅 **Extend Rentals** — `E` on rentals page, costs 30🍿 for +2 days
 - 💰 **Late & Rewind Fees** — $2/day VHS, $3/day DVD; $1 VHS rewind fee
+- 🍿 **Popcorn Points** — +10 on-time return, -5 late; spend on rewards
+- 🎁 **Rewards Shop** — 7 items: free rentals, tier upgrade, collectibles, merch
+- 🎒 **Inventory** — Collectibles (popcorn bucket, VHS tape, poster, t-shirt)
+- 🎟️ **Free Rentals** — Bypass tier limit, waive all late fees
+- ⬆️ **Tier Upgrade** — Spend 1000🍿 to permanently promote one tier level
 - 🏷️ **7 Membership Tiers** — Bronze → Silver → Gold → Employee → Supervisor → Manager → Owner
-- 🛡️ **RBAC Bitmask** — O(1) permission checks, Staff bit cleanly separates employees from Gold members
+- 🛡️ **RBAC Bitmask** — O(1) permission checks, Staff bit separates employees from Gold members
 - 🔐 **JWT Auth** — Access (15min) + Refresh (7day) tokens with rotation
 - 🔒 **TOTP 2FA** — Optional time-based one-time passwords (Manager+)
-- 📋 **Wishlist** — Add titles, get "Available now!" notifications
-- ⭐ **Staff Picks & Last Chance** — Curated recommendations + disappearing titles
+- 📋 **Wishlist** — Add from detail page, view/remove with `V` key
+- ⭐ **Staff Picks & Last Chance** — `S`/`L` toggle curated + disappearing titles
 - 📊 **Graph Recommendations** — "Customers who rented this also rented..."
 - 🧾 **Immutable Audit Trail** — SHA-256 hash chain, tamper-detectable
 - 🚫 **Brute-force Lockout** — 5 failed attempts = 30-minute account lock
@@ -71,30 +81,31 @@ thelastvideostore/
 │   │   ├── lru/                # LRU cache
 │   │   ├── bloom/              # Bloom filter
 │   │   └── graph/              # Undirected weighted graph
-│   ├── models/                 # User, Movie, Rental, Wishlist, Audit
+│   ├── models/                 # User, Movie, Rental, Wishlist, Audit, Merch, Inventory
 │   └── store/                  # BoltDB persistence layer
 ├── api/                        # Chi REST API (handlers, middleware, DTOs)
-├── tui/                        # Bubble Tea TUI (pages, components, styles)
-├── data/seed.go                # Database seed script (40+ movies, 8 users)
+├── tui/                        # Bubble Tea TUI (app, keys, commands, views, pages, components, styles)
+├── data/seed.go                # Database seed script (~135 movies, 8 users, merch)
 ├── tests/                      # Integration tests
 ├── Dockerfile.server           # Docker build for Render
 ├── render.yaml                 # Render Blueprint config
 ├── Makefile                    # Build/test/run/cross-compile
+├── FEATURES.md                 # Full feature reference
 └── README.md
 ```
 
 ## Test Users
 
-| Username   | Password   | Tier       | Max Rentals |
-|-----------|-----------|-----------|:----------:|
-| bronze    | password1 | Bronze    | 1 |
-| silver    | password2 | Silver    | 2 |
-| gold      | password3 | Gold      | 5 |
-| employee  | password4 | Employee  | 5 |
-| supervisor| password8 | Supervisor| 5 |
-| manager   | password5 | Manager   | 10 |
-| owner     | password6 | Owner     | ∞ |
-| banned    | password7 | Bronze    | (suspended) |
+| Username   | Password | Tier       | Max Rentals | 🍿 Points |
+|-----------|---------|-----------|:----------:|:--------:|
+| bronze    | 123     | Bronze    | 1          | 250      |
+| silver    | 123     | Silver    | 2          | 250      |
+| gold      | 123     | Gold      | 5          | 250      |
+| employee  | 123     | Employee  | 5          | 250      |
+| supervisor| 123     | Supervisor| 5          | 250      |
+| manager   | 123     | Manager   | 10         | 250      |
+| owner     | 123     | Owner     | ∞          | 250      |
+| banned    | 123     | Bronze    | (suspended)| 250      |
 
 ## API Endpoints
 
@@ -115,16 +126,32 @@ thelastvideostore/
 | `DELETE`| `/api/v1/movies/{id}` | Manager+ | Delete movie |
 | `POST` | `/api/v1/rentals/rent` | JWT | Rent a movie |
 | `POST` | `/api/v1/rentals/return` | JWT | Return a movie |
+| `POST` | `/api/v1/rentals/extend` | JWT | Extend due date (30🍿, +2 days) |
 | `GET`  | `/api/v1/rentals/history` | JWT | User's rental history |
 | `GET`  | `/api/v1/wishlist` | JWT | View wishlist |
 | `POST` | `/api/v1/wishlist` | JWT | Add to wishlist |
 | `DELETE`| `/api/v1/wishlist/{movieID}` | JWT | Remove from wishlist |
+| `GET`  | `/api/v1/merch` | JWT | List rewards catalog |
+| `POST` | `/api/v1/merch/redeem` | JWT | Redeem popcorn points for a reward |
+| `GET`  | `/api/v1/inventory` | JWT | View your collectibles |
 | `GET`  | `/api/v1/users` | Supervisor+ | List all users |
 | `POST` | `/api/v1/users` | Supervisor+ | Create user |
 | `PUT`  | `/api/v1/users/{id}` | Supervisor+ | Update user tier/ban |
 | `DELETE`| `/api/v1/users/{id}` | Manager+ | Delete user |
 | `POST` | `/api/v1/users/{id}/totp` | Self/Manager+ | Enable/disable TOTP 2FA |
 | `GET`  | `/api/v1/audit` | Supervisor+ | View audit log |
+
+## Rewards Catalog
+
+| Item | 🍿 Cost | Effect |
+|------|:------:|--------|
+| Popcorn Bucket | 50 | +5 bonus points on every future return |
+| Blank VHS Tape | 75 | Collectible (inventory) |
+| Movie Poster | 100 | Collectible (inventory) |
+| Store T-Shirt | 150 | Collectible (inventory) |
+| Free Rental Coupon | 200 | +1 free rental (no late fees, bypasses limit) |
+| Private Screening | 500 | +5 free rentals |
+| Tier Upgrade | 1000 | Permanent tier promotion (up to Gold) |
 
 ## Data Structures (All From Scratch)
 

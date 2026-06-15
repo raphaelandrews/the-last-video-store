@@ -22,6 +22,8 @@ var (
 	bucketStaffPicks      = []byte("staff_picks")
 	bucketTOTPSecrets     = []byte("totp_secrets")
 	bucketLockouts        = []byte("lockouts")
+	bucketMerch           = []byte("merch")
+	bucketInventory       = []byte("inventory")
 )
 
 type Store struct {
@@ -40,7 +42,7 @@ func Open(path string) (*Store, error) {
 			bucketMoviesByGenre, bucketMoviesByTitle, bucketRentals,
 			bucketRentalsByUser, bucketAuditLogs, bucketSessions,
 			bucketBanned, bucketWishlists, bucketStaffPicks,
-			bucketTOTPSecrets, bucketLockouts,
+			bucketTOTPSecrets, bucketLockouts, bucketMerch, bucketInventory,
 		}
 		for _, b := range buckets {
 			if _, err := tx.CreateBucketIfNotExists(b); err != nil {

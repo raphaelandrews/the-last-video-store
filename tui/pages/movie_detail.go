@@ -11,10 +11,11 @@ import (
 type RentRequestMsg struct{ MovieID string }
 
 type MovieDetailModel struct {
-	Movie  *models.MovieResponse
-	Rental *models.RentalResponse
-	Rented bool
-	ErrMsg string
+	Movie     *models.MovieResponse
+	Rental    *models.RentalResponse
+	Rented    bool
+	ErrMsg    string
+	StatusMsg string
 }
 
 func NewMovieDetailModel(m *models.MovieResponse) *MovieDetailModel {
@@ -63,6 +64,9 @@ func (m *MovieDetailModel) View(w, h int) string {
 	lines := []string{title, "", meta, rating, badge, "", synopsis, "", copies, styles.DimTextStyle.Render(cast)}
 	if m.ErrMsg != "" {
 		lines = append(lines, styles.ErrorTextStyle.Render(m.ErrMsg))
+	}
+	if m.StatusMsg != "" {
+		lines = append(lines, styles.SuccessTextStyle.Render(m.StatusMsg))
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }

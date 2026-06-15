@@ -7,48 +7,51 @@ const (
 )
 
 type Rental struct {
-	ID          string  `json:"id"`
-	UserID      string  `json:"user_id"`
-	MovieID     string  `json:"movie_id"`
-	MovieFormat string  `json:"movie_format"`
-	RentedAt    int64   `json:"rented_at"`
-	DueDate     int64   `json:"due_date"`
-	ReturnedAt  int64   `json:"returned_at"`
-	LateFee     float64 `json:"late_fee"`
-	RewindFee   float64 `json:"rewind_fee"`
-	NeedsRewind bool    `json:"needs_rewind"`
-	Status      string  `json:"status"`
+	ID           string  `json:"id"`
+	UserID       string  `json:"user_id"`
+	MovieID      string  `json:"movie_id"`
+	MovieFormat  string  `json:"movie_format"`
+	RentedAt     int64   `json:"rented_at"`
+	DueDate      int64   `json:"due_date"`
+	ReturnedAt   int64   `json:"returned_at"`
+	LateFee      float64 `json:"late_fee"`
+	RewindFee    float64 `json:"rewind_fee"`
+	NeedsRewind  bool    `json:"needs_rewind"`
+	Status       string  `json:"status"`
+	IsFreeRental bool    `json:"is_free_rental"`
 }
 
 type RentalResponse struct {
-	ID          string  `json:"id"`
-	UserID      string  `json:"user_id"`
-	MovieID     string  `json:"movie_id"`
-	MovieTitle  string  `json:"movie_title"`
-	MovieFormat string  `json:"movie_format"`
-	RentedAt    int64   `json:"rented_at"`
-	DueDate     int64   `json:"due_date"`
-	ReturnedAt  int64   `json:"returned_at"`
-	LateFee     float64 `json:"late_fee"`
-	RewindFee   float64 `json:"rewind_fee"`
-	NeedsRewind bool    `json:"needs_rewind"`
-	Status      string  `json:"status"`
+	ID           string  `json:"id"`
+	UserID       string  `json:"user_id"`
+	MovieID      string  `json:"movie_id"`
+	MovieTitle   string  `json:"movie_title"`
+	MovieFormat  string  `json:"movie_format"`
+	RentedAt     int64   `json:"rented_at"`
+	DueDate      int64   `json:"due_date"`
+	ReturnedAt   int64   `json:"returned_at"`
+	LateFee      float64 `json:"late_fee"`
+	RewindFee    float64 `json:"rewind_fee"`
+	NeedsRewind  bool    `json:"needs_rewind"`
+	Status       string  `json:"status"`
+	IsFreeRental bool    `json:"is_free_rental"`
 }
 
 func (r *Rental) ToResponse(movieTitle string) RentalResponse {
 	return RentalResponse{
-		ID:          r.ID,
-		UserID:      r.UserID,
-		MovieID:     r.MovieID,
-		MovieTitle:  movieTitle,
-		MovieFormat: r.MovieFormat,
-		RentedAt:    r.RentedAt,
-		DueDate:     r.DueDate,
-		ReturnedAt:  r.ReturnedAt,
-		LateFee:     r.LateFee,
-		RewindFee:   r.RewindFee,
-		NeedsRewind: r.NeedsRewind,
-		Status:      r.Status,
+		ID:           r.ID,
+		UserID:       r.UserID,
+		MovieID:      r.MovieID,
+		MovieTitle:   movieTitle,
+		MovieFormat:  r.MovieFormat,
+		RentedAt:     r.RentedAt,
+		DueDate:      r.DueDate,
+		ReturnedAt:   r.ReturnedAt,
+		LateFee:      r.LateFee,
+		RewindFee:    r.RewindFee,
+		NeedsRewind:  r.NeedsRewind,
+		Status:       r.Status,
+		IsFreeRental: r.IsFreeRental,
 	}
 }
 
@@ -57,7 +60,7 @@ func (r *Rental) IsOverdue(now int64) bool {
 }
 
 func (r *Rental) CalculateLateFee(now int64) float64 {
-	if now <= r.DueDate {
+	if now <= r.DueDate || r.IsFreeRental {
 		return 0
 	}
 	const day = int64(24 * 3600)

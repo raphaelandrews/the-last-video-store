@@ -136,7 +136,7 @@ var (
 	ErrorRed   = Red
 	SuccessGrn = Green
 	FreshGreen = Green
-	SkyBlue    = Blue
+	SkyBlue    = Green
 	Coral      = Orange
 	Gold       = Yellow
 	GlassBlue  = BG4

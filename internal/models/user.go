@@ -15,6 +15,7 @@ type User struct {
 	TOTPEnabled   bool               `json:"totp_enabled"`
 	TOTPSecret    string             `json:"totp_secret"`
 	PopcornPoints int                `json:"popcorn_points"`
+	FreeRentals   int                `json:"free_rentals"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -30,6 +31,7 @@ type UserResponse struct {
 	Banned        bool               `json:"banned"`
 	TOTPEnabled   bool               `json:"totp_enabled"`
 	PopcornPoints int                `json:"popcorn_points"`
+	FreeRentals   int                `json:"free_rentals"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -46,6 +48,7 @@ func (u *User) ToResponse() UserResponse {
 		Banned:        u.Banned,
 		TOTPEnabled:   u.TOTPEnabled,
 		PopcornPoints: u.PopcornPoints,
+		FreeRentals:   u.FreeRentals,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}
@@ -59,7 +62,7 @@ func (u *User) ToResponse() UserResponse {
 }
 
 func (u *User) CanRent() bool {
-	return bitmask.CanRent(u.Tier) && !u.Banned
+	return (bitmask.CanRent(u.Tier) || u.FreeRentals > 0) && !u.Banned
 }
 
 func (u *User) CanReserve() bool {

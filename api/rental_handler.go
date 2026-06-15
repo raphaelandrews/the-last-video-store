@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"time"
@@ -49,20 +50,29 @@ func (h *RentalHandler) Rent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	freeRental := false
 	if user.AtRentalLimit() {
-		WriteError(w, http.StatusForbidden, "rental limit reached")
-		return
+		if user.FreeRentals > 0 {
+			user.FreeRentals--
+			freeRental = true
+		} else {
+			WriteError(w, http.StatusForbidden, "rental limit reached")
+			return
+		}
+	} else {
+		user.RentalCount++
 	}
 
 	now := time.Now().Unix()
 	rental := &models.Rental{
-		ID:          uuid.NewString(),
-		UserID:      user.ID,
-		MovieID:     movie.ID,
-		MovieFormat: movie.Format,
-		RentedAt:    now,
-		DueDate:     models.DueDateForFormat(movie.Format, now),
-		Status:      models.RentalActive,
+		ID:           uuid.NewString(),
+		UserID:       user.ID,
+		MovieID:      movie.ID,
+		MovieFormat:  movie.Format,
+		RentedAt:     now,
+		DueDate:      models.DueDateForFormat(movie.Format, now),
+		Status:       models.RentalActive,
+		IsFreeRental: freeRental,
 	}
 
 	if movie.Format == config.FormatVHS {
@@ -73,7 +83,6 @@ func (h *RentalHandler) Rent(w http.ResponseWriter, r *http.Request) {
 	if movie.CopiesAvailable == 0 {
 		movie.Available = false
 	}
-	user.RentalCount++
 
 	if err := h.store.UpdateMovie(movie); err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to update movie")
@@ -151,6 +160,13 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 		} else if rental.LateFee > 0 {
 			rentalUser.PopcornPoints -= 5
 		}
+		inventory, _ := h.store.ListInventory(rentalUser.ID)
+		for _, item := range inventory {
+			if item.MerchID == "merch-popcorn-bucket" {
+				rentalUser.PopcornPoints += 5
+				break
+			}
+		}
 		h.store.UpdateUser(rentalUser)
 	}
 
@@ -182,6 +198,35 @@ func (h *RentalHandler) History(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusOK, responses)
+}
+
+func (h *RentalHandler) Extend(w http.ResponseWriter, r *http.Request) {
+	user := GetUser(r)
+
+	var req struct {
+		RentalID string `json:"rental_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+	if req.RentalID == "" {
+		WriteError(w, http.StatusBadRequest, "rental_id is required")
+		return
+	}
+
+	const extendDays = 2
+	const cost = 30
+
+	if err := h.store.ExtendRental(req.RentalID, user.ID, extendDays, cost); err != nil {
+		WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message":  fmt.Sprintf("Extended by %d days for %d 🍿", extendDays, cost),
+		"extended": extendDays,
+	})
 }
 
 func (h *RentalHandler) movieTitle(id string) string {
