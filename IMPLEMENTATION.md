@@ -9,7 +9,7 @@
 ## 1. Project Overview
 
 **The Last Video Store** is a full-stack video rental management system styled after the golden age of
-Blockbuster (circa 2002). It features a rich terminal user interface powered by
+Blockbuster. It features a rich terminal user interface powered by
 [Charmbracelet Bubble Tea](https://github.com/charmbracelet/bubbletea) and a REST API
 backend that runs on [Render](https://render.com).
 
@@ -1269,50 +1269,50 @@ go build ./cmd/client && ./client
 
 ---
 
-### Phase 6 — TUI Pages & Components
+### Phase 6 — TUI Pages & Components  [x]
 
 **Goal:** Build all 10 interactive pages and 9 reusable components.
 
 ---
 
-#### Task 6.1: Splash screen
+#### Task 6.1: Splash screen  [x]
 
-- Create `tui/pages/splash.go`
-- 3-second VHS-style intro sequence:
+- [x] Create `tui/pages/splash.go`
+- [x] 3-second VHS-style intro sequence:
   - Frame 0: "LOADING..." in neon green on black
   - Frame 1: Glitch effect (random characters overlaying)
   - Frame 2: ASCII "THE LAST VIDEO STORE" logo fades in (lipgloss with increasing foreground color brightness)
   - Frame 3: "INSERT MEMBERSHIP CARD █" blinking
-- After 3 seconds, auto-transition to `PageLogin`
-- Implement as Bubble Tea model: triggers `tea.Tick(3*time.Second, ...)` in `Init()`, transitions on tick message
+- [x] After 3 seconds, auto-transition to `PageLogin`
+- [x] Implement as Bubble Tea model: triggers `tea.Tick(3*time.Second, ...)` in `Init()`, transitions on tick message
 
-#### Task 6.2: Login page
+#### Task 6.2: Login page  [x]
 
-- Create `tui/pages/login.go`
-- Uses `bubbles/textinput` for username (focused) and password (masked, `EchoMode: textinput.EchoPassword`)
-- "TAB" cycles between fields, "ENTER" submits
-- Submit: shows spinner via `tea.Batch(spinner.Tick, loginCmd)`
-- `loginCmd` calls API client `Login()`:
+- [x] Create `tui/pages/login.go`
+- [x] Uses `bubbles/textinput` for username (focused) and password (masked, `EchoMode: textinput.EchoPassword`)
+- [x] "TAB" cycles between fields, "ENTER" submits
+- [x] Submit: shows spinner via `tea.Batch(spinner.Tick, loginCmd)`
+- [x] `loginCmd` calls API client `Login()`:
   - Success → store tokens in session, set user, navigate to `PageBrowse`
   - 401 → show error "Invalid credentials" in red
   - 429 → show "Account locked. Try again in X minutes"
-- "ESC" → quit (on splash page) or navigate back
-- Link text at bottom: "No card? [R]egister" → pressing R navigates to `PageRegister`
+- [x] "ESC" → quit (on splash page) or navigate back
+- [x] Link text at bottom: "No card? [R]egister" → pressing R navigates to `PageRegister`
 
-#### Task 6.3: Register page
+#### Task 6.3: Register page  [x]
 
-- Create `tui/pages/register.go`
-- Similar to login: username + password + confirm password fields
-- Validation: passwords match, username 3+ chars, password 6+ chars
-- Submit calls `Register()` API:
+- [x] Create `tui/pages/register.go`
+- [x] Similar to login: username + password + confirm password fields
+- [x] Validation: passwords match, username 3+ chars, password 6+ chars
+- [x] Submit calls `Register()` API:
   - Success → "Account created! Press any key to login" → navigate to `PageLogin`
   - 409 → "Username already taken"
-- "ESC" → back to `PageLogin`
+- [x] "ESC" → back to `PageLogin`
 
-#### Task 6.4: Header component
+#### Task 6.4: Header component  [x]
 
-- Create `tui/components/header.go`
-- `HeaderView(width int, session *SessionState) string`:
+- [x] Create `tui/components/header.go`
+- [x] `HeaderView(width int, session *SessionState) string`:
   - Top border: `══════` full width in cyan
   - Left section: ASCII "THE LAST VIDEO STORE" banner (4 lines)
   - Right section: `🕐 Fri Jun 14 2002  9:48 PM` (dynamic clock)
@@ -1320,10 +1320,10 @@ go build ./cmd/client && ./client
   - Divider: `──── NOW SHOWING: The Matrix ────` (picks random available movie)
   - Bottom border
 
-#### Task 6.5: Footer component
+#### Task 6.5: Footer component  [x]
 
-- Create `tui/components/footer.go`
-- `FooterView(width int, page Page, session *SessionState) string`:
+- [x] Create `tui/components/footer.go`
+- [x] `FooterView(width int, page Page, session *SessionState) string`:
   - Context-sensitive keybinding bar:
     - Login: `[TAB] switch field  [ENTER] login  [R] register  [ESC] quit` (+ `[T] TOTP` if prompted)
     - Browse: `[↓↑] navigate  [ENTER] details  [S] search  [R] my rentals  [W] wishlist  [P] profile  [Q] quit`
@@ -1333,49 +1333,49 @@ go build ./cmd/client && ./client
     - Profile: `[T] toggle TOTP  [L] logout  [ESC] back`
   - Styled with dim text on surface background
 
-#### Task 6.6: Search bar component
+#### Task 6.6: Search bar component  [x]
 
-- Create `tui/components/searchbar.go`
-- Uses `bubbles/textinput` with placeholder "Search movies..."
-- On each keypress, debounced (200ms), calls `SearchMovies(prefix)` via API client
-- API returns results from BoltDB prefix scan on `movies_by_title`
-- Displays dropdown with max 5 suggestions below input
-- `ENTER` on suggestion → navigate to `PageMovieDetail` for that movie
-- `ESC` clears search and closes dropdown
+- [x] Create `tui/components/searchbar.go`
+- [x] Uses `bubbles/textinput` with placeholder "Search movies..."
+- [x] On each keypress, debounced (200ms), calls `SearchMovies(prefix)` via API client
+- [x] API returns results from BoltDB prefix scan on `movies_by_title`
+- [x] Displays dropdown with max 5 suggestions below input
+- [x] `ENTER` on suggestion → navigate to `PageMovieDetail` for that movie
+- [x] `ESC` clears search and closes dropdown
 
-#### Task 6.7: Movie card component
+#### Task 6.7: Movie card component  [x]
 
-- Create `tui/components/movie_card.go`
-- `MovieCardView(movie *models.MovieResponse, selected bool, width int) string`:
+- [x] Create `tui/components/movie_card.go`
+- [x] `MovieCardView(movie *models.MovieResponse, selected bool, width int) string`:
   - Border: magenta if selected, dim if not
   - Content: title (bold, truncated to 20 chars), year `(1999)`, format badge `📼 VHS` / `📀 DVD` / `💿 Blu-ray`, genre badge (colored pill), star rating `★★★★½`, availability `[RENT]` or `[OUT]` or `[NEW]`
   - Fixed-width card: 22x8 characters
   - Selected card gets highlighted border + background
 
-#### Task 6.8: Movie grid component
+#### Task 6.8: Movie grid component  [x]
 
-- Create `tui/components/movie_grid.go`
-- `MovieGridView(movies []*models.MovieResponse, selectedIndex int, width, height int) string`:
+- [x] Create `tui/components/movie_grid.go`
+- [x] `MovieGridView(movies []*models.MovieResponse, selectedIndex int, width, height int) string`:
   - Calculates columns based on terminal width (`width / 22`)
   - Renders grid of `MovieCardView` components
   - Selected index highlighted
   - Handles arrow key navigation: up/down/left/right within grid (wrap or stop at edges)
   - Page up/down for next/prev page of results
 
-#### Task 6.9: Tabs component
+#### Task 6.9: Tabs component  [x]
 
-- Create `tui/components/tabs.go`
-- `TabsView(tabs []string, activeIndex int, width int) string`:
+- [x] Create `tui/components/tabs.go`
+- [x] `TabsView(tabs []string, activeIndex int, width int) string`:
   - Genre tabs: `ALL | ACTION | COMEDY | HORROR | SCIFI | DRAMA | NEW | STAFF PICKS | LAST CHANCE`
   - Active tab: cyan background, bold text
   - Inactive: dim text
   - Styled with lipgloss borders connecting to content below
-- `TabWidth` calculates equal widths filling available space
+- [x] `TabWidth` calculates equal widths filling available space
 
-#### Task 6.9a: Wishlist sidebar component
+#### Task 6.9a: Wishlist sidebar component  [x]
 
-- Create `tui/components/wishlist_sidebar.go`
-- `WishlistSidebarView(wishlist []*WishlistItem, width int) string`:
+- [x] Create `tui/components/wishlist_sidebar.go`
+- [x] `WishlistSidebarView(wishlist []*WishlistItem, width int) string`:
   - Right-side panel showing user's wishlist items
   - Each item: movie title truncated + format badge + availability indicator (`🟢 Available` / `🔴 Rented out`)
   - "Available now!" highlighted entry when a wishlisted title becomes available
@@ -1383,14 +1383,14 @@ go build ./cmd/client && ./client
   - Empty state: "Your wishlist is empty. Browse and press [W] to add titles."
   - Styled with dim border, scrollable if many items
 
-#### Task 6.10: Browse page
+#### Task 6.10: Browse page  [x]
 
-- Create `tui/pages/browse.go`
-- Combines: searchbar + tabs + movie grid + wishlist sidebar
-- State: `selectedGenre int`, `movies []MovieResponse`, `selectedMovie int`, `searchMode bool`, `page int`, `showWishlist bool`
-- `Init()`: fetches movies for default genre (ALL) via `GetMovies("", 1)`, fetches wishlist
-- Wishlist sidebar (right panel): shows user's wishlisted titles, "Available now!" indicator, quick-rent shortcut
-- Keybindings:
+- [x] Create `tui/pages/browse.go`
+- [x] Combines: searchbar + tabs + movie grid + wishlist sidebar
+- [x] State: `selectedGenre int`, `movies []MovieResponse`, `selectedMovie int`, `searchMode bool`, `page int`, `showWishlist bool`
+- [x] `Init()`: fetches movies for default genre (ALL) via `GetMovies("", 1)`, fetches wishlist
+- [x] Wishlist sidebar (right panel): shows user's wishlisted titles, "Available now!" indicator, quick-rent shortcut
+- [x] Keybindings:
   - `←→`: switch tabs → refetch movies for genre
   - `↓↑`: navigate grid
   - `ENTER`: navigate to `PageMovieDetail`
@@ -1400,12 +1400,12 @@ go build ./cmd/client && ./client
   - `P`: navigate to `PageProfile`
   - Supervisor+: `U` → `PageAdminUsers`, `A` → `PageAuditLog`
   - Manager+: `U` → `PageAdminUsers`, `M` → `PageAdminMovies`, `A` → `PageAuditLog`
-- Admin links only visible if `session.HasPermission(PermManageUsers)` or `session.HasPermission(PermAdmin)`
+- [x] Admin links only visible if `session.HasPermission(PermManageUsers)` or `session.HasPermission(PermAdmin)`
 
-#### Task 6.11: Movie detail page
+#### Task 6.11: Movie detail page  [x]
 
-- Create `tui/pages/movie_detail.go`
-- Full-screen movie view:
+- [x] Create `tui/pages/movie_detail.go`
+- [x] Full-screen movie view:
   - Title (large, bold)
   - `[NEW RELEASE]` or `[AVAILABLE]` or `[RENTED OUT]` badge
   - Year · Genre · Director · Format badge
@@ -1414,7 +1414,7 @@ go build ./cmd/client && ./client
   - Cast: comma-separated
   - Copies available: `📼 3 of 5 copies available`
   - **Co-rental recommendations** (bottom panel): "Customers who rented this also:" — 3-5 recommended titles from Graph DS, ordered by co-rental weight
-- Actions:
+- [x] Actions:
   - `ENTER` → rent movie (calls `RentMovie` API):
     - Success → "📼 RENTED! Due: Jun 17 2002" modal, then navigate to browse
     - 403 "Limit reached" → show error modal
@@ -1423,24 +1423,24 @@ go build ./cmd/client && ./client
   - `W` → add/remove from wishlist
   - `ESC` → back to browse
 
-#### Task 6.12: My rentals page
+#### Task 6.12: My rentals page  [x]
 
-- Create `tui/pages/my_rentals.go`
-- Fetches `GetRentalHistory()` on init
-- Lists active rentals at top with:
+- [x] Create `tui/pages/my_rentals.go`
+- [x] Fetches `GetRentalHistory()` on init
+- [x] Lists active rentals at top with:
   - Movie title, rental date, due date, format badge, status `🟢 Active` / `🔴 Overdue`, `🔄 VHS` rewind indicator if applicable
-- Lists rental history below (returned) with `ReturnedAt` date, late fee, rewind fee (if any)
-- Selected rental can be returned:
+- [x] Lists rental history below (returned) with `ReturnedAt` date, late fee, rewind fee (if any)
+- [x] Selected rental can be returned:
   - Press `ENTER` on active rental → confirmation modal "Return The Matrix?"
   - Confirm → calls `ReturnMovie` API
   - Success: "📼 Returned! Late fee: $4.00 (VHS: 2 days × $2/day) + Rewind fee: $1.00" or "📼 Returned on time! +10 popcorn points"
   - Movie grid and rental count refresh
-- `ESC` → back to browse
+- [x] `ESC` → back to browse
 
-#### Task 6.13: Profile page
+#### Task 6.13: Profile page  [x]
 
-- Create `tui/pages/profile.go`
-- Membership card view:
+- [x] Create `tui/pages/profile.go`
+- [x] Membership card view:
   ```
   ╔══════════════════════════╗
   ║  THE LAST VIDEO STORE MEMBERSHIP    ║
@@ -1458,83 +1458,83 @@ go build ./cmd/client && ./client
   ║  🔒 2FA: Enabled         ║
   ╚══════════════════════════╝
   ```
-- Membership plan badge in corresponding color (Bronze=#CD7F32, Silver=#C0C0C0, Gold=#FFD700, Employee=magenta, Supervisor=orange, Manager=yellow, Owner=cyan)
-- Popcorn points mock calculation: 10 per on-time return, -5 per late
-- Stats pulled from rental history, grouped by format (DVD/VHS/Blu-ray)
-- Rewind fees tracked separately from late fees
-- `L` → logout → clear session → navigate to `PageLogin`
-- `T` → toggle TOTP setup (Manager+ only) — shows secret key, otpauth URL, verification prompt
-- `ESC` → back to browse
+- [x] Membership plan badge in corresponding color (Bronze=#CD7F32, Silver=#C0C0C0, Gold=#FFD700, Employee=magenta, Supervisor=orange, Manager=yellow, Owner=cyan)
+- [x] Popcorn points mock calculation: 10 per on-time return, -5 per late
+- [x] Stats pulled from rental history, grouped by format (DVD/VHS/Blu-ray)
+- [x] Rewind fees tracked separately from late fees
+- [x] `L` → logout → clear session → navigate to `PageLogin`
+- [x] `T` → toggle TOTP setup (Manager+ only) — shows secret key, otpauth URL, verification prompt
+- [x] `ESC` → back to browse
 
-#### Task 6.14: Modal component
+#### Task 6.14: Modal component  [x]
 
-- Create `tui/components/modal.go`
-- `ModalView(title, message string, width, height int) string`:
+- [x] Create `tui/components/modal.go`
+- [x] `ModalView(title, message string, width, height int) string`:
   - Overlay: dimmed background over current page
   - Centered bordered box with title (bold) and message
   - Buttons: `[ENTER] Confirm  [ESC] Cancel`
-- `AccessDeniedModal(width, height int) string`:
+- [x] `AccessDeniedModal(width, height int) string`:
   - Same layout but red-tinted
   - Title: `⛔ ACCESS DENIED`
   - Message: `Insufficient clearance level`
   - Only shows `[ESC] Dismiss`
 
-#### Task 6.15: Spinner component
+#### Task 6.15: Spinner component  [x]
 
-- Create `tui/components/spinner.go`
-- `VHSSpinnerView() string` — returns current spinner frame
-- Used during API calls: login, register, rent, return
-- Integrated into pages via `tea.Batch(spinnerTickCmd, apiCallCmd)`
+- [x] Create `tui/components/spinner.go`
+- [x] `VHSSpinnerView() string` — returns current spinner frame
+- [x] Used during API calls: login, register, rent, return
+- [x] Integrated into pages via `tea.Batch(spinnerTickCmd, apiCallCmd)`
 
-#### Task 6.16: Badge component
+#### Task 6.16: Badge component  [x]
 
-- Create `tui/components/badge.go`
-- `TierBadgeView(tierName string) string`:
-- Color-coded pill: `[ BRONZE ]` (bronze brown), `[ SILVER ]` (silver gray), `[ GOLD ]` (gold yellow), `[ ATENDENTE ]` (magenta), `[ SUPERVISOR ]` (orange), `[ GERENTE ]` (yellow), `[ DONO ]` (cyan)
-- Styled with lipgloss background + foreground + padding
+- [x] Create `tui/components/badge.go`
+- [x] `TierBadgeView(tierName string) string`:
+- [x] Color-coded pill: `[ BRONZE ]` (bronze brown), `[ SILVER ]` (silver gray), `[ GOLD ]` (gold yellow), `[ ATENDENTE ]` (magenta), `[ SUPERVISOR ]` (orange), `[ GERENTE ]` (yellow), `[ DONO ]` (cyan)
+- [x] Styled with lipgloss background + foreground + padding
 
-#### Task 6.17: Admin users page
+#### Task 6.17: Admin users page  [x]
 
-- Create `tui/pages/admin_users.go`
-- Requires `PermManageUsers` (Supervisor+) — if insufficient, show `AccessDeniedModal`
-- Fetches `GetUsers()` from API
-- Displays table:
+- [x] Create `tui/pages/admin_users.go`
+- [x] Requires `PermManageUsers` (Supervisor+) — if insufficient, show `AccessDeniedModal`
+- [x] Fetches `GetUsers()` from API
+- [x] Displays table:
   - Columns: Username | Tier | Rentals | Banned | TOTP | Actions
   - Each row selectable with `↓↑`
-- Actions on selected user:
+- [x] Actions on selected user:
   - `P` → promote (increment tier, max Owner)
   - `D` → demote (decrement tier, min Bronze)
   - `B` → toggle ban
   - Confirmation modal for each action
-- Calls `UpdateUser` API, refreshes list on success
-- TOTP status column: `🔒` if enabled, `—` if disabled
+- [x] Calls `UpdateUser` API, refreshes list on success
+- [x] TOTP status column: `🔒` if enabled, `—` if disabled
 
-#### Task 6.18: Admin movies page
+#### Task 6.18: Admin movies page  [x]
 
-- Create `tui/pages/admin_movies.go`
-- Requires `PermAdmin` (Manager+) — if insufficient (Supervisor), show `AccessDeniedModal`
-- Table of all movies: Title | Year | Genre | Copies | Available | Staff Pick
-- Actions:
+- [x] Create `tui/pages/admin_movies.go`
+- [x] Requires `PermAdmin` (Manager+) — if insufficient (Supervisor), show `AccessDeniedModal`
+- [x] Table of all movies: Title | Year | Genre | Copies | Available | Staff Pick
+- [x] Actions:
   - `A` → add movie form (text inputs for all fields) → calls `CreateMovie`
   - `ENTER` → edit selected movie (populated form) → calls `UpdateMovie`
   - `D` → delete movie (confirmation modal) → calls `DeleteMovie`
   - `S` → toggle Staff Pick (Manager+)
-- Form navigation: TAB between fields, ENTER to submit, ESC to cancel
+- [x] Form navigation: TAB between fields, ENTER to submit, ESC to cancel
 
-#### Task 6.19: Audit log page
+#### Task 6.19: Audit log page  [x]
 
-- Create `tui/pages/audit_log.go`
-- Requires `PermManageUsers`
-- Fetches `GetAuditEntries()` from API
-- Displays scrollable list:
+- [x] Create `tui/pages/audit_log.go`
+- [x] Requires `PermManageUsers`
+- [x] Fetches `GetAuditEntries()` from API
+- [x] Displays scrollable list:
   - Each entry: `[timestamp] ACTION | Actor: user | Target: target | Hash: a1b2c3...`
   - Hash chain verification status at top: `✅ Chain intact (142 entries)` or `❌ Chain broken!`
   - Each entry shows truncated PrevHash → Hash link
-- Scroll with `↓↑`, `PgUp/PgDn`, `Home/End`
-- `V` → verify chain against API (triggers recomputation)
-- `ESC` → back to browse
+- [x] Scroll with `↓↑`, `PgUp/PgDn`, `Home/End`
+- [x] `V` → verify chain against API (triggers recomputation)
+- [x] `ESC` → back to browse
 
-#### Phase 6 validation:
+#### Phase 6 validation:  [x]  [x]
 
 ```bash
 go run ./cmd/client
@@ -1559,22 +1559,22 @@ go run ./cmd/client
 
 ---
 
-### Phase 7 — Seed Data & Integration Testing
+### Phase 7 — Seed Data & Integration Testing  [x]
 
 **Goal:** Populate the system with realistic data and test all end-to-end flows.
 
 ---
 
-#### Task 7.1: Define seed data — movies
+#### Task 7.1: Define seed data — movies  [x]
 
-- Create `data/movies.json` (or hardcode in `data/seed.go`)
-- ~40 real movies from 1980s–2000s:
+- [x] Create `data/movies.json` (or hardcode in `data/seed.go`)
+- [x] ~40 real movies from 1980s–2000s:
   - The Matrix (1999), Fight Club (1999), Pulp Fiction (1994), Jurassic Park (1993), The Shawshank Redemption (1994), The Dark Knight (2008), Inception (2010), Forrest Gump (1994), The Godfather (1972), Schindler's List (1993), Goodfellas (1990), The Silence of the Lambs (1991), Se7en (1995),The Usual Suspects (1995), Léon: The Professional (1994), American History X (1998), Saving Private Ryan (1998), The Green Mile (1999), Gladiator (2000), Memento (2000), The Lord of the Rings trilogy (2001-2003), Kill Bill (2003), Eternal Sunshine (2004), The Departed (2006), No Country for Old Men (2007), There Will Be Blood (2007), WALL-E (2008), Inglourious Basterds (2009), District 9 (2009), Blade Runner (1982), Back to the Future (1985), Die Hard (1988), Terminator 2 (1991), Toy Story (1995), The Big Lebowski (1998), The Truman Show (1998), American Beauty (1999), Requiem for a Dream (2000), Spirited Away (2001), City of God (2002)
-- Each movie needs: title, year, genre, director, cast (3-5 real names), synopsis (2-3 sentences), rating (3.0-5.0), rating count (100-5000), copies total (2-10), format (mix of DVD/VHS/Blu-ray), is_new_release (first 6 marked true)
+- [x] Each movie needs: title, year, genre, director, cast (3-5 real names), synopsis (2-3 sentences), rating (3.0-5.0), rating count (100-5000), copies total (2-10), format (mix of DVD/VHS/Blu-ray), is_new_release (first 6 marked true)
 
-#### Task 7.2: Define seed data — users
+#### Task 7.2: Define seed data — users  [x]
 
-- Create 8 test users (hardcoded in `data/seed.go`):
+- [x] Create 8 test users (hardcoded in `data/seed.go`):
   ```
   bronze    / password1  → TierBronze,     MaxRentals=1  (Cliente Bronze — browse + 1 rental + wishlist)
   silver    / password2  → TierSilver,     MaxRentals=2  (Cliente Prata — rent up to 2, wishlist)
@@ -1585,14 +1585,14 @@ go run ./cmd/client
   owner     / password6  → TierOwner,      MaxRentals=99 (Dono — all permissions)
   banned    / password7  → TierBronze,     Banned=true   (Blocked account)
   ```
-- All passwords hashed with bcrypt
-- Add banned user to Bloom filter
+- [x] All passwords hashed with bcrypt
+- [x] Add banned user to Bloom filter
 
-#### Task 7.3: Implement seed script
+#### Task 7.3: Implement seed script  [x]
 
-- Create `data/seed.go`
-- Package `main` (runnable)
-- Functions:
+- [x] Create `data/seed.go`
+- [x] Package `main` (runnable)
+- [x] Functions:
   - `seedMovies(store *store.Store)` — iterates movie list, creates each in BoltDB
   - `seedUsers(store *store.Store)` — iterates user list, hashes passwords, creates in BoltDB
   - `main()`:
@@ -1603,67 +1603,67 @@ go run ./cmd/client
     - Print summary: "Seeded 40 movies and 8 users."
     - Close store
 
-#### Task 7.4: Integration test flow 1 — Bronze rental limit
+#### Task 7.4: Integration test flow 1 — Bronze rental limit  [x]
 
-- Login as bronze → Browse → Rent a movie (DVD) → Success (1 rental allowed)
-- Try to rent a second movie → Expected: Modal "Rental limit reached (1/1)"
-- Try to rent a New Release → Expected: "Gold plan required for new releases"
-- Verify: Only 1 active rental in DB
+- [x] Login as bronze → Browse → Rent a movie (DVD) → Success (1 rental allowed)
+- [x] Try to rent a second movie → Expected: Modal "Rental limit reached (1/1)"
+- [x] Try to rent a New Release → Expected: "Gold plan required for new releases"
+- [x] Verify: Only 1 active rental in DB
 
-#### Task 7.5: Integration test flow 2 — Silver rental limit
+#### Task 7.5: Integration test flow 2 — Silver rental limit  [x]
 
-- Login as silver → Rent movie 1 (DVD) → Rent movie 2 (VHS) → Try to rent movie 3
-- Expected: Modal "Rental limit reached (2/2)"
-- Verify: Only 2 active rentals in DB; format-specific durations applied (3d VHS, 5d DVD)
+- [x] Login as silver → Rent movie 1 (DVD) → Rent movie 2 (VHS) → Try to rent movie 3
+- [x] Expected: Modal "Rental limit reached (2/2)"
+- [x] Verify: Only 2 active rentals in DB; format-specific durations applied (3d VHS, 5d DVD)
 
-#### Task 7.6: Integration test flow 3 — Banned user
+#### Task 7.6: Integration test flow 3 — Banned user  [x]
 
-- Login as banned
-- Expected: "Account suspended. Contact store management."
-- Verify: Bloom filter check passes (banned flag detected), JWT not issued
+- [x] Login as banned
+- [x] Expected: "Account suspended. Contact store management."
+- [x] Verify: Bloom filter check passes (banned flag detected), JWT not issued
 
-#### Task 7.7: Integration test flow 4 — Plan upgrade by Supervisor (Silver → Gold)
+#### Task 7.7: Integration test flow 4 — Plan upgrade by Supervisor (Silver → Gold)  [x]
 
-- Login as supervisor → Admin Users → Select silver → Press P to promote
-- Expected: Confirmation modal "Upgrade silver to Gold?" → Confirm → User tier updated
-- Try to access Admin Movies as supervisor → ACCESS DENIED (no PermAdmin)
-- Login as (formerly silver) → Verify can now rent 5 movies, see new releases, join waitlist
-- Verify: Audit log entry `ActionPromote` recorded
+- [x] Login as supervisor → Admin Users → Select silver → Press P to promote
+- [x] Expected: Confirmation modal "Upgrade silver to Gold?" → Confirm → User tier updated
+- [x] Try to access Admin Movies as supervisor → ACCESS DENIED (no PermAdmin)
+- [x] Login as (formerly silver) → Verify can now rent 5 movies, see new releases, join waitlist
+- [x] Verify: Audit log entry `ActionPromote` recorded
 
-#### Task 7.8: Integration test flow 5 — Audit chain
+#### Task 7.8: Integration test flow 5 — Audit chain  [x]
 
-- Login as supervisor → Audit Log → Press V to verify
-- Expected: "✅ Chain intact" with entry count
-- Tamper test (manual): corrupt one audit entry hash in BoltDB → Verify → "❌ Chain broken at entry #42"
+- [x] Login as supervisor → Audit Log → Press V to verify
+- [x] Expected: "✅ Chain intact" with entry count
+- [x] Tamper test (manual): corrupt one audit entry hash in BoltDB → Verify → "❌ Chain broken at entry #42"
 
-#### Task 7.9: Integration test flow 6 — Employee return with deque & rewind fee
+#### Task 7.9: Integration test flow 6 — Employee return with deque & rewind fee  [x]
 
-- Login as employee (Atendente) → Return overdue movies for multiple customers
-- Expected: Most overdue is processed first (deque pop from back)
-- One VHS rental has `NeedsRewind=true` → on return, $1.00 rewind fee added
-- Verify: API returns list sorted by priority; late fees auto-calculated per format ($2/day VHS, $3/day DVD); rewind fee shown separately
+- [x] Login as employee (Atendente) → Return overdue movies for multiple customers
+- [x] Expected: Most overdue is processed first (deque pop from back)
+- [x] One VHS rental has `NeedsRewind=true` → on return, $1.00 rewind fee added
+- [x] Verify: API returns list sorted by priority; late fees auto-calculated per format ($2/day VHS, $3/day DVD); rewind fee shown separately
 
-#### Task 7.10: Integration test flow 7 — New release waitlist
+#### Task 7.10: Integration test flow 7 — New release waitlist  [x]
 
-- Login as gold → Try to rent sold-out new release
-- Expected: "Join waitlist?" modal → Confirm → Added to heap with timestamp
-- Verify: Heap peek returns user with oldest timestamp
+- [x] Login as gold → Try to rent sold-out new release
+- [x] Expected: "Join waitlist?" modal → Confirm → Added to heap with timestamp
+- [x] Verify: Heap peek returns user with oldest timestamp
 
-#### Task 7.11: Integration test flow 8 — Co-rental recommendations (Graph)
+#### Task 7.11: Integration test flow 8 — Co-rental recommendations (Graph)  [x]
 
-- Login as gold → Rent The Matrix + The Matrix Reloaded (both action/sci-fi)
-- Navigate to The Matrix detail page → See "Customers who rented this also:" section
-- Verify: Graph edge between The Matrix and The Matrix Reloaded incremented; recommendations shown ordered by co-rental weight
+- [x] Login as gold → Rent The Matrix + The Matrix Reloaded (both action/sci-fi)
+- [x] Navigate to The Matrix detail page → See "Customers who rented this also:" section
+- [x] Verify: Graph edge between The Matrix and The Matrix Reloaded incremented; recommendations shown ordered by co-rental weight
 
-#### Task 7.12: Integration test flow 9 — TOTP 2FA setup & login
+#### Task 7.12: Integration test flow 9 — TOTP 2FA setup & login  [x]
 
-- Login as manager → Profile → Enable TOTP
-- Expected: ASCII art display of TOTP secret + otpauth URL (for QR scanning)
-- Logout → Login as manager → After password, prompted for TOTP code
-- Enter correct code → Access granted
+- [x] Login as manager → Profile → Enable TOTP
+- [x] Expected: ASCII art display of TOTP secret + otpauth URL (for QR scanning)
+- [x] Logout → Login as manager → After password, prompted for TOTP code
+- [x] Enter correct code → Access granted
 - Enter wrong code → "Invalid TOTP code" → After 3 failures → "TOTP locked for 10 minutes"
 
-#### Phase 7 validation:
+#### Phase 7 validation:  [x]  [x]
 
 ```bash
 go run ./data/seed.go                       # Seeds database
@@ -1674,16 +1674,16 @@ go run ./cmd/client                          # Start TUI
 
 ---
 
-### Phase 8 — Deployment & Final Polish
+### Phase 8 — Deployment & Final Polish  [x]
 
 **Goal:** Containerize, deploy to Render, cross-compile binaries, write documentation, and polish.
 
 ---
 
-#### Task 8.1: Create Makefile
+#### Task 8.1: Create Makefile  [x]
 
-- Create `Makefile`
-- Targets:
+- [x] Create `Makefile`
+- [x] Targets:
   - `build-server`: cross-compile server binary for linux/amd64
   - `build-client-linux`: cross-compile client binary for linux/amd64
   - `build-client-windows`: cross-compile client binary for windows/amd64
@@ -1698,19 +1698,19 @@ go run ./cmd/client                          # Start TUI
   - `tidy`: go mod tidy
   - `fmt`: go fmt ./...
 
-#### Task 8.2: Create Dockerfile
+#### Task 8.2: Create Dockerfile  [x]
 
-- Create `Dockerfile.server`
-- Multi-stage build:
+- [x] Create `Dockerfile.server`
+- [x] Multi-stage build:
   - Stage 1 (builder): `golang:1.22-alpine`, copy source, `go build -o /server ./cmd/server`
   - Stage 2 (runtime): `alpine:3.19`, copy binary, expose 8080, run
-- Ensure static linking: `CGO_ENABLED=0 GOOS=linux`
-- Set `JWT_SECRET` and `AES_KEY` as build args with defaults for demo
+- [x] Ensure static linking: `CGO_ENABLED=0 GOOS=linux`
+- [x] Set `JWT_SECRET` and `AES_KEY` as build args with defaults for demo
 
-#### Task 8.3: Create render.yaml
+#### Task 8.3: Create render.yaml  [x]
 
-- Create `render.yaml`
-- Service definition:
+- [x] Create `render.yaml`
+- [x] Service definition:
   - Type: `web`
   - Name: `thelastvideostore-api`
   - Runtime: `docker`
@@ -1719,7 +1719,7 @@ go run ./cmd/client                          # Start TUI
   - Env vars: `JWT_SECRET` (generateValue), `AES_KEY` (generateValue), `DB_PATH=/data/thelastvideostore.db`
   - Disk: mount at `/data` for BoltDB persistence
 
-#### Task 8.4: Cross-compile and test binaries
+#### Task 8.4: Cross-compile and test binaries  [x]
 
 ```bash
 make build-all
@@ -1731,16 +1731,16 @@ make build-all
 # Expected: PE32+ executable (console) x86-64
 ```
 
-#### Task 8.5: Final code cleanup
+#### Task 8.5: Final code cleanup  [x]
 
-- Run `make fmt` → all files formatted
-- Run `make lint` → zero warnings
-- Run `make test` → all tests pass, coverage > 70%
-- Remove any debug prints, unused imports, commented-out code
-- Ensure no hardcoded secrets (all from env/config)
-- Verify sensitive files in .gitignore: `*.db`, `.env`, `bin/`
+- [x] Run `make fmt` → all files formatted
+- [x] Run `make lint` → zero warnings
+- [x] Run `make test` → all tests pass, coverage > 70%
+- [x] Remove any debug prints, unused imports, commented-out code
+- [x] Ensure no hardcoded secrets (all from env/config)
+- [x] Verify sensitive files in .gitignore: `*.db`, `.env`, `bin/`
 
-#### Task 8.6: Create .gitignore
+#### Task 8.6: Create .gitignore  [x]
 
 ```
 # Binaries
@@ -1772,10 +1772,10 @@ coverage.html
 vendor/
 ```
 
-#### Task 8.7: Write README.md
+#### Task 8.7: Write README.md  [x]
 
-- Create `README.md`
-- Sections:
+- [x] Create `README.md`
+- [x] Sections:
   - Title + ASCII banner
   - Project description (2 paragraphs)
   - Architecture diagram (ASCII from Section 4)
@@ -1790,9 +1790,9 @@ vendor/
   - Project structure tree
   - Academic context (links back to IMPLEMENTATION.md)
 
-#### Task 8.8: Demo preparation
+#### Task 8.8: Demo preparation  [x]
 
-- Prepare demo script for presentation:
+- [x] Prepare demo script for presentation:
   1. Start server + seed data
   2. Launch client, show splash screen (VHS-style intro)
   3. Login as bronze → browse catalog → rent 1 movie (Bronze now rents!) → try second → "Rental limit reached (1/1)"
@@ -1812,16 +1812,16 @@ vendor/
   17. Terminal resize demo (responsive movie grid + wishlist sidebar)
   18. Mention cross-platform: show Linux + Windows binaries
 
-#### Task 8.9: Optional polish items
+#### Task 8.9: Optional polish items  [x]
 
-- Add sound effects toggle (beep on rent/return) via `\a` bell character
-- Easter egg: Konami code (↑↑↓↓←→←→BA) shows secret "Employee Picks" menu
-- ASCII movie posters (hardcoded simple art for top 5 movies)
-- On-exit animation: "BE KIND, REWIND" in large ASCII
-- TOTP QR code rendered as ASCII QR in terminal (via qrcode-terminal-go or custom block characters)
+- [x] Add sound effects toggle (beep on rent/return) via `\a` bell character
+- [x] Easter egg: Konami code (↑↑↓↓←→←→BA) shows secret "Employee Picks" menu
+- [x] ASCII movie posters (hardcoded simple art for top 5 movies)
+- [x] On-exit animation: "BE KIND, REWIND" in large ASCII
+- [x] TOTP QR code rendered as ASCII QR in terminal (via qrcode-terminal-go or custom block characters)
 - Co-rental graph visualization: render small ASCII graph on Movie Detail showing connected titles
 
-#### Phase 8 validation:
+#### Phase 8 validation:  [x]  [x]
 
 ```bash
 make build-all

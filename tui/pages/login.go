@@ -1,11 +1,26 @@
 package pages
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/styles"
 )
+
+type NavigateMsg struct{ Page string }
+type ErrorMsg struct{ Message string }
+type LoginSuccessMsg struct {
+	AccessToken  string
+	RefreshToken string
+	User         *models.UserResponse
+}
+type LoginRequestMsg struct {
+	Username string
+	Password string
+}
 
 type LoginModel struct {
 	username textinput.Model
@@ -18,47 +33,38 @@ type LoginModel struct {
 func NewLoginModel() *LoginModel {
 	un := textinput.New()
 	un.Placeholder = "Username"
-	un.Focus()
 	un.Width = 30
-	un.CharLimit = 20
 	un.Prompt = "▸ "
-
+	un.Focus()
 	pw := textinput.New()
 	pw.Placeholder = "Password"
 	pw.EchoMode = textinput.EchoPassword
 	pw.Width = 30
-	pw.CharLimit = 64
 	pw.Prompt = "▸ "
-
-	return &LoginModel{
-		username: un,
-		password: pw,
-		focus:    0,
-	}
+	return &LoginModel{username: un, password: pw}
 }
 
-func (m *LoginModel) Init() tea.Cmd {
-	return textinput.Blink
-}
+func (m *LoginModel) Init() tea.Cmd { return textinput.Blink }
 
 func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyTab:
-			m.focus = (m.focus + 1) % 2
+		switch msg.String() {
+		case "tab":
+			m.focus = 1 - m.focus
 			m.updateFocus()
 			return m, nil
-		case tea.KeyEnter:
-			if m.username.Value() != "" && m.password.Value() != "" {
+		case "enter":
+			u := strings.TrimSpace(m.username.Value())
+			p := m.password.Value()
+			if u != "" && p != "" {
 				m.loading = true
 				m.errMsg = ""
-				return m, m.loginCmd()
+				return m, func() tea.Msg { return LoginRequestMsg{Username: u, Password: p} }
 			}
 			return m, nil
 		}
 	}
-
 	var cmd tea.Cmd
 	if m.focus == 0 {
 		m.username, cmd = m.username.Update(msg)
@@ -67,6 +73,8 @@ func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 	}
 	return m, cmd
 }
+
+func (m *LoginModel) SetError(s string) { m.errMsg = s; m.loading = false }
 
 func (m *LoginModel) updateFocus() {
 	if m.focus == 0 {
@@ -78,26 +86,17 @@ func (m *LoginModel) updateFocus() {
 	}
 }
 
-func (m *LoginModel) loginCmd() tea.Cmd {
-	return func() tea.Msg {
-		return performLoginMsg{
-			username: m.username.Value(),
-			password: m.password.Value(),
-		}
-	}
-}
+func (m *LoginModel) View(w, h int) string {
+	box := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(styles.SkyBlue).
+		Background(styles.BgWhite).
+		Padding(2, 4).
+		Width(42).
+		Align(lipgloss.Center)
 
-type performLoginMsg struct {
-	username, password string
-}
-
-func (m *LoginModel) View(width, height int, api interface{}, errMsg string) string {
-	title := styles.TitleStyle.Render("╔══════════════════════╗")
-	title += "\n" + styles.TitleStyle.Render("║   MEMBER LOGIN       ║")
-	title += "\n" + styles.TitleStyle.Render("╚══════════════════════╝")
-
-	form := lipgloss.JoinVertical(lipgloss.Left,
-		title,
+	inner := lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Render("MEMBER LOGIN"),
 		"",
 		styles.TextStyle.Render("Username:"),
 		m.username.View(),
@@ -106,35 +105,12 @@ func (m *LoginModel) View(width, height int, api interface{}, errMsg string) str
 		m.password.View(),
 	)
 
-	errSection := ""
-	if errMsg != "" {
-		errSection = "\n\n" + styles.ErrorTextStyle.Render("⚠ "+errMsg)
+	if m.errMsg != "" {
+		inner += "\n" + styles.ErrorTextStyle.Render(m.errMsg)
 	}
-
-	loading := ""
 	if m.loading {
-		loading = "\n\n" + styles.TextStyle.Render("Authenticating...")
+		inner += "\n" + styles.DimTextStyle.Render("Authenticating...")
 	}
 
-	hint := styles.DimTextStyle.Render("\n\n[TAB] switch  [ENTER] login  [R] register  [ESC] quit")
-	content := form + errSection + loading + hint
-
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
-}
-
-func (m *LoginModel) SetError(msg string) {
-	m.errMsg = msg
-	m.loading = false
-}
-
-func (m *LoginModel) ClearError() {
-	m.errMsg = ""
-	m.loading = false
-}
-
-func RegisterView(width, height int, api interface{}, errMsg string) string {
-	title := styles.TitleStyle.Render("REGISTER NEW MEMBER")
-	msg := styles.TextStyle.Render("\nRegistration form coming soon.\nPress ESC to go back.")
-	content := lipgloss.JoinVertical(lipgloss.Center, title, msg)
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, content)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box.Render(inner))
 }

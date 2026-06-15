@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: thelastvideostore-api
+    runtime: docker
+    repo: https://github.com/anomalyco/the-last-video-store
+    dockerfilePath: Dockerfile.server
+    envVars:
+      - key: TLVS_JWT_SECRET
+        generateValue: true
+      - key: TLVS_AES_KEY
+        generateValue: true
+      - key: TLVS_SERVER_PORT
+        value: "8080"
+      - key: TLVS_DB_PATH
+        value: "/app/data/thelastvideostore.db"
+      - key: TLVS_ENV
+        value: "production"
+    plan: free
+    healthCheckPath: /health
