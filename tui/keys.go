@@ -30,12 +30,14 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			mv := m.browse.SelectedMovie()
 			if mv != nil {
 				m.detail = pages.NewMovieDetailModel(mv)
+				m.setDetailContext()
 				m.screen = scrDetail
 			}
 		case "d":
 			mv := m.browse.SelectedMovie()
 			if mv != nil {
 				m.detail = pages.NewMovieDetailModel(mv)
+				m.setDetailContext()
 				m.screen = scrDetail
 			}
 		case "r":
@@ -153,6 +155,16 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.screen = scrInventory
 			return m.loadInventory()
 		}
+		if k == "t" {
+			sub := "wood"
+			bal := 0.0
+			if m.userResp != nil {
+				sub = m.userResp.Subscription
+				bal = m.userResp.Balance
+			}
+			m.tierShop = pages.NewTierShopModel(sub, bal)
+			m.screen = scrTierShop
+		}
 	case scrWishlist:
 		switch k {
 		case "down", "j":
@@ -203,6 +215,18 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				return func() tea.Msg { return pages.MerchRedeemMsg{ItemID: item.ID} }
 			}
 		}
+	case scrTierShop:
+		switch k {
+		case "down", "j":
+			m.tierShop.MoveDown()
+		case "up", "k":
+			m.tierShop.MoveUp()
+		case "enter":
+			tier := m.tierShop.SelectedTier()
+			if tier != nil && tier.Name != m.tierShop.Current && (tier.Price == 0 || m.userResp.Balance >= tier.Price) {
+				return m.doPurchaseTier(tier.Name)
+			}
+		}
 	}
 	return nil
 }
@@ -220,6 +244,7 @@ func (m *Model) searchKey(msg tea.KeyMsg) tea.Cmd {
 			m.searching = false
 			m.searchBar.Blur()
 			m.detail = pages.NewMovieDetailModel(mv)
+			m.setDetailContext()
 			m.screen = scrDetail
 		}
 		return nil

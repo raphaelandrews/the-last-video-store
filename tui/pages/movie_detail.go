@@ -11,11 +11,14 @@ import (
 type RentRequestMsg struct{ MovieID string }
 
 type MovieDetailModel struct {
-	Movie     *models.MovieResponse
-	Rental    *models.RentalResponse
-	Rented    bool
-	ErrMsg    string
-	StatusMsg string
+	Movie       *models.MovieResponse
+	Rental      *models.RentalResponse
+	Rented      bool
+	ErrMsg      string
+	StatusMsg   string
+	FreeRentals int
+	MaxFree     int
+	Balance     float64
 }
 
 func NewMovieDetailModel(m *models.MovieResponse) *MovieDetailModel {
@@ -24,6 +27,11 @@ func NewMovieDetailModel(m *models.MovieResponse) *MovieDetailModel {
 
 func (m *MovieDetailModel) SetRental(r *models.RentalResponse) { m.Rental = r; m.Rented = true }
 func (m *MovieDetailModel) SetError(s string)                  { m.ErrMsg = s }
+func (m *MovieDetailModel) SetUserContext(freeRentals, maxFree int, balance float64) {
+	m.FreeRentals = freeRentals
+	m.MaxFree = maxFree
+	m.Balance = balance
+}
 
 func (m *MovieDetailModel) View(w, h int) string {
 	if m.Movie == nil {
@@ -53,6 +61,16 @@ func (m *MovieDetailModel) View(w, h int) string {
 
 	synopsis := styles.TextStyle.Width(w - 4).Render(wrap(mv.Synopsis, w-4))
 	copies := fmt.Sprintf("📀 %d/%d copies available", mv.CopiesAvailable, mv.CopiesTotal)
+
+	costInfo := ""
+	if mv.Available && !m.Rented {
+		if m.FreeRentals > 0 {
+			costInfo = fmt.Sprintf("🎟️ Free rental (%d/%d remaining)", m.FreeRentals, m.MaxFree)
+		} else {
+			c := models.MovieCost(mv.RentalPrice, mv.Format)
+			costInfo = fmt.Sprintf("💵 $%.2f (balance: $%.2f)", c, m.Balance)
+		}
+	}
 	cast := "Cast: "
 	for i, c := range mv.Cast {
 		if i > 0 {
@@ -61,7 +79,11 @@ func (m *MovieDetailModel) View(w, h int) string {
 		cast += c
 	}
 
-	lines := []string{title, "", meta, rating, badge, "", synopsis, "", copies, styles.DimTextStyle.Render(cast)}
+	lines := []string{title, "", meta, rating, badge}
+	if costInfo != "" {
+		lines = append(lines, styles.TextStyle.Render(costInfo))
+	}
+	lines = append(lines, "", synopsis, "", copies, styles.DimTextStyle.Render(cast))
 	if m.ErrMsg != "" {
 		lines = append(lines, styles.ErrorTextStyle.Render(m.ErrMsg))
 	}

@@ -43,6 +43,8 @@ func (m *Model) View() string {
 		body = m.merch.View(m.w, ch)
 	case scrInventory:
 		body = m.inventory.View(m.w, ch)
+	case scrTierShop:
+		body = m.tierShop.View(m.w, ch)
 	case scrAdminMovies:
 		body = m.adminMovies.View(m.w, ch)
 	case scrAdminUsers:
@@ -55,16 +57,18 @@ func (m *Model) View() string {
 }
 
 func (m *Model) headerView() string {
-	un, tier := "", ""
-	pts, free := 0, 0
+	un, tier, sub := "", "", "wood"
+	pts, free, bal := 0, 0, 0.0
 	loggedIn := m.userResp != nil
 	if loggedIn {
 		un = m.userResp.Username
 		tier = m.userResp.TierName
 		pts = m.userResp.PopcornPoints
 		free = m.userResp.FreeRentals
+		bal = m.userResp.Balance
+		sub = m.userResp.Subscription
 	}
-	return m.header.View(m.w, loggedIn, un, tier, pts, free)
+	return m.header.View(m.w, loggedIn, un, tier, pts, free, bal, sub)
 }
 
 func (m *Model) footerView() string {
@@ -93,13 +97,15 @@ func (m *Model) footerView() string {
 	case scrRentals:
 		hints = "[↑↓] select  [ENTER] return  [E] extend (30🍿)  [Q] back"
 	case scrProfile:
-		hints = "[L] logout  [M] rewards  [I] inventory  [Q] back"
+		hints = "[L] logout  [T] tiers  [M] rewards  [I] inventory  [Q] back"
 	case scrWishlist:
 		hints = "[↑↓] select  [ENTER] info  [D] remove  [Q] back"
 	case scrMerch:
 		hints = "[↑↓] select  [ENTER] redeem  [Q] back"
 	case scrInventory:
 		hints = "[Q] back"
+	case scrTierShop:
+		hints = "[↑↓] select  [ENTER] purchase  [Q] back"
 	case scrAdminMovies, scrAdminUsers, scrAuditLog:
 		hints = "[Q] back  [Ctrl+C] quit"
 	default:

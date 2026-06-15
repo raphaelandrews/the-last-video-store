@@ -16,6 +16,8 @@ type User struct {
 	TOTPSecret    string             `json:"totp_secret"`
 	PopcornPoints int                `json:"popcorn_points"`
 	FreeRentals   int                `json:"free_rentals"`
+	Balance       float64            `json:"balance"`
+	Subscription  string             `json:"subscription"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -32,6 +34,8 @@ type UserResponse struct {
 	TOTPEnabled   bool               `json:"totp_enabled"`
 	PopcornPoints int                `json:"popcorn_points"`
 	FreeRentals   int                `json:"free_rentals"`
+	Balance       float64            `json:"balance"`
+	Subscription  string             `json:"subscription"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -49,6 +53,8 @@ func (u *User) ToResponse() UserResponse {
 		TOTPEnabled:   u.TOTPEnabled,
 		PopcornPoints: u.PopcornPoints,
 		FreeRentals:   u.FreeRentals,
+		Balance:       u.Balance,
+		Subscription:  u.Subscription,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}

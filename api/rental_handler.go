@@ -51,17 +51,29 @@ func (h *RentalHandler) Rent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	freeRental := false
+	paid := false
 	if user.AtRentalLimit() {
 		if user.FreeRentals > 0 {
 			user.FreeRentals--
 			freeRental = true
 		} else {
-			WriteError(w, http.StatusForbidden, "rental limit reached")
+			WriteError(w, http.StatusForbidden, "rental limit reached — return a movie or upgrade your tier")
 			return
 		}
 	} else {
 		user.RentalCount++
 	}
+
+	cost := models.MovieCost(movie.RentalPrice, movie.Format)
+	if !freeRental && cost > 0 {
+		if user.Balance < cost {
+			WriteError(w, http.StatusPaymentRequired, fmt.Sprintf("insufficient balance: need $%.2f, have $%.2f", cost, user.Balance))
+			return
+		}
+		user.Balance -= cost
+		paid = true
+	}
+	_ = paid
 
 	now := time.Now().Unix()
 	rental := &models.Rental{
@@ -157,8 +169,18 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 		}
 		if rental.LateFee == 0 && rental.RewindFee == 0 {
 			rentalUser.PopcornPoints += 10
+			if !rental.IsFreeRental {
+				rentalUser.Balance += models.RentalCost(rental.MovieFormat)
+			}
 		} else if rental.LateFee > 0 {
 			rentalUser.PopcornPoints -= 5
+		}
+		tier := models.TierByName(rentalUser.Subscription)
+		if !tier.NoLateFees && !rental.IsFreeRental {
+			rentalUser.Balance -= rental.LateFee + rental.RewindFee
+			if rentalUser.Balance < 0 {
+				rentalUser.Balance = 0
+			}
 		}
 		inventory, _ := h.store.ListInventory(rentalUser.ID)
 		for _, item := range inventory {

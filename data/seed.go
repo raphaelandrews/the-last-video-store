@@ -35,36 +35,41 @@ func main() {
 	seedUsers(s)
 	seedMovies(s)
 	seedMerch(s)
-	fmt.Printf("Seeded %d movies and 8 users.\n", countMovies(s))
+	fmt.Printf("Seeded %d movies, 8 users, and 7 merch items.\n", countMovies(s))
 }
 
 func seedUsers(s *store.Store) {
 	entries := []struct {
-		name, pass string
-		tier       bitmask.Permission
-		banned     bool
+		name, pass, sub string
+		tier            bitmask.Permission
+		banned          bool
+		balance         float64
 	}{
-		{"bronze", "123", bitmask.TierBronze, false},
-		{"silver", "123", bitmask.TierSilver, false},
-		{"gold", "123", bitmask.TierGold, false},
-		{"employee", "123", bitmask.TierEmployee, false},
-		{"supervisor", "123", bitmask.TierSupervisor, false},
-		{"manager", "123", bitmask.TierManager, false},
-		{"owner", "123", bitmask.TierOwner, false},
-		{"banned", "123", bitmask.TierBronze, true},
+		{"bronze", "123", "bronze", bitmask.TierBronze, false, 50},
+		{"silver", "123", "silver", bitmask.TierSilver, false, 50},
+		{"gold", "123", "gold", bitmask.TierGold, false, 50},
+		{"employee", "123", "gold", bitmask.TierEmployee, false, 50},
+		{"supervisor", "123", "gold", bitmask.TierSupervisor, false, 50},
+		{"manager", "123", "diamond", bitmask.TierManager, false, 100},
+		{"owner", "123", "diamond", bitmask.TierOwner, false, 100},
+		{"banned", "123", "wood", bitmask.TierBronze, true, 5},
 	}
 
 	for _, e := range entries {
 		hash, _ := auth.HashPassword(e.pass)
 		now := time.Now().Unix()
+		tier := models.TierByName(e.sub)
 		user := &models.User{
 			ID:            fmt.Sprintf("seed-%s", e.name),
 			Username:      e.name,
 			PasswordHash:  hash,
 			Tier:          e.tier,
-			MaxRentals:    bitmask.MaxRentalsForTier(e.tier),
+			MaxRentals:    tier.MaxConcurrent,
 			Banned:        e.banned,
 			PopcornPoints: 250,
+			FreeRentals:   tier.FreeRentals,
+			Balance:       e.balance,
+			Subscription:  e.sub,
 			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
@@ -250,6 +255,7 @@ func seedMovies(s *store.Store) {
 			CopiesAvailable: m.CopiesTotal,
 			Available:       true,
 			IsNewRelease:    m.IsNewRelease,
+			RentalPrice:     moviePrice(m.Year, m.Format, m.IsNewRelease),
 			Rating:          3.0 + rand.Float64()*2.0,
 			RatingCount:     100 + rand.Intn(5000),
 			CreatedAt:       time.Now().Unix(),
@@ -265,6 +271,19 @@ func seedMovies(s *store.Store) {
 func countMovies(s *store.Store) int {
 	movies, _, _ := s.ListMovies("", 0, 1000)
 	return len(movies)
+}
+
+func moviePrice(year int, format string, isNew bool) float64 {
+	base := 2.99
+	if year >= 2020 || isNew {
+		base = 5.99
+	} else if year >= 2000 {
+		base = 3.99
+	}
+	if format == "Blu-ray" {
+		base += 1.00
+	}
+	return base
 }
 
 func sanitizeID(s string) string {

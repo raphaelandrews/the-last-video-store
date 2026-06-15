@@ -26,6 +26,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 	auditHandler := NewAuditHandler(store, cfg)
 	merchHandler := &MerchHandler{Store: store}
 	inventoryHandler := &InventoryHandler{Store: store}
+	tierHandler := &TierHandler{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -101,6 +102,11 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 
 			r.Route("/inventory", func(r chi.Router) {
 				r.Get("/", inventoryHandler.List)
+			})
+
+			r.Route("/tiers", func(r chi.Router) {
+				r.Get("/", tierHandler.List)
+				r.Post("/purchase", tierHandler.Purchase)
 			})
 		})
 	})

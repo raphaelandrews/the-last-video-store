@@ -22,6 +22,7 @@ const (
 	scrWishlist
 	scrMerch
 	scrInventory
+	scrTierShop
 	scrAdminMovies
 	scrAdminUsers
 	scrAuditLog
@@ -78,6 +79,7 @@ type Model struct {
 	wishlist    *pages.WishlistModel
 	merch       *pages.MerchModel
 	inventory   *pages.InventoryModel
+	tierShop    *pages.TierShopModel
 	header      *components.HeaderModel
 	adminMovies *pages.AdminMoviesModel
 	adminUsers  *pages.AdminUsersModel
@@ -104,6 +106,14 @@ func (m *Model) Init() tea.Cmd {
 	return tea.Batch(tea.EnterAltScreen, tea.ClearScreen, m.splash.Init())
 }
 
+func (m *Model) setDetailContext() {
+	if m.detail == nil || m.userResp == nil {
+		return
+	}
+	tier := models.TierByName(m.userResp.Subscription)
+	m.detail.SetUserContext(m.userResp.FreeRentals, tier.FreeRentals, m.userResp.Balance)
+}
+
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var pageCmd tea.Cmd
 
@@ -122,7 +132,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.searchKey(msg)
 		}
 		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse && m.screen != scrTOTP {
-			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrRegister || m.screen == scrWishlist || m.screen == scrMerch || m.screen == scrInventory || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
+			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrRegister || m.screen == scrWishlist || m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
 				m.screen = scrBrowse
 				return m, nil
 			}

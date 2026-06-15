@@ -250,7 +250,17 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 		if m.detail != nil {
 			m.detail.SetRental(&rental)
 		}
-		m.browse.Status = "Rented! " + rental.MovieTitle
+		if m.userResp != nil {
+			if rental.IsFreeRental {
+				m.userResp.FreeRentals--
+				m.browse.Status = "Rented! " + rental.MovieTitle + " (🎟️ free rental)"
+			} else {
+				cost := models.MovieCost(0, rental.MovieFormat)
+				m.userResp.Balance -= cost
+				m.userResp.RentalCount++
+				m.browse.Status = fmt.Sprintf("Rented! %s (💵 $%.2f)", rental.MovieTitle, cost)
+			}
+		}
 		return m.loadMovies(m.browse.Page)()
 	}
 }
@@ -304,8 +314,26 @@ func (m *Model) doReturn(rentalID string) tea.Cmd {
 		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/rentals/return", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+m.token)
-		http.DefaultClient.Do(req)
-		m.rentals.Status = "Returned!"
+		resp, _ := http.DefaultClient.Do(req)
+		if resp != nil {
+			defer resp.Body.Close()
+			var rental models.RentalResponse
+			json.NewDecoder(resp.Body).Decode(&rental)
+			m.rentals.Status = "Returned!"
+			if m.userResp != nil {
+				m.userResp.RentalCount--
+				if rental.LateFee == 0 && rental.RewindFee == 0 {
+					m.userResp.PopcornPoints += 10
+					if !rental.IsFreeRental {
+						m.userResp.Balance += models.RentalCost(rental.MovieFormat)
+					}
+					m.rentals.Status += " (+10🍿"
+					m.rentals.Status += ")"
+				} else {
+					m.userResp.PopcornPoints -= 5
+				}
+			}
+		}
 		return tea.Batch(m.loadRentals(), m.loadMovies(m.browse.Page))()
 	}
 }
@@ -461,6 +489,47 @@ func (m *Model) doExtendRental(rentalID string) tea.Cmd {
 			m.userResp.PopcornPoints -= 30
 		}
 		return m.loadRentals()()
+	}
+}
+
+func (m *Model) doPurchaseTier(tierName string) tea.Cmd {
+	return func() tea.Msg {
+		body := `{"tier_name":"` + tierName + `"}`
+		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/tiers/purchase", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+m.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			m.tierShop.Error = err.Error()
+			return nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			var e struct {
+				Error string `json:"error"`
+			}
+			json.NewDecoder(resp.Body).Decode(&e)
+			m.tierShop.Error = e.Error
+			return nil
+		}
+		var r struct {
+			Message string `json:"message"`
+		}
+		json.NewDecoder(resp.Body).Decode(&r)
+		m.tierShop.Error = ""
+		m.tierShop.Status = r.Message
+		tier := models.TierByName(tierName)
+		if tier != nil {
+			m.tierShop.Current = tier.Name
+			if m.userResp != nil {
+				m.userResp.Balance -= tier.Price
+				m.userResp.Subscription = tier.Name
+				m.userResp.MaxRentals = tier.MaxConcurrent
+				m.userResp.FreeRentals = tier.FreeRentals
+				m.tierShop.Balance = m.userResp.Balance
+			}
+		}
+		return nil
 	}
 }
 

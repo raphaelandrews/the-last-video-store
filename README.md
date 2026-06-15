@@ -13,8 +13,10 @@ Blockbuster. It features a rich terminal user interface powered by
 backend that runs on [Render](https://render.com).
 
 Users browse a ~135 movie catalog, rent VHS/DVD/Blu-ray tapes, earn 🍿 Popcorn Points on returns,
-redeem rewards (free rentals, tier upgrades, collectibles), and manage their membership —
-all gated by a **7-tier Role-Based Access Control (RBAC)** system enforced through 6-bit bitmask operations.
+redeem rewards (free rentals, collectibles, merch), and purchase **premium subscription tiers**
+(Wood → Bronze → Silver → Gold → Diamond) that grant monthly free rental allowances and perks.
+
+Staff access is gated by a **7-role Role-Based Access Control (RBAC)** system enforced through 6-bit bitmask operations, separate from the subscription tier system.
 
 ## Quick Start
 
@@ -37,27 +39,53 @@ All 8 test users share the password: `123`
 
 ## Features
 
+### Catalog & Browsing
 - 🎞️ **~135 Movies** — VHS, DVD, Blu-ray spanning 1937–2022, 8 genres
 - 🔍 **Live Search** — `/` opens search bar, type for instant prefix results
 - 📄 **Paginated Browse** — 40 movies per page, `N`/`B` navigation
+- ⭐ **Staff Picks & Last Chance** — `S`/`L` toggle curated + disappearing titles
+- 📊 **Graph Recommendations** — "Customers who rented this also rented..."
+
+### Rental System
 - 📼 **Format-Aware Rentals** — VHS: 3 days, DVD/Blu-ray: 5 days
-- ⏱️ **Due Date Countdown** — "due in N days", "due soon", "overdue by N days"
+- ⏱️ **Due Date Countdown** — "due in N days", "due soon" (≤2 days), "overdue by N days"
 - 📅 **Extend Rentals** — `E` on rentals page, costs 30🍿 for +2 days
-- 💰 **Late & Rewind Fees** — $2/day VHS, $3/day DVD; $1 VHS rewind fee
-- 🍿 **Popcorn Points** — +10 on-time return, -5 late; spend on rewards
-- 🎁 **Rewards Shop** — 7 items: free rentals, tier upgrade, collectibles, merch
-- 🎒 **Inventory** — Collectibles (popcorn bucket, VHS tape, poster, t-shirt)
-- 🎟️ **Free Rentals** — Bypass tier limit, waive all late fees
-- ⬆️ **Tier Upgrade** — Spend 1000🍿 to permanently promote one tier level
-- 🏷️ **7 Membership Tiers** — Bronze → Silver → Gold → Employee → Supervisor → Manager → Owner
-- 🛡️ **RBAC Bitmask** — O(1) permission checks, Staff bit separates employees from Gold members
+- 💰 **Late & Rewind Fees** — $2/day VHS, $3/day DVD/BD; $1 VHS rewind fee (30% chance)
+- 💵 **Paid Rentals** — $2.99 VHS, $3.99 DVD, $4.99 BD; free from tier allowance first
+- 🎟️ **Free Rentals** — From reward coupons or tier allowance, waive all late fees
+
+### Premium Subscription Tiers
+| Tier | Price | Free Rentals/mo | Max Concurrent | New Releases | Late Fees |
+|------|------:|:--------------:|:------------:|:---:|:---:|
+| Wood | Free | 0 | 2 | No | Yes |
+| Bronze | $9.99 | 1 | 3 | No | Yes |
+| Silver | $19.99 | 3 | 5 | Yes | Yes |
+| Gold | $29.99 | 5 | 10 | Yes | **Waived** |
+| Diamond | $49.99 | Unlimited | Unlimited | Yes | **Waived** |
+
+### 💵 Money & 🍿 Popcorn Points (Dual Currency)
+- **Money ($)** — Used to pay for rentals beyond tier allowance and to buy premium tiers
+- **Popcorn Points (🍿)** — Loyalty points earned on returns, spent on rewards
+- On-time return: +10🍿 + rental cost refunded
+- Late return: -5🍿, late fees come out of money balance
+- Popcorn Bucket collectible gives +5🍿 bonus on every return
+
+### Rewards & Collectibles
+- 🎁 **Rewards Shop** — `M` from profile, 7 items
+- 🎒 **Inventory** — `I` from profile, view owned collectibles
+- 🎟️ **Free Rental Coupon** (200🍿) — +1 free rental ticket
+- 🍿 **Popcorn Bucket** (50🍿) — +5 bonus points on every future return
+- ⬆️ **Tier Upgrade** (1000🍿) — Promote RBAC role one level (up to Gold)
+- 🎉 **Private Screening** (500🍿) — +5 free rental tickets
+
+### Admin & Security
+- 🏷️ **7 RBAC Roles** — Bronze → Silver → Gold → Employee → Supervisor → Manager → Owner
+- 🛡️ **RBAC Bitmask** — O(1) permission checks
 - 🔐 **JWT Auth** — Access (15min) + Refresh (7day) tokens with rotation
 - 🔒 **TOTP 2FA** — Optional time-based one-time passwords (Manager+)
 - 📋 **Wishlist** — Add from detail page, view/remove with `V` key
-- ⭐ **Staff Picks & Last Chance** — `S`/`L` toggle curated + disappearing titles
-- 📊 **Graph Recommendations** — "Customers who rented this also rented..."
 - 🧾 **Immutable Audit Trail** — SHA-256 hash chain, tamper-detectable
-- 🚫 **Brute-force Lockout** — 5 failed attempts = 30-minute account lock
+- 🚫 **Brute-force Lockout** — 5 failed attempts = 30min lock
 - 🔮 **Bloom Filter** — O(k) banned-user lookup
 - 🖥️ **Cross-Platform** — Linux + Windows binaries
 
@@ -81,7 +109,7 @@ thelastvideostore/
 │   │   ├── lru/                # LRU cache
 │   │   ├── bloom/              # Bloom filter
 │   │   └── graph/              # Undirected weighted graph
-│   ├── models/                 # User, Movie, Rental, Wishlist, Audit, Merch, Inventory
+│   ├── models/                 # User, Movie, Rental, Wishlist, Audit, Merch, Inventory, Tier
 │   └── store/                  # BoltDB persistence layer
 ├── api/                        # Chi REST API (handlers, middleware, DTOs)
 ├── tui/                        # Bubble Tea TUI (app, keys, commands, views, pages, components, styles)
@@ -96,27 +124,26 @@ thelastvideostore/
 
 ## Test Users
 
-| Username   | Password | Tier       | Max Rentals | 🍿 Points |
-|-----------|---------|-----------|:----------:|:--------:|
-| bronze    | 123     | Bronze    | 1          | 250      |
-| silver    | 123     | Silver    | 2          | 250      |
-| gold      | 123     | Gold      | 5          | 250      |
-| employee  | 123     | Employee  | 5          | 250      |
-| supervisor| 123     | Supervisor| 5          | 250      |
-| manager   | 123     | Manager   | 10         | 250      |
-| owner     | 123     | Owner     | ∞          | 250      |
-| banned    | 123     | Bronze    | (suspended)| 250      |
+| Username   | Password | Subscription | 🍿 Points | 💵 Balance |
+|-----------|---------|-------------|:--------:|:--------:|
+| bronze    | 123     | Bronze      | 250      | $50.00   |
+| silver    | 123     | Silver      | 250      | $50.00   |
+| gold      | 123     | Gold        | 250      | $50.00   |
+| employee  | 123     | Gold        | 250      | $50.00   |
+| supervisor| 123     | Gold        | 250      | $50.00   |
+| manager   | 123     | Diamond     | 250      | $100.00  |
+| owner     | 123     | Diamond     | 250      | $100.00  |
+| banned    | 123     | Wood        | 250      | $5.00    |
 
 ## API Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | — | Register new member (Bronze) |
+| `POST` | `/api/v1/auth/register` | — | Register new member (Wood subscription) |
 | `POST` | `/api/v1/auth/login` | — | Login, get JWT (+ TOTP prompt if enabled) |
 | `POST` | `/api/v1/auth/login/totp` | Temp | TOTP 2FA step 2 |
 | `POST` | `/api/v1/auth/refresh` | JWT | Rotate refresh token |
-| `POST` | `/api/v1/auth/logout` | JWT | Logout |
-| `GET`  | `/api/v1/movies` | JWT | List movies (paginated, genre filter) |
+| `GET`  | `/api/v1/movies` | JWT | List movies (paginated, 40/page) |
 | `GET`  | `/api/v1/movies/search` | JWT | Prefix search by title |
 | `GET`  | `/api/v1/movies/staff-picks` | JWT | Curated picks |
 | `GET`  | `/api/v1/movies/last-chance` | JWT | Last copies available |
@@ -124,34 +151,24 @@ thelastvideostore/
 | `POST` | `/api/v1/movies` | Manager+ | Create movie |
 | `PUT`  | `/api/v1/movies/{id}` | Manager+ | Update movie |
 | `DELETE`| `/api/v1/movies/{id}` | Manager+ | Delete movie |
-| `POST` | `/api/v1/rentals/rent` | JWT | Rent a movie |
-| `POST` | `/api/v1/rentals/return` | JWT | Return a movie |
+| `POST` | `/api/v1/rentals/rent` | JWT | Rent a movie (tier allowance or 💵) |
+| `POST` | `/api/v1/rentals/return` | JWT | Return a movie (+🍿, ±💵) |
 | `POST` | `/api/v1/rentals/extend` | JWT | Extend due date (30🍿, +2 days) |
-| `GET`  | `/api/v1/rentals/history` | JWT | User's rental history |
+| `GET`  | `/api/v1/rentals/history` | JWT | Rental history |
 | `GET`  | `/api/v1/wishlist` | JWT | View wishlist |
 | `POST` | `/api/v1/wishlist` | JWT | Add to wishlist |
 | `DELETE`| `/api/v1/wishlist/{movieID}` | JWT | Remove from wishlist |
-| `GET`  | `/api/v1/merch` | JWT | List rewards catalog |
-| `POST` | `/api/v1/merch/redeem` | JWT | Redeem popcorn points for a reward |
+| `GET`  | `/api/v1/tiers` | JWT | List subscription tiers |
+| `POST` | `/api/v1/tiers/purchase` | JWT | Buy/upgrade subscription tier |
+| `GET`  | `/api/v1/merch` | JWT | Popcorn Points rewards catalog |
+| `POST` | `/api/v1/merch/redeem` | JWT | Redeem 🍿 for a reward |
 | `GET`  | `/api/v1/inventory` | JWT | View your collectibles |
 | `GET`  | `/api/v1/users` | Supervisor+ | List all users |
 | `POST` | `/api/v1/users` | Supervisor+ | Create user |
-| `PUT`  | `/api/v1/users/{id}` | Supervisor+ | Update user tier/ban |
+| `PUT`  | `/api/v1/users/{id}` | Supervisor+ | Update user role/ban |
 | `DELETE`| `/api/v1/users/{id}` | Manager+ | Delete user |
 | `POST` | `/api/v1/users/{id}/totp` | Self/Manager+ | Enable/disable TOTP 2FA |
 | `GET`  | `/api/v1/audit` | Supervisor+ | View audit log |
-
-## Rewards Catalog
-
-| Item | 🍿 Cost | Effect |
-|------|:------:|--------|
-| Popcorn Bucket | 50 | +5 bonus points on every future return |
-| Blank VHS Tape | 75 | Collectible (inventory) |
-| Movie Poster | 100 | Collectible (inventory) |
-| Store T-Shirt | 150 | Collectible (inventory) |
-| Free Rental Coupon | 200 | +1 free rental (no late fees, bypasses limit) |
-| Private Screening | 500 | +5 free rentals |
-| Tier Upgrade | 1000 | Permanent tier promotion (up to Gold) |
 
 ## Data Structures (All From Scratch)
 
