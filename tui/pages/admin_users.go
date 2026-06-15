@@ -11,7 +11,7 @@ import (
 type AdminUsersModel struct {
 	users    []models.UserResponse
 	selected int
-	errMsg   string
+	ErrMsg   string
 }
 
 type AdminUsersRefreshMsg struct{}
@@ -82,10 +82,12 @@ func (m *AdminUsersModel) View(width, height int) string {
 		rows = append(rows, style.Render(line))
 	}
 
-	footer := styles.TextStyle.Render("\n[P] Promote  [D] Demote  [B] Toggle Ban  [ESC] Back")
-
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	return lipgloss.JoinVertical(lipgloss.Left, title, content, footer)
+	result := lipgloss.JoinVertical(lipgloss.Left, title, content)
+	if m.ErrMsg != "" {
+		result += "\n" + styles.ErrorTextStyle.Render(m.ErrMsg)
+	}
+	return result
 }
 
 func truncateStr(s string, n int) string {

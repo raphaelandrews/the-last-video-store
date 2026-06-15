@@ -93,6 +93,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 			r.Route("/audit", func(r chi.Router) {
 				r.Use(RequirePermission(bitmask.PermManageUsers))
 				r.Get("/", auditHandler.List)
+				r.Get("/verify", auditHandler.Verify)
 			})
 
 			r.Route("/merch", func(r chi.Router) {

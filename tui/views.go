@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/tui/styles"
 )
@@ -45,6 +47,10 @@ func (m *Model) View() string {
 		body = m.inventory.View(m.w, ch)
 	case scrTierShop:
 		body = m.tierShop.View(m.w, ch)
+	case scrMovieForm:
+		body = m.movieForm.View(m.w, ch)
+	case scrAccessDenied:
+		body = m.accessDenied.View(m.w, ch)
 	case scrAdminMovies:
 		body = m.adminMovies.View(m.w, ch)
 	case scrAdminUsers:
@@ -106,8 +112,16 @@ func (m *Model) footerView() string {
 		hints = "[Q] back"
 	case scrTierShop:
 		hints = "[↑↓] select  [ENTER] purchase  [Q] back"
-	case scrAdminMovies, scrAdminUsers, scrAuditLog:
-		hints = "[Q] back  [Ctrl+C] quit"
+	case scrMovieForm:
+		hints = "[TAB] next field  [ENTER] submit  [ESC] back"
+	case scrAccessDenied:
+		hints = "[Q] back"
+	case scrAdminMovies:
+		hints = fmt.Sprintf("[A] Add  [ENTER] Edit  [D] Delete  [S] Staff Pick  [N/B] Page %d/%d  [Q] Back", m.adminMovies.Page, m.adminMovies.TotalPages)
+	case scrAdminUsers:
+		hints = "[P] Promote  [D] Demote  [B] Toggle Ban  [Q] Back"
+	case scrAuditLog:
+		hints = "[↑↓] Navigate  [V] Verify Chain  [Q] Back"
 	default:
 		hints = "[Q] back  [Ctrl+C] quit"
 	}

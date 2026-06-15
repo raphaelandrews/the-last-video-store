@@ -26,6 +26,8 @@ const (
 	scrAdminMovies
 	scrAdminUsers
 	scrAuditLog
+	scrMovieForm
+	scrAccessDenied
 )
 
 type loadMoviesMsg struct {
@@ -47,6 +49,8 @@ type searchResultsMsg struct {
 }
 type loadAdminMoviesMsg struct {
 	movies []models.MovieResponse
+	total  int
+	page   int
 }
 type loadAdminUsersMsg struct {
 	users []models.UserResponse
@@ -69,21 +73,23 @@ type Model struct {
 	token    string
 	userResp *models.UserResponse
 
-	splash      *pages.SplashModel
-	login       *pages.LoginModel
-	register    *pages.RegisterModel
-	browse      *pages.BrowseModel
-	detail      *pages.MovieDetailModel
-	rentals     *pages.MyRentalsModel
-	profile     *pages.ProfileModel
-	wishlist    *pages.WishlistModel
-	merch       *pages.MerchModel
-	inventory   *pages.InventoryModel
-	tierShop    *pages.TierShopModel
-	header      *components.HeaderModel
-	adminMovies *pages.AdminMoviesModel
-	adminUsers  *pages.AdminUsersModel
-	auditLog    *pages.AuditLogModel
+	splash       *pages.SplashModel
+	login        *pages.LoginModel
+	register     *pages.RegisterModel
+	browse       *pages.BrowseModel
+	detail       *pages.MovieDetailModel
+	rentals      *pages.MyRentalsModel
+	profile      *pages.ProfileModel
+	wishlist     *pages.WishlistModel
+	merch        *pages.MerchModel
+	inventory    *pages.InventoryModel
+	tierShop     *pages.TierShopModel
+	header       *components.HeaderModel
+	adminMovies  *pages.AdminMoviesModel
+	adminUsers   *pages.AdminUsersModel
+	auditLog     *pages.AuditLogModel
+	movieForm    *pages.MovieFormModel
+	accessDenied *pages.AccessDeniedModel
 
 	searchBar *components.SearchbarModel
 	searching bool
@@ -131,8 +137,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.searching {
 			return m, m.searchKey(msg)
 		}
-		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse && m.screen != scrTOTP {
-			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrRegister || m.screen == scrWishlist || m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
+		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse && m.screen != scrTOTP && m.screen != scrMovieForm && m.screen != scrAccessDenied && m.screen != scrRegister {
+			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
 				m.screen = scrBrowse
 				return m, nil
 			}
@@ -218,7 +224,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case searchResultsMsg:
 			m.searchBar.SetResults(msg.results)
 		case loadAdminMoviesMsg:
-			m.adminMovies.SetMovies(msg.movies)
+			m.adminMovies.SetMovies(msg.movies, msg.total, msg.page)
 		case loadAdminUsersMsg:
 			m.adminUsers.SetUsers(msg.users)
 		case loadAuditLogMsg:
@@ -229,6 +235,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.inventory.SetItems(msg.items)
 		case pages.MerchRedeemMsg:
 			return m, m.doRedeemMerch(msg.ItemID)
+		case pages.MovieFormSubmitMsg:
+			if msg.Mode == pages.FormAdd {
+				return m, m.doCreateMovie(msg)
+			}
+			return m, m.doUpdateMovie(msg)
 
 		case pages.ErrorMsg:
 			if m.login != nil {
@@ -250,6 +261,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_, pageCmd = m.login.Update(msg)
 	case scrRegister:
 		_, pageCmd = m.register.Update(msg)
+	case scrMovieForm:
+		pageCmd, _ = m.movieForm.Update(msg)
 	}
 
 	return m, pageCmd

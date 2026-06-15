@@ -1,8 +1,8 @@
 package auth
 
 import (
-	"encoding/hex"
 	"fmt"
+	"sort"
 
 	"github.com/google/uuid"
 	"github.com/thelastvideostore/internal/crypto"
@@ -37,6 +37,8 @@ func VerifyAuditChain(s *store.Store) (bool, error) {
 		return true, nil
 	}
 
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Timestamp < entries[j].Timestamp })
+
 	chainEntries := make([]crypto.HashChainEntry, len(entries))
 	for i, e := range entries {
 		chainEntries[i] = crypto.HashChainEntry{
@@ -50,18 +52,5 @@ func VerifyAuditChain(s *store.Store) (bool, error) {
 		}
 	}
 
-	valid := crypto.VerifyChain(chainEntries)
-	if !valid {
-		return false, nil
-	}
-
-	prev := []byte("GENESIS")
-	for _, e := range entries {
-		if hex.EncodeToString(e.PrevHash) != hex.EncodeToString(prev) {
-			return false, nil
-		}
-		prev = e.Hash
-	}
-
-	return true, nil
+	return crypto.VerifyChain(chainEntries), nil
 }

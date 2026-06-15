@@ -10,20 +10,35 @@ import (
 )
 
 type AdminMoviesModel struct {
-	movies   []models.MovieResponse
-	selected int
-	errMsg   string
+	movies     []models.MovieResponse
+	selected   int
+	errMsg     string
+	Page       int
+	TotalPages int
+	total      int
+	PageSize   int
 }
 
 type AdminMoviesRefreshMsg struct{}
 
 func NewAdminMoviesModel() *AdminMoviesModel {
-	return &AdminMoviesModel{selected: -1}
+	return &AdminMoviesModel{selected: -1, Page: 1, PageSize: 30}
 }
 
-func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse) {
+func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page int) {
 	m.movies = movies
+	m.total = total
+	m.Page = page
+	if m.PageSize > 0 {
+		m.TotalPages = (total + m.PageSize - 1) / m.PageSize
+	}
+	if m.selected >= len(m.movies) {
+		m.selected = len(m.movies) - 1
+	}
 }
+
+func (m *AdminMoviesModel) HasNextPage() bool { return m.Page < m.TotalPages }
+func (m *AdminMoviesModel) HasPrevPage() bool { return m.Page > 1 }
 
 func (m *AdminMoviesModel) SelectedMovie() *models.MovieResponse {
 	if m.selected >= 0 && m.selected < len(m.movies) {
@@ -77,8 +92,6 @@ func (m *AdminMoviesModel) View(width, height int) string {
 		rows = append(rows, style.Render(line))
 	}
 
-	footer := styles.TextStyle.Render("\n[A] Add Movie  [ENTER] Edit  [D] Delete  [S] Toggle Staff Pick  [ESC] Back")
-
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	return lipgloss.JoinVertical(lipgloss.Left, title, content, footer)
+	return lipgloss.JoinVertical(lipgloss.Left, title, content)
 }

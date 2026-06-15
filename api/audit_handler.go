@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/thelastvideostore/internal/auth"
 	"github.com/thelastvideostore/internal/config"
 	"github.com/thelastvideostore/internal/store"
 )
@@ -34,4 +35,23 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusOK, entries)
+}
+
+func (h *AuditHandler) Verify(w http.ResponseWriter, r *http.Request) {
+	valid, err := auth.VerifyAuditChain(h.store)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"chain_intact": valid,
+		"message":      chainMessage(valid),
+	})
+}
+
+func chainMessage(valid bool) string {
+	if valid {
+		return "✅ Chain intact — no tampering detected"
+	}
+	return "⚠️ Chain broken — possible tampering detected"
 }

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"github.com/thelastvideostore/internal/ds/bitmask"
 	"github.com/thelastvideostore/tui/pages"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -85,23 +86,29 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				return m.loadMovies(m.browse.Page - 1)
 			}
 		case "ctrl+a":
-			if m.userResp != nil && m.userResp.TierName != "Couch Potato" && m.userResp.TierName != "Matinee Fan" {
+			if m.userResp != nil && bitmask.CanAdmin(m.userResp.Tier) {
 				m.adminMovies = pages.NewAdminMoviesModel()
 				m.screen = scrAdminMovies
-				return m.loadAdminMovies()
+				return m.loadAdminMovies(1)
 			}
+			m.accessDenied = pages.NewAccessDeniedModel("Manager role or higher required to manage movies.")
+			m.screen = scrAccessDenied
 		case "ctrl+u":
-			if m.userResp != nil && m.userResp.TierName != "Couch Potato" && m.userResp.TierName != "Matinee Fan" && m.userResp.TierName != "Gold Member" {
+			if m.userResp != nil && bitmask.CanManageUsers(m.userResp.Tier) {
 				m.adminUsers = pages.NewAdminUsersModel()
 				m.screen = scrAdminUsers
 				return m.loadAdminUsers()
 			}
+			m.accessDenied = pages.NewAccessDeniedModel("Supervisor role or higher required to manage users.")
+			m.screen = scrAccessDenied
 		case "ctrl+g":
-			if m.userResp != nil && m.userResp.TierName != "Couch Potato" && m.userResp.TierName != "Matinee Fan" {
+			if m.userResp != nil && bitmask.CanManageUsers(m.userResp.Tier) {
 				m.auditLog = pages.NewAuditLogModel()
 				m.screen = scrAuditLog
 				return m.loadAuditLog()
 			}
+			m.accessDenied = pages.NewAccessDeniedModel("Supervisor role or higher required to view the audit log.")
+			m.screen = scrAccessDenied
 		case "f5":
 			return m.loadMovies(m.browse.Page)
 		}
@@ -188,6 +195,33 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.adminMovies.MoveDown()
 		case "up", "k":
 			m.adminMovies.MoveUp()
+		case "a":
+			m.movieForm = pages.NewMovieFormModel()
+			m.screen = scrMovieForm
+		case "enter":
+			mv := m.adminMovies.SelectedMovie()
+			if mv != nil {
+				m.movieForm = pages.NewMovieEditFormModel(mv)
+				m.screen = scrMovieForm
+			}
+		case "s":
+			mv := m.adminMovies.SelectedMovie()
+			if mv != nil {
+				return m.doToggleStaffPick(mv.ID, mv.IsStaffPick)
+			}
+		case "d":
+			mv := m.adminMovies.SelectedMovie()
+			if mv != nil {
+				return m.doDeleteMovie(mv.ID)
+			}
+		case "n":
+			if m.adminMovies.HasNextPage() {
+				return m.loadAdminMovies(m.adminMovies.Page + 1)
+			}
+		case "b":
+			if m.adminMovies.HasPrevPage() {
+				return m.loadAdminMovies(m.adminMovies.Page - 1)
+			}
 		}
 	case scrAdminUsers:
 		switch k {
@@ -195,6 +229,21 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.adminUsers.MoveDown()
 		case "up", "k":
 			m.adminUsers.MoveUp()
+		case "p":
+			u := m.adminUsers.SelectedUser()
+			if u != nil {
+				return m.doUpdateUser(u.ID, "promote")
+			}
+		case "d":
+			u := m.adminUsers.SelectedUser()
+			if u != nil {
+				return m.doUpdateUser(u.ID, "demote")
+			}
+		case "b":
+			u := m.adminUsers.SelectedUser()
+			if u != nil {
+				return m.doUpdateUser(u.ID, "ban")
+			}
 		}
 	case scrAuditLog:
 		switch k {
@@ -202,6 +251,12 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.auditLog.MoveDown()
 		case "up", "k":
 			m.auditLog.MoveUp()
+		case "v":
+			return m.doVerifyAuditChain()
+		}
+	case scrAccessDenied:
+		if k == "q" {
+			m.screen = scrBrowse
 		}
 	case scrMerch:
 		switch k {
@@ -226,6 +281,11 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			if tier != nil && tier.Name != m.tierShop.Current && (tier.Price == 0 || m.userResp.Balance >= tier.Price) {
 				return m.doPurchaseTier(tier.Name)
 			}
+		}
+	case scrMovieForm:
+		if k == "esc" {
+			m.screen = scrAdminMovies
+			m.movieForm = nil
 		}
 	}
 	return nil

@@ -156,6 +156,22 @@ func (h *MovieHandler) Create(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusBadRequest, "invalid year")
 		return
 	}
+	if req.Genre == "" {
+		WriteError(w, http.StatusBadRequest, "genre is required")
+		return
+	}
+	if req.Format != "VHS" && req.Format != "DVD" && req.Format != "Blu-ray" {
+		WriteError(w, http.StatusBadRequest, "format must be VHS, DVD, or Blu-ray")
+		return
+	}
+	if req.Director == "" {
+		WriteError(w, http.StatusBadRequest, "director is required")
+		return
+	}
+	if len(req.Cast) == 0 {
+		WriteError(w, http.StatusBadRequest, "at least one cast member is required")
+		return
+	}
 	if req.CopiesTotal < 1 {
 		req.CopiesTotal = 1
 	}
@@ -205,12 +221,20 @@ func (h *MovieHandler) Update(w http.ResponseWriter, r *http.Request) {
 		movie.Title = *req.Title
 	}
 	if req.Year != nil {
+		if *req.Year < 1900 || *req.Year > time.Now().Year()+5 {
+			WriteError(w, http.StatusBadRequest, "invalid year")
+			return
+		}
 		movie.Year = *req.Year
 	}
 	if req.Genre != nil {
 		movie.Genre = *req.Genre
 	}
 	if req.Format != nil {
+		if *req.Format != "VHS" && *req.Format != "DVD" && *req.Format != "Blu-ray" {
+			WriteError(w, http.StatusBadRequest, "format must be VHS, DVD, or Blu-ray")
+			return
+		}
 		movie.Format = *req.Format
 	}
 	if req.Director != nil {

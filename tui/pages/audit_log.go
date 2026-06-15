@@ -2,16 +2,18 @@ package pages
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/tui/styles"
 )
 
 type AuditLogModel struct {
-	entries  []map[string]interface{}
-	selected int
-	scroll   int
-	errMsg   string
+	entries   []map[string]interface{}
+	selected  int
+	scroll    int
+	errMsg    string
+	VerifyMsg string
 }
 
 type AuditLogRefreshMsg struct{}
@@ -65,7 +67,14 @@ func (m *AuditLogModel) PageDown() {
 func (m *AuditLogModel) View(width, height int) string {
 	title := styles.HeadingStyle.Width(width).Align(lipgloss.Center).Render("🔗 AUDIT LOG — Hash Chain Viewer")
 
-	status := styles.SuccessTextStyle.Render("✅ Chain intact") + "  "
+	status := styles.DimTextStyle.Render("Press [V] to verify chain integrity")
+	if m.VerifyMsg != "" {
+		if strings.HasPrefix(m.VerifyMsg, "✅") {
+			status = styles.SuccessTextStyle.Render(m.VerifyMsg)
+		} else {
+			status = styles.ErrorTextStyle.Render(m.VerifyMsg)
+		}
+	}
 	status += styles.DimTextStyle.Render("(" + itoaStr(len(m.entries)) + " entries)")
 
 	var rows []string
@@ -97,10 +106,8 @@ func (m *AuditLogModel) View(width, height int) string {
 		rows = append(rows, style.Render(line))
 	}
 
-	footer := styles.TextStyle.Render("\n[↑↓] Navigate  [PgUp/PgDn] Scroll  [V] Verify Chain  [ESC] Back")
-
 	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	return lipgloss.JoinVertical(lipgloss.Left, title, content, footer)
+	return lipgloss.JoinVertical(lipgloss.Left, title, content)
 }
 
 func formatAction(a string) string {
