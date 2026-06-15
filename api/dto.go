@@ -45,7 +45,8 @@ type UpdateMovieRequest struct {
 }
 
 type RentRequest struct {
-	MovieID string `json:"movie_id"`
+	MovieID   string `json:"movie_id"`
+	UseTicket bool   `json:"use_ticket"`
 }
 
 type ReturnRequest struct {

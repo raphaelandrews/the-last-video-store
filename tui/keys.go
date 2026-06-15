@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/thelastvideostore/internal/ds/bitmask"
+	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/pages"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -116,9 +117,37 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		switch k {
 		case "enter":
 			if m.detail != nil && !m.detail.Rented && m.detail.Movie.Available {
-				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+				if m.detail.FreeRentals > 0 && m.detail.Balance >= models.MovieCost(m.detail.Movie.RentalPrice, m.detail.Movie.Format) {
+					m.detail.Choosing = true
+					m.detail.ErrMsg = ""
+				} else if m.detail.FreeRentals > 0 {
+					m.detail.UseTicket = true
+					return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+				} else if m.detail.Balance >= models.MovieCost(m.detail.Movie.RentalPrice, m.detail.Movie.Format) {
+					m.detail.UseTicket = false
+					return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+				} else {
+					m.detail.ErrMsg = "💵 Insufficient funds — upgrade tier or add funds"
+				}
 			} else if m.detail != nil && !m.detail.Rented && !m.detail.Movie.Available {
 				m.detail.ErrMsg = "🔴 No copies available — press [W] to join the waitlist"
+			}
+		case "t":
+			if m.detail != nil && m.detail.Choosing && m.detail.FreeRentals > 0 {
+				m.detail.Choosing = false
+				m.detail.UseTicket = true
+				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+			}
+		case "m":
+			if m.detail != nil && m.detail.Choosing && m.detail.Balance >= models.MovieCost(m.detail.Movie.RentalPrice, m.detail.Movie.Format) {
+				m.detail.Choosing = false
+				m.detail.UseTicket = false
+				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+			}
+		case "esc":
+			if m.detail != nil && m.detail.Choosing {
+				m.detail.Choosing = false
+				m.detail.ErrMsg = ""
 			}
 		case "w":
 			if m.detail != nil {

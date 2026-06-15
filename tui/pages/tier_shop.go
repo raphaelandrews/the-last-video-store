@@ -86,7 +86,7 @@ func (m *TierShopModel) View(w, h int) string {
 			}
 		}
 
-		line := fmt.Sprintf("%s%-12s %10s  %d free/mo  max %d concurrent%s",
+		line := fmt.Sprintf("%s%-12s %10s  %d free/mo  max %d rentals%s",
 			prefix, t.Label, price, t.FreeRentals, t.MaxConcurrent, current)
 		rows = append(rows, st.Render(line))
 

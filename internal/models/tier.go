@@ -11,11 +11,11 @@ type TierInfo struct {
 }
 
 var Tiers = []TierInfo{
-	{Name: "wood", Label: "Wood", Price: 0, FreeRentals: 0, MaxConcurrent: 2, NewReleasesOK: false, NoLateFees: false},
-	{Name: "bronze", Label: "Bronze", Price: 9.99, FreeRentals: 1, MaxConcurrent: 3, NewReleasesOK: false, NoLateFees: false},
-	{Name: "silver", Label: "Silver", Price: 19.99, FreeRentals: 3, MaxConcurrent: 5, NewReleasesOK: true, NoLateFees: false},
-	{Name: "gold", Label: "Gold", Price: 29.99, FreeRentals: 5, MaxConcurrent: 10, NewReleasesOK: true, NoLateFees: true},
-	{Name: "diamond", Label: "Diamond", Price: 49.99, FreeRentals: 999, MaxConcurrent: 999, NewReleasesOK: true, NoLateFees: true},
+	{Name: "wood", Label: "Wood", Price: 0, FreeRentals: 0, MaxConcurrent: 5, NewReleasesOK: false, NoLateFees: false},
+	{Name: "bronze", Label: "Bronze", Price: 9.99, FreeRentals: 1, MaxConcurrent: 10, NewReleasesOK: false, NoLateFees: false},
+	{Name: "silver", Label: "Silver", Price: 19.99, FreeRentals: 3, MaxConcurrent: 15, NewReleasesOK: true, NoLateFees: false},
+	{Name: "gold", Label: "Gold", Price: 29.99, FreeRentals: 5, MaxConcurrent: 25, NewReleasesOK: true, NoLateFees: true},
+	{Name: "diamond", Label: "Diamond", Price: 49.99, FreeRentals: 10, MaxConcurrent: 50, NewReleasesOK: true, NoLateFees: true},
 }
 
 func TierByName(name string) *TierInfo {

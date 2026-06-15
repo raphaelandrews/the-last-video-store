@@ -63,13 +63,13 @@ func (r *Rental) CalculateLateFee(now int64) float64 {
 	if now <= r.DueDate || r.IsFreeRental {
 		return 0
 	}
-	const day = int64(24 * 3600)
-	daysLate := (now - r.DueDate) / day
-	if daysLate < 1 {
-		daysLate = 1
+	const minute = int64(60)
+	minutesLate := (now - r.DueDate) / minute
+	if minutesLate < 1 {
+		minutesLate = 1
 	}
-	rate := DailyLateFeeRate(r.MovieFormat)
-	return float64(daysLate) * rate
+	rate := DailyLateFeeRate(r.MovieFormat) / 10 // per-minute rate
+	return float64(minutesLate) * rate
 }
 
 func (r *Rental) CalculateRewindFee() float64 {
@@ -84,14 +84,16 @@ func (r *Rental) TotalFee() float64 {
 }
 
 func DueDateForFormat(format string, rentedAt int64) int64 {
-	const day = int64(24 * 3600)
+	const minute = int64(60)
 	switch format {
 	case "VHS":
-		return rentedAt + 3*day
-	case "DVD", "Blu-ray":
-		return rentedAt + 5*day
+		return rentedAt + 1*minute
+	case "DVD":
+		return rentedAt + 2*minute
+	case "Blu-ray":
+		return rentedAt + 3*minute
 	default:
-		return rentedAt + 5*day
+		return rentedAt + 4*minute
 	}
 }
 

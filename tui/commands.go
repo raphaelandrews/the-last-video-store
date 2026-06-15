@@ -257,7 +257,8 @@ func (m *Model) loadAuditLog() tea.Cmd {
 
 func (m *Model) doRent(movieID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"movie_id":"` + movieID + `"}`
+		useTicket := m.detail != nil && m.detail.UseTicket
+		body := fmt.Sprintf(`{"movie_id":"%s","use_ticket":%v}`, movieID, useTicket)
 		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/rentals/rent", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+m.token)
@@ -277,7 +278,7 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 			m.detail.SetRental(&rental)
 		}
 		if m.userResp != nil {
-			if rental.IsFreeRental {
+			if m.detail != nil && m.detail.UseTicket {
 				m.userResp.FreeRentals--
 				m.browse.Status = "Rented! " + rental.MovieTitle + " (🎟️ free rental)"
 			} else {
@@ -286,6 +287,7 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 				m.userResp.RentalCount++
 				m.browse.Status = fmt.Sprintf("Rented! %s (💵 $%.2f)", rental.MovieTitle, cost)
 			}
+			m.detail.UseTicket = false
 		}
 		return m.loadMovies(m.browse.Page)()
 	}
@@ -350,11 +352,7 @@ func (m *Model) doReturn(rentalID string) tea.Cmd {
 				m.userResp.RentalCount--
 				if rental.LateFee == 0 && rental.RewindFee == 0 {
 					m.userResp.PopcornPoints += 10
-					if !rental.IsFreeRental {
-						m.userResp.Balance += models.RentalCost(rental.MovieFormat)
-					}
-					m.rentals.Status += " (+10🍿"
-					m.rentals.Status += ")"
+					m.rentals.Status += " (+10🍿)"
 				} else {
 					m.userResp.PopcornPoints -= 5
 				}

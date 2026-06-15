@@ -51,29 +51,23 @@ func (h *RentalHandler) Rent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	freeRental := false
-	paid := false
-	if user.AtRentalLimit() {
-		if user.FreeRentals > 0 {
-			user.FreeRentals--
-			freeRental = true
-		} else {
-			WriteError(w, http.StatusForbidden, "rental limit reached — return a movie or upgrade your tier")
-			return
-		}
-	} else {
-		user.RentalCount++
+	if req.UseTicket && user.FreeRentals > 0 {
+		user.FreeRentals--
+		freeRental = true
+	} else if user.AtRentalLimit() {
+		WriteError(w, http.StatusForbidden, "rental limit reached — use a ticket, return a movie, or upgrade your tier")
+		return
 	}
 
-	cost := models.MovieCost(movie.RentalPrice, movie.Format)
-	if !freeRental && cost > 0 {
+	if !freeRental {
+		cost := models.MovieCost(movie.RentalPrice, movie.Format)
 		if user.Balance < cost {
 			WriteError(w, http.StatusPaymentRequired, fmt.Sprintf("insufficient balance: need $%.2f, have $%.2f", cost, user.Balance))
 			return
 		}
 		user.Balance -= cost
-		paid = true
+		user.RentalCount++
 	}
-	_ = paid
 
 	now := time.Now().Unix()
 	rental := &models.Rental{
@@ -169,9 +163,6 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 		}
 		if rental.LateFee == 0 && rental.RewindFee == 0 {
 			rentalUser.PopcornPoints += 10
-			if !rental.IsFreeRental {
-				rentalUser.Balance += models.RentalCost(rental.MovieFormat)
-			}
 		} else if rental.LateFee > 0 {
 			rentalUser.PopcornPoints -= 5
 		}
@@ -237,17 +228,17 @@ func (h *RentalHandler) Extend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	const extendDays = 2
+	const extendMinutes = 1
 	const cost = 30
 
-	if err := h.store.ExtendRental(req.RentalID, user.ID, extendDays, cost); err != nil {
+	if err := h.store.ExtendRental(req.RentalID, user.ID, extendMinutes, cost); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"message":  fmt.Sprintf("Extended by %d days for %d 🍿", extendDays, cost),
-		"extended": extendDays,
+		"message":  fmt.Sprintf("Extended by %d min for %d 🍿", extendMinutes, cost),
+		"extended": extendMinutes,
 	})
 }
 

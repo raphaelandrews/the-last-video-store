@@ -183,7 +183,7 @@ func (s *Store) CountActiveRentalsByUser(userID string) (int, error) {
 	return count, err
 }
 
-func (s *Store) ExtendRental(rentalID, userID string, extensionDays int64, cost int) error {
+func (s *Store) ExtendRental(rentalID, userID string, extensionMinutes int64, cost int) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		rb := tx.Bucket(bucketRentals)
 		data := rb.Get([]byte(rentalID))
@@ -215,7 +215,7 @@ func (s *Store) ExtendRental(rentalID, userID string, extensionDays int64, cost 
 		}
 
 		user.PopcornPoints -= cost
-		rental.DueDate += extensionDays * 24 * 3600
+		rental.DueDate += extensionMinutes * 60
 		if rental.Status == models.RentalOverdue {
 			rental.Status = models.RentalActive
 		}

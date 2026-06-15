@@ -67,18 +67,18 @@ func (m *MyRentalsModel) View(w, h int) string {
 		status := "🟢 active"
 		due := ""
 		now := time.Now().Unix()
-		const day = int64(24 * 3600)
-		daysLeft := (r.DueDate - now) / day
+		const minute = int64(60)
+		secsLeft := (r.DueDate - now) / minute
 		if r.Status == "returned" {
 			status = "✓ returned"
-		} else if daysLeft < 0 {
+		} else if secsLeft < 0 {
 			status = "🔴 overdue"
-			due = fmt.Sprintf(" by %d days", -daysLeft)
-		} else if daysLeft <= 2 {
+			due = fmt.Sprintf(" %d min ago", -secsLeft)
+		} else if secsLeft <= 1 {
 			status = "🟡 due soon"
-			due = fmt.Sprintf(" in %d day(s)", daysLeft)
+			due = fmt.Sprintf(" in %d min", secsLeft)
 		} else {
-			due = fmt.Sprintf(" in %d days", daysLeft)
+			due = fmt.Sprintf(" in %d min", secsLeft)
 		}
 		freeTag := ""
 		if r.IsFreeRental {

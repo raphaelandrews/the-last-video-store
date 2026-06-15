@@ -19,6 +19,8 @@ type MovieDetailModel struct {
 	FreeRentals int
 	MaxFree     int
 	Balance     float64
+	Choosing    bool
+	UseTicket   bool
 }
 
 func NewMovieDetailModel(m *models.MovieResponse) *MovieDetailModel {
@@ -64,11 +66,13 @@ func (m *MovieDetailModel) View(w, h int) string {
 
 	costInfo := ""
 	if mv.Available && !m.Rented {
-		if m.FreeRentals > 0 {
-			costInfo = fmt.Sprintf("🎟️ Free rental (%d/%d remaining)", m.FreeRentals, m.MaxFree)
+		if m.Choosing {
+			costInfo = styles.HighlightStyle.Render("[T] Use ticket  [M] Pay with money  [ESC] Cancel")
+		} else if m.FreeRentals > 0 {
+			costInfo = fmt.Sprintf("🎟️ Free rental (%d/%d remaining) — Press ENTER to rent", m.FreeRentals, m.MaxFree)
 		} else {
 			c := models.MovieCost(mv.RentalPrice, mv.Format)
-			costInfo = fmt.Sprintf("💵 $%.2f (balance: $%.2f)", c, m.Balance)
+			costInfo = fmt.Sprintf("💵 $%.2f (balance: $%.2f) — Press ENTER to rent", c, m.Balance)
 		}
 	}
 	cast := "Cast: "
