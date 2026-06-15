@@ -82,14 +82,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if k == "ctrl+c" || k == "ctrl+d" {
 			return m, tea.Quit
 		}
-		if k == "esc" {
+		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse {
 			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrRegister {
 				m.screen = scrBrowse
 				return m, nil
 			}
-			if m.screen == scrLogin && m.register != nil {
-				return m, nil
-			}
+		}
+		if k == "ctrl+r" && (m.screen == scrLogin || m.screen == scrRegister) {
+			return m, func() tea.Msg { return pages.NavigateMsg{Page: "register"} }
+		}
+		if k == "ctrl+l" && m.screen == scrRegister {
+			return m, func() tea.Msg { return pages.NavigateMsg{Page: "login"} }
 		}
 		pageCmd = m.pageKey(msg)
 
@@ -143,6 +146,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case loadMoviesMsg:
 			m.browse.SetMovies(msg.movies, msg.total)
+			if m.detail != nil && m.detail.Movie != nil {
+				for i := range msg.movies {
+					if msg.movies[i].ID == m.detail.Movie.ID {
+						m.detail.Movie = &msg.movies[i]
+						break
+					}
+				}
+			}
+		case pages.BrowseReloadMsg:
+			return m, m.loadMovies()
 		case loadRentalsMsg:
 			m.rentals.SetRentals(msg.rentals)
 		case loadProfileMsg:
@@ -189,14 +202,38 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				m.detail = pages.NewMovieDetailModel(mv)
 				m.screen = scrDetail
 			}
+		case "d":
+			mv := m.browse.SelectedMovie()
+			if mv != nil {
+				m.detail = pages.NewMovieDetailModel(mv)
+				m.screen = scrDetail
+			}
+		case "w":
+			mv := m.browse.SelectedMovie()
+			if mv != nil {
+				return m.doAddToWishlist(mv.ID, false)
+			}
 		case "r":
 			return func() tea.Msg { return pages.NavigateMsg{Page: "rentals"} }
 		case "p":
 			return func() tea.Msg { return pages.NavigateMsg{Page: "profile"} }
+		case "f5":
+			return m.loadMovies()
 		}
 	case scrDetail:
-		if k == "enter" && m.detail != nil && !m.detail.Rented {
-			return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+		switch k {
+		case "enter":
+			if m.detail != nil && !m.detail.Rented && m.detail.Movie.Available {
+				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.detail.Movie.ID} }
+			} else if m.detail != nil && !m.detail.Rented && !m.detail.Movie.Available {
+				m.detail.ErrMsg = "No copies available — press [W] to join the waitlist"
+			}
+		case "w":
+			if m.detail != nil {
+				return m.doAddToWishlist(m.detail.Movie.ID, true)
+			}
+		case "f5":
+			return m.loadMovies()
 		}
 	case scrRentals:
 		switch k {
@@ -214,12 +251,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		if k == "l" {
 			return func() tea.Msg { return pages.NavigateMsg{Page: "login"} }
 		}
-	case scrLogin:
-		if k == "r" || k == "R" {
-			return func() tea.Msg { return pages.NavigateMsg{Page: "register"} }
-		}
-	case scrRegister:
-		return nil
 	}
 	return nil
 }
@@ -274,23 +305,23 @@ func (m *Model) footerView() string {
 	case scrSplash:
 		hints = "[ENTER] start  [Ctrl+C] quit"
 	case scrLogin:
-		hints = "[TAB] switch field  [ENTER] login  [R] register  [Ctrl+C] quit"
+		hints = "[TAB] switch  [ENTER] login  [Ctrl+R] sign up  [Ctrl+C] quit"
 	case scrRegister:
-		hints = "[TAB] switch field  [ENTER] register  [ESC] back to login"
+		hints = "[TAB] switch  [ENTER] create account  [Ctrl+L] back to login"
 	case scrBrowse:
-		hints = "[↑↓] navigate  [ENTER] detail  [R] rentals  [P] profile  [Ctrl+C] quit"
+		hints = "[↑↓] navigate  [ENTER] details  [R] rentals  [P] profile  [W] waitlist  [F5] refresh  [Ctrl+C] quit"
 	case scrDetail:
 		if m.detail != nil && !m.detail.Rented {
-			hints = "[ENTER] rent  [ESC] back  [Ctrl+C] quit"
+			hints = "[ENTER] rent  [W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
 		} else {
-			hints = "[ESC] back  [Ctrl+C] quit"
+			hints = "[W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
 		}
 	case scrRentals:
-		hints = "[↑↓] select  [ENTER] return  [ESC] back"
+		hints = "[↑↓] select  [ENTER] return  [Q] back"
 	case scrProfile:
-		hints = "[L] logout  [ESC] back"
+		hints = "[L] logout  [Q] back"
 	default:
-		hints = "[ESC] back  [Ctrl+C] quit"
+		hints = "[Q] back  [Ctrl+C] quit"
 	}
 	return lipgloss.NewStyle().Background(styles.BgBlue).Foreground(styles.TextMedium).Width(m.w).Padding(0, 1).Render(hints)
 }
@@ -385,7 +416,53 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 		}
 		var rental models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rental)
-		m.detail.SetRental(&rental)
+		if m.detail != nil {
+			m.detail.SetRental(&rental)
+		}
+		m.browse.Status = "Rented! " + rental.MovieTitle
+		return m.loadMovies()()
+	}
+}
+
+func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
+	return func() tea.Msg {
+		body := `{"movie_id":"` + movieID + `"}`
+		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/wishlist", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+m.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			if fromDetail {
+				m.detail.ErrMsg = err.Error()
+			} else {
+				m.browse.Status = err.Error()
+			}
+			return nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == 409 {
+			if fromDetail {
+				m.detail.ErrMsg = "Already in waitlist"
+			} else {
+				m.browse.Status = "Already in waitlist"
+			}
+			return nil
+		}
+		if resp.StatusCode >= 400 {
+			var e struct{ Error string }
+			json.NewDecoder(resp.Body).Decode(&e)
+			if fromDetail {
+				m.detail.ErrMsg = e.Error
+			} else {
+				m.browse.Status = e.Error
+			}
+			return nil
+		}
+		if fromDetail {
+			m.detail.ErrMsg = "Added to waitlist ✓"
+		} else {
+			m.browse.Status = "Added to waitlist ✓"
+		}
 		return nil
 	}
 }
@@ -398,7 +475,7 @@ func (m *Model) doReturn(rentalID string) tea.Cmd {
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		http.DefaultClient.Do(req)
 		m.rentals.Status = "Returned!"
-		return m.loadRentals()()
+		return tea.Batch(m.loadRentals(), m.loadMovies())()
 	}
 }
 

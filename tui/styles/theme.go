@@ -112,11 +112,11 @@ func StatusStyle(status string) lipgloss.Style {
 func FormatBadge(format string) string {
 	switch format {
 	case "VHS":
-		return lipgloss.NewStyle().Foreground(Orange).Render("📼 VHS")
+		return lipgloss.NewStyle().Foreground(Orange).Background(BG0).Render("📼 VHS")
 	case "DVD":
-		return lipgloss.NewStyle().Foreground(Blue).Render("📀 DVD")
+		return lipgloss.NewStyle().Foreground(Blue).Background(BG0).Render("📀 DVD")
 	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(Purple).Render("💿 BD")
+		return lipgloss.NewStyle().Foreground(Purple).Background(BG0).Render("💿 BD")
 	default:
 		return format
 	}

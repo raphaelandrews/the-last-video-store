@@ -57,12 +57,17 @@ func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 		case "enter":
 			u := strings.TrimSpace(m.username.Value())
 			p := m.password.Value()
-			if u != "" && p != "" {
-				m.loading = true
-				m.errMsg = ""
-				return m, func() tea.Msg { return LoginRequestMsg{Username: u, Password: p} }
+			if u == "" {
+				m.errMsg = "Username is required"
+				return m, nil
 			}
-			return m, nil
+			if p == "" {
+				m.errMsg = "Password is required"
+				return m, nil
+			}
+			m.loading = true
+			m.errMsg = ""
+			return m, func() tea.Msg { return LoginRequestMsg{Username: u, Password: p} }
 		}
 	}
 	var cmd tea.Cmd

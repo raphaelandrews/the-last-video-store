@@ -13,8 +13,10 @@ import (
 	"github.com/thelastvideostore/internal/store"
 )
 
-var genres = []string{"Action", "Comedy", "Horror", "SciFi", "Drama", "Thriller", "Romance", "Animation"}
-var directors = []string{"Wachowski", "Tarantino", "Fincher", "Spielberg", "Nolan", "Scorsese", "Coppola", "Kubrick", "Scott", "Cameron"}
+var (
+	genres    = []string{"Action", "Comedy", "Horror", "SciFi", "Drama", "Thriller", "Romance", "Animation"}
+	directors = []string{"Wachowski", "Tarantino", "Fincher", "Spielberg", "Nolan", "Scorsese", "Coppola", "Kubrick", "Scott", "Cameron"}
+)
 
 func main() {
 	cfgPath := "thelastvideostore.db"
@@ -41,14 +43,14 @@ func seedUsers(s *store.Store) {
 		tier       bitmask.Permission
 		banned     bool
 	}{
-		{"bronze", "password1", bitmask.TierBronze, false},
-		{"silver", "password2", bitmask.TierSilver, false},
-		{"gold", "password3", bitmask.TierGold, false},
-		{"employee", "password4", bitmask.TierEmployee, false},
-		{"supervisor", "password8", bitmask.TierSupervisor, false},
-		{"manager", "password5", bitmask.TierManager, false},
-		{"owner", "password6", bitmask.TierOwner, false},
-		{"banned", "password7", bitmask.TierBronze, true},
+		{"bronze", "123", bitmask.TierBronze, false},
+		{"silver", "123", bitmask.TierSilver, false},
+		{"gold", "123", bitmask.TierGold, false},
+		{"employee", "123", bitmask.TierEmployee, false},
+		{"supervisor", "123", bitmask.TierSupervisor, false},
+		{"manager", "123", bitmask.TierManager, false},
+		{"owner", "123", bitmask.TierOwner, false},
+		{"banned", "123", bitmask.TierBronze, true},
 	}
 
 	for _, e := range entries {
