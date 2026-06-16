@@ -129,6 +129,8 @@ func (m *Model) loadMovies(page int, genre string) tea.Cmd {
 		ps = 20
 	}
 	return func() tea.Msg {
+		m.browseReqID++
+		rid := m.browseReqID
 		url := fmt.Sprintf("%s/api/v1/movies?page_size=%d&page=%d", m.baseURL, ps, page)
 		if genre != "" {
 			url += "&genre=" + genre
@@ -145,12 +147,14 @@ func (m *Model) loadMovies(page int, genre string) tea.Cmd {
 			Total  int                    `json:"total"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
-		return loadMoviesMsg{movies: r.Movies, total: r.Total, page: page}
+		return loadMoviesMsg{movies: r.Movies, total: r.Total, page: page, reqID: rid}
 	}
 }
 
 func (m *Model) loadStaffPicks() tea.Cmd {
 	return func() tea.Msg {
+		m.browseReqID++
+		rid := m.browseReqID
 		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/staff-picks", nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
@@ -160,12 +164,14 @@ func (m *Model) loadStaffPicks() tea.Cmd {
 		defer resp.Body.Close()
 		var movies []models.MovieResponse
 		json.NewDecoder(resp.Body).Decode(&movies)
-		return loadMoviesMsg{movies: movies, total: len(movies), page: 1}
+		return loadMoviesMsg{movies: movies, total: len(movies), page: 1, reqID: rid}
 	}
 }
 
 func (m *Model) loadLastChance() tea.Cmd {
 	return func() tea.Msg {
+		m.browseReqID++
+		rid := m.browseReqID
 		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/last-chance", nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
@@ -175,7 +181,7 @@ func (m *Model) loadLastChance() tea.Cmd {
 		defer resp.Body.Close()
 		var movies []models.MovieResponse
 		json.NewDecoder(resp.Body).Decode(&movies)
-		return loadMoviesMsg{movies: movies, total: len(movies), page: 1}
+		return loadMoviesMsg{movies: movies, total: len(movies), page: 1, reqID: rid}
 	}
 }
 

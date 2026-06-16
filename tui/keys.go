@@ -57,21 +57,18 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			if m.browse.Mode != pages.ModeStaffPicks {
 				m.browse.Mode = pages.ModeStaffPicks
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadStaffPicks()
 			}
 		case "l":
 			if m.browse.Mode != pages.ModeLastChance {
 				m.browse.Mode = pages.ModeLastChance
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadLastChance()
 			}
 		case "a":
 			if m.browse.Mode != pages.ModeAll {
 				m.browse.Mode = pages.ModeAll
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadMovies(1, m.browse.Genre)
 			}
 		case "[":
@@ -82,7 +79,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 					m.browse.Genre = ""
 				}
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadMovies(1, m.browse.Genre)
 			}
 		case "]":
@@ -93,19 +89,16 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 					m.browse.Genre = ""
 				}
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadMovies(1, m.browse.Genre)
 			}
 		case "n":
 			if m.browse.HasNextPage() {
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadMovies(m.browse.Page+1, m.browse.Genre)
 			}
 		case "b":
 			if m.browse.HasPrevPage() {
 				m.browse.Selected = -1
-				m.browse.Loading = true
 				return m.loadMovies(m.browse.Page-1, m.browse.Genre)
 			}
 		case "ctrl+a":

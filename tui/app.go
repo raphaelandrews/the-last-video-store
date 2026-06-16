@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/components"
@@ -36,6 +37,7 @@ type loadMoviesMsg struct {
 	movies []models.MovieResponse
 	total  int
 	page   int
+	reqID  int
 }
 type loadRentalsMsg struct {
 	rentals []models.RentalResponse
@@ -49,6 +51,7 @@ type loadWishlistMsg struct {
 type searchResultsMsg struct {
 	results []models.MovieResponse
 }
+type autoRefreshMsg struct{}
 type loadAdminMoviesMsg struct {
 	movies []models.MovieResponse
 	total  int
@@ -93,11 +96,12 @@ type Model struct {
 	movieForm    *pages.MovieFormModel
 	accessDenied *pages.AccessDeniedModel
 
-	searchBar *components.SearchbarModel
-	searching bool
-	tabs      *components.TabsModel
-	tempToken string
-	totpCode  string
+	searchBar   *components.SearchbarModel
+	searching   bool
+	tabs        *components.TabsModel
+	tempToken   string
+	totpCode    string
+	browseReqID int
 }
 
 func NewModel(baseURL string) *Model {
@@ -114,6 +118,12 @@ func NewModel(baseURL string) *Model {
 
 func (m *Model) Init() tea.Cmd {
 	return tea.Batch(tea.EnterAltScreen, tea.ClearScreen, m.splash.Init())
+}
+
+func autoRefreshCmd() tea.Cmd {
+	return tea.Tick(30*time.Second, func(t time.Time) tea.Msg {
+		return autoRefreshMsg{}
+	})
 }
 
 func (m *Model) setDetailContext() {
@@ -236,7 +246,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.userResp = msg.User
 			m.browse = pages.NewBrowseModel()
 			m.screen = scrBrowse
-			return m, m.loadMovies(1, "")
+			return m, tea.Batch(m.loadMovies(1, ""), autoRefreshCmd())
 
 		case pages.NavigateMsg:
 			switch msg.Page {
@@ -270,6 +280,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.doExtendRental(msg.RentalID)
 
 		case loadMoviesMsg:
+			if msg.reqID != 0 && msg.reqID != m.browseReqID {
+				return m, nil
+			}
 			m.browse.SetMovies(msg.movies, msg.total, msg.page)
 			if m.detail != nil && m.detail.Movie != nil {
 				for i := range msg.movies {
@@ -299,6 +312,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.auditLog.SetEntries(msg.entries)
 		case loadMerchMsg:
 			m.merch.SetItems(msg.items)
+		case autoRefreshMsg:
+			if m.screen == scrBrowse && !m.searching {
+				return m, tea.Batch(m.loadMovies(m.browse.Page, m.browse.Genre), autoRefreshCmd())
+			}
+			return m, autoRefreshCmd()
 		case loadInventoryMsg:
 			m.inventory.SetItems(msg.items)
 		case pages.MerchRedeemMsg:

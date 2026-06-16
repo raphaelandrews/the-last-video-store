@@ -50,7 +50,7 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 | **LRU Cache** | Session + movie caching — O(1) |
 | **Bloom Filter** | Fast banned-user check — O(k) |
 | **Hash Chain** (SHA-256) | Immutable audit trail — O(1) append |
-| **Undirected Weighted Graph** | Co-rental recommendations — O(V+E) | |
+| **Undirected Weighted Graph** | Co-rental recommendations — O(V+E) |
 
 ---
 
@@ -101,7 +101,17 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 | Key | Action |
 |-----|--------|
 | `Ctrl+C` / `Ctrl+D` | Quit |
-| `Q` | Back to Browse (non-input screens only) |
+| `Q` | Back to parent screen (see navigation hierarchy below) |
+
+**Q-back hierarchy:**
+| From | Returns to |
+|------|-----------|
+| Detail, Rentals, Wishlist | Browse |
+| Rewards Shop, Tier Shop, Inventory | Profile |
+| Admin Movies, Users, Audit Log | Browse |
+| Access Denied | Browse |
+| Movie Form (`ESC`) | Admin Movies |
+| Profile | Browse |
 
 ### Browse (Main Catalog)
 | Key | Action |
@@ -112,6 +122,7 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 | `P` | Profile |
 | `V` | View Wishlist |
 | `/` | Search movies (live prefix with Trie backend) |
+| `[` / `]` | Genre tabs (Action, SciFi, Horror, Comedy, Drama, Thriller, Romance, Animation) |
 | `S` | Staff Picks mode |
 | `L` | Last Chance mode |
 | `A` | All catalog |
@@ -121,16 +132,25 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 | `Ctrl+U` | Admin Users (Supervisor+) |
 | `Ctrl+G` | Audit Log (Supervisor+) |
 
-### Detail (Payment Choice)
+### Search Mode (`/`)
 | Key | Action |
 |-----|--------|
-| `ENTER` | Prompt payment choice if both options available |
+| Type | Live prefix search via API |
+| `↑↓` / `J` `K` | Navigate results |
+| `ENTER` | Open selected movie |
+| `ESC` | Cancel search |
+
+### Detail
+| Key | Action |
+|-----|--------|
+| `ENTER` | Open highlighted related movie, or rent current movie |
+| `↑↓` / `J` `K` | Navigate franchise/related movies |
 | `T` | Use free ticket (🎟️) |
 | `M` | Pay with money (💵) |
 | `ESC` | Cancel payment choice |
 | `W` | Add to waitlist |
 | `F5` | Refresh |
-| `Q` | Back to browse |
+| `Q` | Back to Browse |
 
 ### Rentals
 | Key | Action |

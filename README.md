@@ -40,34 +40,36 @@ All 8 test users share the password: `123`
 ## Features
 
 ### Catalog & Browsing
-- 🎞️ **~135 Movies** — VHS, DVD, Blu-ray spanning 1937–2022, 8 genres
+- 🎞️ **~147 Movies** — VHS, DVD, Blu-ray spanning 1937–2022, 8 genres with custom rental prices
 - 🔍 **Live Search** — `/` opens search bar, type for instant prefix results
 - 📄 **Paginated Browse** — 40 movies per page, `N`/`B` navigation
+- 🏷️ **Genre Tabs** — `[`/`]` filter by Action, SciFi, Horror, Comedy, Drama, Thriller, Romance, Animation
 - ⭐ **Staff Picks & Last Chance** — `S`/`L` toggle curated + disappearing titles
-- 📊 **Graph Recommendations** — "Customers who rented this also rented..."
+- 📊 **Movie Recommendations** — Same-genre suggestions + franchise chain (sequels/prequels)
 
 ### Rental System
-- 📼 **Format-Aware Rentals** — VHS: 3 days, DVD/Blu-ray: 5 days
-- ⏱️ **Due Date Countdown** — "due in N days", "due soon" (≤2 days), "overdue by N days"
-- 📅 **Extend Rentals** — `E` on rentals page, costs 30🍿 for +2 days
-- 💰 **Late & Rewind Fees** — $2/day VHS, $3/day DVD/BD; $1 VHS rewind fee (30% chance)
-- 💵 **Paid Rentals** — $2.99 VHS, $3.99 DVD, $4.99 BD; free from tier allowance first
+- 📼 **Format-Aware Rentals** — VHS: 2 min, DVD: 3 min, Blu-ray: 4 min (demo-friendly)
+- ⏱️ **Due Date Countdown** — "in N min", "due soon", "overdue N min ago"
+- 📅 **Extend Rentals** — `E` on rentals page, costs 30🍿 for +1 min
+- 💰 **Late & Rewind Fees** — Per-minute late fees; $1 VHS rewind fee (30% random chance)
+- 💵 **Paid Rentals** — Movie-specific prices ($2.99–$6.99); free from tier allowance first
 - 🎟️ **Free Rentals** — From reward coupons or tier allowance, waive all late fees
+- 🎛️ **Payment Choice** — `T` for ticket or `M` for money on ENTER
 
 ### Premium Subscription Tiers
 | Tier | Price | Free Rentals/mo | Max Concurrent | New Releases | Late Fees |
 |------|------:|:--------------:|:------------:|:---:|:---:|
-| Wood | Free | 0 | 2 | No | Yes |
-| Bronze | $9.99 | 1 | 3 | No | Yes |
-| Silver | $19.99 | 3 | 5 | Yes | Yes |
-| Gold | $29.99 | 5 | 10 | Yes | **Waived** |
-| Diamond | $49.99 | Unlimited | Unlimited | Yes | **Waived** |
+| Wood | Free | 0 | 5 | No | Yes |
+| Bronze | $9.99 | 1 | 10 | No | Yes |
+| Silver | $19.99 | 3 | 15 | Yes | Yes |
+| Gold | $29.99 | 5 | 25 | Yes | **Waived** |
+| Diamond | $49.99 | 10 | 50 | Yes | **Waived** |
 
 ### 💵 Money & 🍿 Popcorn Points (Dual Currency)
 - **Money ($)** — Used to pay for rentals beyond tier allowance and to buy premium tiers
 - **Popcorn Points (🍿)** — Loyalty points earned on returns, spent on rewards
-- On-time return: +10🍿 + rental cost refunded
-- Late return: -5🍿, late fees come out of money balance
+- On-time return: +10🍿
+- Late return: -5🍿, late fees deducted from money balance
 - Popcorn Bucket collectible gives +5🍿 bonus on every return
 
 ### Rewards & Collectibles
