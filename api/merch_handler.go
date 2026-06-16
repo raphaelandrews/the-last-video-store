@@ -25,7 +25,7 @@ func (h *MerchHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MerchHandler) Redeem(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	user := GetUser(r)
 
 	var req struct {
 		ItemID string `json:"item_id"`
@@ -39,7 +39,7 @@ func (h *MerchHandler) Redeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.Store.RedeemMerchItem(req.ItemID, userID)
+	item, err := h.Store.RedeemMerchItem(req.ItemID, user.ID)
 	if err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return

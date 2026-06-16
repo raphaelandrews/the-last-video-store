@@ -11,20 +11,24 @@ import (
 type RentRequestMsg struct{ MovieID string }
 
 type MovieDetailModel struct {
-	Movie       *models.MovieResponse
-	Rental      *models.RentalResponse
-	Rented      bool
-	ErrMsg      string
-	StatusMsg   string
-	FreeRentals int
-	MaxFree     int
-	Balance     float64
-	Choosing    bool
-	UseTicket   bool
+	Movie           *models.MovieResponse
+	Rental          *models.RentalResponse
+	Rented          bool
+	ErrMsg          string
+	StatusMsg       string
+	FreeRentals     int
+	MaxFree         int
+	Balance         float64
+	Choosing        bool
+	UseTicket       bool
+	SequelTitle     string
+	Franchise       []models.MovieResponse
+	Recommendations []models.MovieResponse
+	RelatedSelected int
 }
 
 func NewMovieDetailModel(m *models.MovieResponse) *MovieDetailModel {
-	return &MovieDetailModel{Movie: m}
+	return &MovieDetailModel{Movie: m, RelatedSelected: -1}
 }
 
 func (m *MovieDetailModel) SetRental(r *models.RentalResponse) { m.Rental = r; m.Rented = true }
@@ -33,6 +37,36 @@ func (m *MovieDetailModel) SetUserContext(freeRentals, maxFree int, balance floa
 	m.FreeRentals = freeRentals
 	m.MaxFree = maxFree
 	m.Balance = balance
+}
+
+func (m *MovieDetailModel) MoveRelatedUp() {
+	all := append(m.Franchise, m.Recommendations...)
+	if len(all) == 0 {
+		return
+	}
+	m.RelatedSelected--
+	if m.RelatedSelected < -1 {
+		m.RelatedSelected = len(all) - 1
+	}
+}
+
+func (m *MovieDetailModel) MoveRelatedDown() {
+	all := append(m.Franchise, m.Recommendations...)
+	if len(all) == 0 {
+		return
+	}
+	m.RelatedSelected++
+	if m.RelatedSelected >= len(all) {
+		m.RelatedSelected = -1
+	}
+}
+
+func (m *MovieDetailModel) SelectedRelated() *models.MovieResponse {
+	all := append(m.Franchise, m.Recommendations...)
+	if m.RelatedSelected >= 0 && m.RelatedSelected < len(all) {
+		return &all[m.RelatedSelected]
+	}
+	return nil
 }
 
 func (m *MovieDetailModel) View(w, h int) string {
@@ -64,6 +98,15 @@ func (m *MovieDetailModel) View(w, h int) string {
 	synopsis := styles.TextStyle.Width(w - 4).Render(wrap(mv.Synopsis, w-4))
 	copies := fmt.Sprintf("📀 %d/%d copies available", mv.CopiesAvailable, mv.CopiesTotal)
 
+	sequelInfo := ""
+	if mv.SequelTo != "" {
+		title := m.SequelTitle
+		if title == "" {
+			title = mv.SequelTo
+		}
+		sequelInfo = styles.DimTextStyle.Render("📎 Sequel to: " + title)
+	}
+
 	costInfo := ""
 	if mv.Available && !m.Rented {
 		if m.Choosing {
@@ -84,10 +127,34 @@ func (m *MovieDetailModel) View(w, h int) string {
 	}
 
 	lines := []string{title, "", meta, rating, badge}
+	if sequelInfo != "" {
+		lines = append(lines, sequelInfo)
+	}
 	if costInfo != "" {
 		lines = append(lines, styles.TextStyle.Render(costInfo))
 	}
 	lines = append(lines, "", synopsis, "", copies, styles.DimTextStyle.Render(cast))
+	if len(m.Franchise) > 0 {
+		lines = append(lines, "", styles.TextStyle.Bold(true).Render("📎 Franchise:"))
+		for i, f := range m.Franchise {
+			prefix := "  "
+			if i == m.RelatedSelected {
+				prefix = styles.HighlightStyle.Render("▸ ")
+			}
+			lines = append(lines, styles.DimTextStyle.Render(prefix+f.Title))
+		}
+	}
+	if len(m.Recommendations) > 0 {
+		fOffset := len(m.Franchise)
+		lines = append(lines, "", styles.TextStyle.Bold(true).Render("Also in "+mv.Genre+":"))
+		for i, r := range m.Recommendations {
+			prefix := "  • "
+			if fOffset+i == m.RelatedSelected {
+				prefix = styles.HighlightStyle.Render("▸ ")
+			}
+			lines = append(lines, styles.DimTextStyle.Render(prefix+r.Title))
+		}
+	}
 	if m.ErrMsg != "" {
 		lines = append(lines, styles.ErrorTextStyle.Render(m.ErrMsg))
 	}

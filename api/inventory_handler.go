@@ -12,8 +12,8 @@ type InventoryHandler struct {
 }
 
 func (h *InventoryHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
-	items, err := h.Store.ListInventory(userID)
+	user := GetUser(r)
+	items, err := h.Store.ListInventory(user.ID)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, err.Error())
 		return

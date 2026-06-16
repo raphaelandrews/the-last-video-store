@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thelastvideostore/tui/pages"
 	"github.com/thelastvideostore/tui/styles"
 )
 
@@ -30,6 +31,9 @@ func (m *Model) View() string {
 		body = m.totpView(m.w, ch)
 	case scrBrowse:
 		body = m.browse.View(m.w, ch)
+		if m.browse.Mode == pages.ModeAll {
+			body = lipgloss.JoinVertical(lipgloss.Left, m.tabs.View(m.w), "", body)
+		}
 		if m.searching {
 			body = lipgloss.JoinVertical(lipgloss.Left, m.searchBar.View(), "", body)
 		}
@@ -92,13 +96,13 @@ func (m *Model) footerView() string {
 		if m.searching {
 			hints = "[↑↓] results  [ENTER] open  [ESC] cancel search  [Ctrl+C] quit"
 		} else {
-			hints = "[↑↓] navigate  [ENTER] details  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
+			hints = "[↑↓] navigate  [ENTER] details  [[/]] genres  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
 		}
 	case scrDetail:
 		if m.detail != nil && !m.detail.Rented {
-			hints = "[ENTER] rent  [W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
+			hints = "[ENTER] rent  [↑↓] related  [W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
 		} else {
-			hints = "[W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
+			hints = "[↑↓] related  [W] waitlist  [F5] refresh  [Q] back  [Ctrl+C] quit"
 		}
 	case scrRentals:
 		hints = "[↑↓] select  [ENTER] return  [E] extend (30🍿)  [Q] back"

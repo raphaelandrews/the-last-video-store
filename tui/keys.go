@@ -72,19 +72,41 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				m.browse.Mode = pages.ModeAll
 				m.browse.Selected = -1
 				m.browse.Loading = true
-				return m.loadMovies(1)
+				return m.loadMovies(1, m.browse.Genre)
+			}
+		case "[":
+			if m.browse.Mode == pages.ModeAll {
+				m.tabs.Prev()
+				m.browse.Genre = m.tabs.ActiveTab()
+				if m.browse.Genre == "ALL" {
+					m.browse.Genre = ""
+				}
+				m.browse.Selected = -1
+				m.browse.Loading = true
+				return m.loadMovies(1, m.browse.Genre)
+			}
+		case "]":
+			if m.browse.Mode == pages.ModeAll {
+				m.tabs.Next()
+				m.browse.Genre = m.tabs.ActiveTab()
+				if m.browse.Genre == "ALL" {
+					m.browse.Genre = ""
+				}
+				m.browse.Selected = -1
+				m.browse.Loading = true
+				return m.loadMovies(1, m.browse.Genre)
 			}
 		case "n":
 			if m.browse.HasNextPage() {
 				m.browse.Selected = -1
 				m.browse.Loading = true
-				return m.loadMovies(m.browse.Page + 1)
+				return m.loadMovies(m.browse.Page+1, m.browse.Genre)
 			}
 		case "b":
 			if m.browse.HasPrevPage() {
 				m.browse.Selected = -1
 				m.browse.Loading = true
-				return m.loadMovies(m.browse.Page - 1)
+				return m.loadMovies(m.browse.Page-1, m.browse.Genre)
 			}
 		case "ctrl+a":
 			if m.userResp != nil && bitmask.CanAdmin(m.userResp.Tier) {
@@ -111,12 +133,16 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.accessDenied = pages.NewAccessDeniedModel("Supervisor role or higher required to view the audit log.")
 			m.screen = scrAccessDenied
 		case "f5":
-			return m.loadMovies(m.browse.Page)
+			return m.loadMovies(m.browse.Page, m.browse.Genre)
 		}
 	case scrDetail:
 		switch k {
 		case "enter":
-			if m.detail != nil && !m.detail.Rented && m.detail.Movie.Available {
+			rv := m.detail.SelectedRelated()
+			if rv != nil {
+				m.detail = pages.NewMovieDetailModel(rv)
+				m.setDetailContext()
+			} else if m.detail != nil && !m.detail.Rented && m.detail.Movie.Available {
 				if m.detail.FreeRentals > 0 && m.detail.Balance >= models.MovieCost(m.detail.Movie.RentalPrice, m.detail.Movie.Format) {
 					m.detail.Choosing = true
 					m.detail.ErrMsg = ""
@@ -149,12 +175,20 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				m.detail.Choosing = false
 				m.detail.ErrMsg = ""
 			}
+		case "down", "j":
+			if m.detail != nil {
+				m.detail.MoveRelatedDown()
+			}
+		case "up", "k":
+			if m.detail != nil {
+				m.detail.MoveRelatedUp()
+			}
 		case "w":
 			if m.detail != nil {
 				return m.doAddToWishlist(m.detail.Movie.ID, true)
 			}
 		case "f5":
-			return m.loadMovies(m.browse.Page)
+			return m.loadMovies(m.browse.Page, m.browse.Genre)
 		}
 	case scrRentals:
 		switch k {

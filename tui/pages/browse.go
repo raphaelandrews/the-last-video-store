@@ -31,6 +31,7 @@ type BrowseModel struct {
 	PageSize   int
 	TotalPages int
 	Mode       BrowseMode
+	Genre      string
 }
 
 func NewBrowseModel() *BrowseModel {

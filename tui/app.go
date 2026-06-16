@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/components"
 	"github.com/thelastvideostore/tui/pages"
@@ -93,6 +95,7 @@ type Model struct {
 
 	searchBar *components.SearchbarModel
 	searching bool
+	tabs      *components.TabsModel
 	tempToken string
 	totpCode  string
 }
@@ -105,6 +108,7 @@ func NewModel(baseURL string) *Model {
 		login:     pages.NewLoginModel(),
 		header:    components.NewHeaderModel(),
 		searchBar: components.NewSearchbarModel(),
+		tabs:      components.NewTabsModel([]string{"ALL", "Action", "SciFi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Animation"}),
 	}
 }
 
@@ -118,6 +122,66 @@ func (m *Model) setDetailContext() {
 	}
 	tier := models.TierByName(m.userResp.Subscription)
 	m.detail.SetUserContext(m.userResp.FreeRentals, tier.FreeRentals, m.userResp.Balance)
+	if m.detail.Movie.SequelTo != "" {
+		for _, mv := range m.browse.Movies {
+			if mv.ID == m.detail.Movie.SequelTo {
+				m.detail.SequelTitle = mv.Title
+				break
+			}
+		}
+	}
+	var franchise []models.MovieResponse
+	currentID := m.detail.Movie.ID
+	seen := map[string]bool{currentID: true}
+	// Find prequels
+	id := m.detail.Movie.SequelTo
+	for id != "" && !seen[id] {
+		found := false
+		for _, mv := range m.browse.Movies {
+			if mv.ID == id {
+				seen[id] = true
+				franchise = append([]models.MovieResponse{mv}, franchise...)
+				id = mv.SequelTo
+				found = true
+				break
+			}
+		}
+		if !found {
+			break
+		}
+	}
+	// Add current movie
+	franchise = append(franchise, *m.detail.Movie)
+	// Find sequels
+	queue := []string{currentID}
+	for len(queue) > 0 {
+		prequelID := queue[0]
+		queue = queue[1:]
+		for _, mv := range m.browse.Movies {
+			if mv.SequelTo == prequelID && !seen[mv.ID] {
+				seen[mv.ID] = true
+				franchise = append(franchise, mv)
+				queue = append(queue, mv.ID)
+			}
+		}
+	}
+	// Only show franchise if there are 2+ movies in chain
+	if len(franchise) > 1 {
+		m.detail.Franchise = franchise
+	} else {
+		m.detail.Franchise = nil
+	}
+
+	var sameGenre []models.MovieResponse
+	for _, mv := range m.browse.Movies {
+		if !seen[mv.ID] && mv.Genre == m.detail.Movie.Genre {
+			sameGenre = append(sameGenre, mv)
+			if len(sameGenre) >= 5 {
+				break
+			}
+		}
+	}
+	m.detail.Recommendations = sameGenre
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -138,7 +202,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.searchKey(msg)
 		}
 		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse && m.screen != scrTOTP && m.screen != scrMovieForm && m.screen != scrAccessDenied && m.screen != scrRegister {
-			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
+			if m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop {
+				m.screen = scrProfile
+				return m, nil
+			}
+			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
 				m.screen = scrBrowse
 				return m, nil
 			}
@@ -168,7 +236,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.userResp = msg.User
 			m.browse = pages.NewBrowseModel()
 			m.screen = scrBrowse
-			return m, m.loadMovies(1)
+			return m, m.loadMovies(1, "")
 
 		case pages.NavigateMsg:
 			switch msg.Page {
@@ -212,7 +280,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		case pages.BrowseReloadMsg:
-			return m, m.loadMovies(m.browse.Page)
+			return m, m.loadMovies(m.browse.Page, m.browse.Genre)
 		case loadRentalsMsg:
 			m.rentals.SetRentals(msg.rentals)
 		case loadProfileMsg:
@@ -242,6 +310,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.doUpdateMovie(msg)
 
 		case pages.ErrorMsg:
+			if strings.Contains(msg.Message, "ACCESS DENIED") || strings.Contains(msg.Message, "⛔") {
+				m.accessDenied = pages.NewAccessDeniedModel(msg.Message)
+				m.screen = scrAccessDenied
+			}
 			if m.login != nil {
 				m.login.SetError(msg.Message)
 			}

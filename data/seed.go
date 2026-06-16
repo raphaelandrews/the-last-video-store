@@ -266,6 +266,22 @@ func seedMovies(s *store.Store) {
 	s.AddStaffPick("seed-movie-TheMatrix")
 	s.AddStaffPick("seed-movie-TheDarkKnight")
 	s.AddStaffPick("seed-movie-PulpFiction")
+
+	seedSequels(s)
+}
+
+func seedSequels(s *store.Store) {
+	links := map[string]string{
+		"seed-movie-Aliens":   "seed-movie-Alien",
+		"seed-movie-Avengers": "seed-movie-IronMan",
+	}
+	for movieID, prequelID := range links {
+		m, err := s.GetMovieByID(movieID)
+		if err == nil {
+			m.SequelTo = prequelID
+			s.UpdateMovie(m)
+		}
+	}
 }
 
 func countMovies(s *store.Store) int {

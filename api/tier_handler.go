@@ -19,7 +19,7 @@ func (h *TierHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TierHandler) Purchase(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	user := GetUser(r)
 
 	var req struct {
 		TierName string `json:"tier_name"`
@@ -35,7 +35,7 @@ func (h *TierHandler) Purchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.Store.PurchaseTier(userID, tier); err != nil {
+	if err := h.Store.PurchaseTier(user.ID, tier); err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}

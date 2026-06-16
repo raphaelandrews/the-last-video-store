@@ -123,13 +123,16 @@ func (m *Model) doRegister(u, p string) tea.Cmd {
 	}
 }
 
-func (m *Model) loadMovies(page int) tea.Cmd {
+func (m *Model) loadMovies(page int, genre string) tea.Cmd {
 	ps := m.browse.PageSize
 	if ps <= 0 {
 		ps = 20
 	}
 	return func() tea.Msg {
 		url := fmt.Sprintf("%s/api/v1/movies?page_size=%d&page=%d", m.baseURL, ps, page)
+		if genre != "" {
+			url += "&genre=" + genre
+		}
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
@@ -155,12 +158,9 @@ func (m *Model) loadStaffPicks() tea.Cmd {
 			return loadMoviesMsg{}
 		}
 		defer resp.Body.Close()
-		var r struct {
-			Movies []models.MovieResponse `json:"movies"`
-			Total  int                    `json:"total"`
-		}
-		json.NewDecoder(resp.Body).Decode(&r)
-		return loadMoviesMsg{movies: r.Movies, total: r.Total, page: 1}
+		var movies []models.MovieResponse
+		json.NewDecoder(resp.Body).Decode(&movies)
+		return loadMoviesMsg{movies: movies, total: len(movies), page: 1}
 	}
 }
 
@@ -173,12 +173,9 @@ func (m *Model) loadLastChance() tea.Cmd {
 			return loadMoviesMsg{}
 		}
 		defer resp.Body.Close()
-		var r struct {
-			Movies []models.MovieResponse `json:"movies"`
-			Total  int                    `json:"total"`
-		}
-		json.NewDecoder(resp.Body).Decode(&r)
-		return loadMoviesMsg{movies: r.Movies, total: r.Total, page: 1}
+		var movies []models.MovieResponse
+		json.NewDecoder(resp.Body).Decode(&movies)
+		return loadMoviesMsg{movies: movies, total: len(movies), page: 1}
 	}
 }
 
@@ -289,7 +286,7 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 			}
 			m.detail.UseTicket = false
 		}
-		return m.loadMovies(m.browse.Page)()
+		return m.loadMovies(m.browse.Page, m.browse.Genre)()
 	}
 }
 
@@ -358,7 +355,7 @@ func (m *Model) doReturn(rentalID string) tea.Cmd {
 				}
 			}
 		}
-		return tea.Batch(m.loadRentals(), m.loadMovies(m.browse.Page))()
+		return tea.Batch(m.loadRentals(), m.loadMovies(m.browse.Page, m.browse.Genre))()
 	}
 }
 
