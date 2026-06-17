@@ -69,22 +69,36 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			if m.browse.Mode != pages.ModeAll {
 				m.browse.Mode = pages.ModeAll
 				m.browse.Selected = -1
-				return m.loadMovies(1, m.browse.Genre)
+				m.tabs.SetActive(0)
+				m.genreTabs.SetActive(0)
+				m.browse.Genre = ""
+				m.browse.MediaType = "movie"
+				return m.loadMovies(1, "")
 			}
 		case "[":
 			if m.browse.Mode == pages.ModeAll {
 				m.tabs.Prev()
-				m.browse.Genre = m.tabs.ActiveTab()
+				return m.applyMediaTypeFilter()
+			}
+		case "]":
+			if m.browse.Mode == pages.ModeAll {
+				m.tabs.Next()
+				return m.applyMediaTypeFilter()
+			}
+		case ",":
+			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() == "🎬 Movies" {
+				m.genreTabs.Prev()
+				m.browse.Genre = m.genreTabs.ActiveTab()
 				if m.browse.Genre == "ALL" {
 					m.browse.Genre = ""
 				}
 				m.browse.Selected = -1
 				return m.loadMovies(1, m.browse.Genre)
 			}
-		case "]":
-			if m.browse.Mode == pages.ModeAll {
-				m.tabs.Next()
-				m.browse.Genre = m.tabs.ActiveTab()
+		case ".":
+			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() == "🎬 Movies" {
+				m.genreTabs.Next()
+				m.browse.Genre = m.genreTabs.ActiveTab()
 				if m.browse.Genre == "ALL" {
 					m.browse.Genre = ""
 				}

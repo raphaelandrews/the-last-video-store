@@ -17,6 +17,9 @@ type Movie struct {
 	IsNewRelease    bool     `json:"is_new_release"`
 	RentalPrice     float64  `json:"rental_price"`
 	SequelTo        string   `json:"sequel_to"`
+	MediaType       string   `json:"media_type"`
+	SeasonNumber    int      `json:"season_number"`
+	EpisodeCount    int      `json:"episode_count"`
 	CoverArt        string   `json:"cover_art"`
 	CreatedAt       int64    `json:"created_at"`
 }
@@ -38,6 +41,9 @@ type MovieResponse struct {
 	IsNewRelease    bool     `json:"is_new_release"`
 	RentalPrice     float64  `json:"rental_price"`
 	SequelTo        string   `json:"sequel_to"`
+	MediaType       string   `json:"media_type"`
+	SeasonNumber    int      `json:"season_number"`
+	EpisodeCount    int      `json:"episode_count"`
 	CoverArt        string   `json:"cover_art"`
 	CreatedAt       int64    `json:"created_at"`
 	IsStaffPick     bool     `json:"is_staff_pick"`
@@ -61,6 +67,9 @@ func (m *Movie) ToResponse() MovieResponse {
 		IsNewRelease:    m.IsNewRelease,
 		RentalPrice:     m.RentalPrice,
 		SequelTo:        m.SequelTo,
+		MediaType:       m.MediaType,
+		SeasonNumber:    m.SeasonNumber,
+		EpisodeCount:    m.EpisodeCount,
 		CoverArt:        m.CoverArt,
 		CreatedAt:       m.CreatedAt,
 	}

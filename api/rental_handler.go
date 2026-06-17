@@ -81,7 +81,7 @@ func (h *RentalHandler) Rent(w http.ResponseWriter, r *http.Request) {
 		IsFreeRental: freeRental,
 	}
 
-	if movie.Format == config.FormatVHS {
+	if movie.Format == models.FormatVHS {
 		rental.NeedsRewind = rand.Intn(100) < 30
 	}
 

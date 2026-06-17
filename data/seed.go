@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/thelastvideostore/internal/auth"
@@ -216,6 +217,68 @@ func seedMovies(s *store.Store) {
 		{"The Matrix Revolutions", 2003, "SciFi", "Blu-ray", "Wachowski", []string{"Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss"}, "The human city of Zion defends itself against the massive invasion of the machines.", 4, false},
 		{"The Godfather Part II", 1974, "Drama", "VHS", "Coppola", []string{"Al Pacino", "Robert De Niro", "Robert Duvall"}, "The early life and career of Vito Corleone in 1920s New York is portrayed while his son, Michael, expands the family crime syndicate.", 4, false},
 		{"The Godfather Part III", 1990, "Drama", "DVD", "Coppola", []string{"Al Pacino", "Diane Keaton", "Andy Garcia"}, "Michael Corleone seeks to legitimize his family's business affairs and get out of the Mafia.", 3, false},
+		{"Breaking Bad: Season 1", 2008, "Series", "DVD", "Gilligan", []string{"Bryan Cranston", "Aaron Paul", "Anna Gunn"}, "A high school chemistry teacher diagnosed with terminal cancer turns to manufacturing methamphetamine to secure his family's future.", 2, false},
+		{"Breaking Bad: Season 2", 2009, "Series", "DVD", "Gilligan", []string{"Bryan Cranston", "Aaron Paul", "Anna Gunn"}, "Walt's criminal activities deepen as he deals with family troubles and a growing drug empire.", 2, false},
+		{"Breaking Bad: Season 3", 2010, "Series", "DVD", "Gilligan", []string{"Bryan Cranston", "Aaron Paul", "Anna Gunn"}, "Walt butts heads with Jesse and faces the consequences of his choices as Gus Fring tightens his grip.", 2, false},
+		{"Breaking Bad: Season 4", 2011, "Series", "DVD", "Gilligan", []string{"Bryan Cranston", "Aaron Paul", "Anna Gunn"}, "Walt and Jesse's partnership with Gus reaches a boiling point in a high-stakes chess game.", 2, false},
+		{"Breaking Bad: Season 5", 2012, "Series", "DVD", "Gilligan", []string{"Bryan Cranston", "Aaron Paul", "Anna Gunn"}, "Walt faces the consequences of his criminal empire as all forces converge in an explosive finale.", 2, false},
+		{"The Sopranos: Season 1", 1999, "Series", "DVD", "Chase", []string{"James Gandolfini", "Lorraine Bracco", "Edie Falco"}, "New Jersey mob boss Tony Soprano deals with personal and professional issues in his home and business life.", 2, false},
+		{"The Sopranos: Season 2", 2000, "Series", "DVD", "Chase", []string{"James Gandolfini", "Lorraine Bracco", "Edie Falco"}, "Tony deals with his long-lost sister Janice and Richie Aprile's release from prison.", 2, false},
+		{"The Sopranos: Season 3", 2001, "Series", "DVD", "Chase", []string{"James Gandolfini", "Lorraine Bracco", "Edie Falco"}, "Jackie Aprile Jr. tries to follow in his father's footsteps while Tony deals with family and federal pressure.", 2, false},
+		{"The Wire: Season 1", 2002, "Series", "DVD", "Simon", []string{"Dominic West", "Idris Elba", "Lance Reddick"}, "Baltimore detectives investigate the drug trade through a complex web of dealers, police, and politicians.", 2, false},
+		{"The Wire: Season 2", 2003, "Series", "DVD", "Simon", []string{"Dominic West", "Idris Elba", "Lance Reddick"}, "The investigation shifts to the docks as a union leader gets involved in smuggling operations.", 2, false},
+		{"The Wire: Season 3", 2004, "Series", "DVD", "Simon", []string{"Dominic West", "Idris Elba", "Lance Reddick"}, "Stringer Bell attempts to legitimize the Barksdale organization while the detail experiments with a radical new approach.", 2, false},
+		{"The Wire: Season 4", 2006, "Series", "DVD", "Simon", []string{"Dominic West", "Idris Elba", "Lance Reddick"}, "The Baltimore school system becomes the focus as four young boys navigate the corners of West Baltimore.", 2, false},
+		{"Friends: Season 1", 1994, "Series", "DVD", "Crane", []string{"Jennifer Aniston", "Courteney Cox", "Lisa Kudrow"}, "Six young people living in Manhattan navigate life, love and friendship in the city.", 3, false},
+		{"Friends: Season 2", 1995, "Series", "DVD", "Crane", []string{"Jennifer Aniston", "Courteney Cox", "Lisa Kudrow"}, "Ross and Rachel's budding romance takes center stage as the gang navigates new jobs and relationships.", 3, false},
+		{"Friends: Season 3", 1996, "Series", "DVD", "Crane", []string{"Jennifer Aniston", "Courteney Cox", "Lisa Kudrow"}, "The gang faces relationship turbulence, career changes, and life-altering decisions.", 3, false},
+		{"Friends: Season 4", 1997, "Series", "DVD", "Crane", []string{"Jennifer Aniston", "Courteney Cox", "Lisa Kudrow"}, "Ross's wedding to Emily in London creates chaos, and Chandler and Monica's relationship begins unexpectedly.", 3, false},
+		{"Seinfeld: Season 1", 1989, "Series", "VHS", "Seinfeld", []string{"Jerry Seinfeld", "Julia Louis-Dreyfus", "Jason Alexander"}, "A stand-up comedian and his eccentric friends navigate the absurdities of everyday life in New York.", 3, false},
+		{"Seinfeld: Season 2", 1990, "Series", "VHS", "Seinfeld", []string{"Jerry Seinfeld", "Julia Louis-Dreyfus", "Jason Alexander"}, "Jerry struggles with a speach impediment; George quits his job; Elaine dates a psychiatrist.", 3, false},
+		{"Seinfeld: Season 3", 1991, "Series", "VHS", "Seinfeld", []string{"Jerry Seinfeld", "Julia Louis-Dreyfus", "Jason Alexander"}, "Kramer's coffee table book idea, the Pez dispenser incident, and more classic misadventures.", 3, false},
+		{"The X-Files: Season 1", 1993, "Series", "DVD", "Carter", []string{"David Duchovny", "Gillian Anderson", "Mitch Pileggi"}, "FBI agents Fox Mulder and Dana Scully investigate unsolved cases involving paranormal phenomena.", 2, false},
+		{"The X-Files: Season 2", 1994, "Series", "DVD", "Carter", []string{"David Duchovny", "Gillian Anderson", "Mitch Pileggi"}, "Mulder and Scully dig deeper into the alien conspiracy after the X-Files are shut down.", 2, false},
+		{"The X-Files: Season 3", 1995, "Series", "DVD", "Carter", []string{"David Duchovny", "Gillian Anderson", "Mitch Pileggi"}, "The alien conspiracy deepens as Scully investigates her abduction and Mulder faces a personal crisis.", 2, false},
+		{"Lost: Season 1", 2004, "Series", "DVD", "Abrams", []string{"Matthew Fox", "Evangeline Lilly", "Terry O'Quinn"}, "Survivors of a plane crash on a mysterious island must work together to stay alive and unravel the island's secrets.", 2, false},
+		{"Lost: Season 2", 2005, "Series", "DVD", "Abrams", []string{"Matthew Fox", "Evangeline Lilly", "Terry O'Quinn"}, "The hatch is opened and the survivors discover a new resident while tensions rise between the groups.", 2, false},
+		{"Lost: Season 3", 2006, "Series", "DVD", "Abrams", []string{"Matthew Fox", "Evangeline Lilly", "Terry O'Quinn"}, "The Others and their leader Benjamin Linus take center stage as flash-forwards reveal the survivors' fate.", 2, false},
+		{"The Office: Season 1", 2005, "Series", "DVD", "Daniels", []string{"Steve Carell", "Rainn Wilson", "John Krasinski"}, "A documentary crew follows the employees of the Dunder Mifflin Paper Company in Scranton, Pennsylvania.", 3, false},
+		{"The Office: Season 2", 2005, "Series", "DVD", "Daniels", []string{"Steve Carell", "Rainn Wilson", "John Krasinski"}, "Jim and Pam's romance blossoms while Michael's antics reach new heights of cringe.", 3, false},
+		{"The Office: Season 3", 2006, "Series", "DVD", "Daniels", []string{"Steve Carell", "Rainn Wilson", "John Krasinski"}, "Jim transfers to Stamford as Pam deals with the fallout of their interrupted kiss.", 3, false},
+		{"Buffy the Vampire Slayer: Season 1", 1997, "Series", "VHS", "Whedon", []string{"Sarah Michelle Gellar", "Nicholas Brendon", "Alyson Hannigan"}, "A young woman destined to slay vampires arrives at Sunnydale High to face vampires, demons, and the forces of darkness.", 2, false},
+		{"Buffy the Vampire Slayer: Season 2", 1997, "Series", "VHS", "Whedon", []string{"Sarah Michelle Gellar", "Nicholas Brendon", "Alyson Hannigan"}, "Buffy faces new challenges as vampire lovers Angel and Spike enter her life and the stakes get higher.", 2, false},
+		{"Buffy the Vampire Slayer: Season 3", 1998, "Series", "VHS", "Whedon", []string{"Sarah Michelle Gellar", "Nicholas Brendon", "Alyson Hannigan"}, "A rogue slayer named Faith arrives in Sunnydale as the gang faces their final year of high school.", 2, false},
+		{"Dragon Ball Z: Season 1", 1989, "Series", "DVD", "Nishio", []string{"Masako Nozawa", "Ryo Horikawa", "Toshio Furukawa"}, "Goku discovers his Saiyan heritage when his evil brother Raditz arrives on Earth seeking his long-lost sibling.", 3, false},
+		{"Dragon Ball Z: Season 2", 1990, "Series", "DVD", "Nishio", []string{"Masako Nozawa", "Ryo Horikawa", "Toshio Furukawa"}, "The Z Fighters travel to planet Namek in search of the Dragon Balls while facing the fearsome Frieza Force.", 3, false},
+		{"Dragon Ball Z: Season 3", 1991, "Series", "DVD", "Nishio", []string{"Masako Nozawa", "Ryo Horikawa", "Toshio Furukawa"}, "Goku achieves the legendary Super Saiyan form in an epic battle against Frieza on the dying planet Namek.", 3, false},
+		{"Cowboy Bebop", 1998, "Series", "Blu-ray", "Watanabe", []string{"Koichi Yamadera", "Unsho Ishizuka", "Megumi Hayashibara"}, "A ragtag crew of bounty hunters chases the galaxy's most dangerous criminals aboard their spaceship, the Bebop.", 3, false},
+		{"Neon Genesis Evangelion", 1995, "Series", "DVD", "Anno", []string{"Megumi Ogata", "Megumi Hayashibara", "Yuko Miyamura"}, "Teenage pilots fight monstrous Angels using giant biomechanical robots in a post-apocalyptic world.", 3, false},
+		{"Fullmetal Alchemist", 2003, "Series", "DVD", "Mizushima", []string{"Romi Park", "Rie Kugimiya", "Toru Okawa"}, "Two brothers use alchemy to search for the Philosopher's Stone after a failed attempt to resurrect their mother.", 3, false},
+		{"Naruto", 2002, "Series", "DVD", "Date", []string{"Junko Takeuchi", "Noriaki Sugiyama", "Chie Nakamura"}, "A young ninja with a sealed demon fox inside him seeks recognition and dreams of becoming the Hokage.", 3, false},
+		{"Death Note", 2006, "Series", "DVD", "Araki", []string{"Mamoru Miyano", "Kappei Yamaguchi", "Norio Wakamoto"}, "A high school student discovers a supernatural notebook that allows him to kill anyone by writing their name in it.", 3, false},
+		{"Twin Peaks", 1990, "Series", "DVD", "Lynch", []string{"Kyle MacLachlan", "Michael Ontkean", "Madchen Amick"}, "An FBI agent investigates the murder of a popular high school girl in the quirky town of Twin Peaks.", 2, false},
+		{"MacGyver", 1985, "Series", "VHS", "Zlotoff", []string{"Richard Dean Anderson", "Dana Elcar", "Bruce McGill"}, "An incredibly resourceful secret agent uses his scientific knowledge to solve problems and escape dangerous situations.", 2, false},
+		{"Knight Rider", 1982, "Series", "VHS", "Larson", []string{"David Hasselhoff", "Edward Mulhare", "William Daniels"}, "A lone crimefighter battles the forces of evil with the help of his indestructible and artificially intelligent car, KITT.", 2, false},
+		{"Miami Vice", 1984, "Series", "VHS", "Mann", []string{"Don Johnson", "Philip Michael Thomas", "Edward James Olmos"}, "Two undercover vice detectives fight crime on the glamorous and dangerous streets of Miami.", 2, false},
+		{"Attack on Titan: Season 1", 2013, "Series", "Blu-ray", "Araki", []string{"Yuki Kaji", "Yui Ishikawa", "Marina Inoue"}, "Humanity lives inside cities surrounded by enormous walls due to the Titans, gigantic humanoids who eat humans.", 3, false},
+		{"Attack on Titan: Season 2", 2017, "Series", "Blu-ray", "Araki", []string{"Yuki Kaji", "Yui Ishikawa", "Marina Inoue"}, "The truth about the Titans begins to emerge as Eren discovers a power that could change everything.", 3, false},
+		{"Attack on Titan: Season 3", 2018, "Series", "Blu-ray", "Araki", []string{"Yuki Kaji", "Yui Ishikawa", "Marina Inoue"}, "The Survey Corps fights to retake Wall Maria and uncovers the secrets of their world.", 3, false},
+		{"Demon Slayer: Season 1", 2019, "Series", "Blu-ray", "Sotozaki", []string{"Natsuki Hanae", "Akari Kito", "Hiro Shimono"}, "After his family is slaughtered by demons, Tanjiro becomes a demon slayer to cure his sister turned into a demon.", 3, false},
+		{"Demon Slayer: Season 2", 2021, "Series", "Blu-ray", "Sotozaki", []string{"Natsuki Hanae", "Akari Kito", "Hiro Shimono"}, "Tanjiro and his comrades board the Mugen Train and later infiltrate the Entertainment District.", 3, false},
+		{"Game of Thrones: Season 1", 2011, "Series", "Blu-ray", "Benioff", []string{"Sean Bean", "Peter Dinklage", "Emilia Clarke"}, "Several noble families fight for control of the Iron Throne in the land of Westeros.", 3, false},
+		{"Game of Thrones: Season 2", 2012, "Series", "Blu-ray", "Benioff", []string{"Peter Dinklage", "Emilia Clarke", "Kit Harington"}, "The War of the Five Kings escalates as new contenders vie for the throne and supernatural threats grow.", 3, false},
+		{"Game of Thrones: Season 3", 2013, "Series", "Blu-ray", "Benioff", []string{"Peter Dinklage", "Emilia Clarke", "Kit Harington"}, "The War of the Five Kings reaches a pivotal turning point with the Red Wedding.", 3, false},
+		{"Stranger Things: Season 1", 2016, "Series", "Blu-ray", "Duffer", []string{"Winona Ryder", "David Harbour", "Millie Bobby Brown"}, "A young boy vanishes in a small town, uncovering a mystery involving secret experiments and a strange girl.", 3, false},
+		{"Stranger Things: Season 2", 2017, "Series", "Blu-ray", "Duffer", []string{"Winona Ryder", "David Harbour", "Millie Bobby Brown"}, "Nearly a year after Will's return, a new threat emerges from the Upside Down.", 3, false},
+		{"Stranger Things: Season 3", 2019, "Series", "Blu-ray", "Duffer", []string{"Winona Ryder", "David Harbour", "Millie Bobby Brown"}, "Summer brings new jobs and budding romance, but a new horror threatens the group.", 3, false},
+		{"Chernobyl", 2019, "Series", "Blu-ray", "Renck", []string{"Jared Harris", "Stellan Skarsgard", "Emily Watson"}, "The true story of the 1986 nuclear disaster and the men and women who sacrificed to save Europe.", 3, false},
+		{"Rick and Morty: Season 1", 2013, "Series", "DVD", "Harmon", []string{"Justin Roiland", "Chris Parnell", "Spencer Grammer"}, "An animated series following the exploits of a mad scientist and his not-so-bright grandson.", 3, false},
+		{"Rick and Morty: Season 2", 2015, "Series", "DVD", "Harmon", []string{"Justin Roiland", "Chris Parnell", "Spencer Grammer"}, "Rick and Morty return for more interdimensional adventures with the Smith family.", 3, false},
+		{"Arcane: Season 1", 2021, "Series", "Blu-ray", "Linke", []string{"Hailee Steinfeld", "Ella Purnell", "Kevin Alejandro"}, "The origins of two iconic League champions, set in the utopian Piltover and the oppressed underground of Zaun.", 3, false},
+		{"Squid Game: Season 1", 2021, "Series", "Blu-ray", "Hwang", []string{"Lee Jung-jae", "Park Hae-soo", "Wi Ha-joon"}, "Hundreds of cash-strapped players accept an invitation to compete in deadly children's games for a tempting prize.", 3, false},
+		{"Hunter x Hunter", 2011, "Series", "DVD", "Kojina", []string{"Megumi Han", "Mariya Ise", "Keiji Fujiwara"}, "Gon Freecss aspires to become a Hunter to find his father, encountering allies and deadly challenges along the way.", 3, false},
+		{"Frieren", 2023, "Series", "Blu-ray", "Saito", []string{"Atsumi Tanezaki", "Kana Ichinose", "Nobuhiko Okamoto"}, "An elven mage confronts the nature of mortality as she retraces the journey of her heroic party decades later.", 3, false},
+		{"Black Mirror", 2011, "Series", "DVD", "Brooker", []string{"Various Actors"}, "Stand-alone dramas exploring techno-paranoia — each episode a sharp, suspenseful tale of modern technology gone wrong.", 3, false},
 	}
 
 	for _, m := range movies {
@@ -237,6 +300,12 @@ func seedMovies(s *store.Store) {
 			Rating:          3.0 + rand.Float64()*2.0,
 			RatingCount:     100 + rand.Intn(5000),
 			CreatedAt:       time.Now().Unix(),
+		}
+		if m.Genre == "Series" {
+			movie.MediaType = "series"
+			movie.SeasonNumber, movie.EpisodeCount = parseSeasonInfo(m.Title)
+		} else {
+			movie.MediaType = "movie"
 		}
 		s.CreateMovie(movie)
 	}
@@ -284,6 +353,30 @@ func seedSequels(s *store.Store) {
 		"seed-movie-TheMatrixRevolutions":                 "seed-movie-TheMatrixReloaded",
 		"seed-movie-TheGodfatherPartII":                   "seed-movie-TheGodfather",
 		"seed-movie-TheGodfatherPartIII":                  "seed-movie-TheGodfatherPartII",
+		"seed-movie-BreakingBadSeason2":                   "seed-movie-BreakingBadSeason1",
+		"seed-movie-BreakingBadSeason3":                   "seed-movie-BreakingBadSeason2",
+		"seed-movie-BreakingBadSeason4":                   "seed-movie-BreakingBadSeason3",
+		"seed-movie-BreakingBadSeason5":                   "seed-movie-BreakingBadSeason4",
+		"seed-movie-TheSopranosSeason2":                   "seed-movie-TheSopranosSeason1",
+		"seed-movie-TheSopranosSeason3":                   "seed-movie-TheSopranosSeason2",
+		"seed-movie-TheWireSeason2":                       "seed-movie-TheWireSeason1",
+		"seed-movie-TheWireSeason3":                       "seed-movie-TheWireSeason2",
+		"seed-movie-TheWireSeason4":                       "seed-movie-TheWireSeason3",
+		"seed-movie-FriendsSeason2":                       "seed-movie-FriendsSeason1",
+		"seed-movie-FriendsSeason3":                       "seed-movie-FriendsSeason2",
+		"seed-movie-FriendsSeason4":                       "seed-movie-FriendsSeason3",
+		"seed-movie-SeinfeldSeason2":                      "seed-movie-SeinfeldSeason1",
+		"seed-movie-SeinfeldSeason3":                      "seed-movie-SeinfeldSeason2",
+		"seed-movie-TheXFilesSeason2":                     "seed-movie-TheXFilesSeason1",
+		"seed-movie-TheXFilesSeason3":                     "seed-movie-TheXFilesSeason2",
+		"seed-movie-LostSeason2":                          "seed-movie-LostSeason1",
+		"seed-movie-LostSeason3":                          "seed-movie-LostSeason2",
+		"seed-movie-TheOfficeSeason2":                     "seed-movie-TheOfficeSeason1",
+		"seed-movie-TheOfficeSeason3":                     "seed-movie-TheOfficeSeason2",
+		"seed-movie-BuffytheVampireSlayerSeason2":         "seed-movie-BuffytheVampireSlayerSeason1",
+		"seed-movie-BuffytheVampireSlayerSeason3":         "seed-movie-BuffytheVampireSlayerSeason2",
+		"seed-movie-DragonBallZSeason2":                   "seed-movie-DragonBallZSeason1",
+		"seed-movie-DragonBallZSeason3":                   "seed-movie-DragonBallZSeason2",
 	}
 	for movieID, prequelID := range links {
 		m, err := s.GetMovieByID(movieID)
@@ -297,6 +390,55 @@ func seedSequels(s *store.Store) {
 func countMovies(s *store.Store) int {
 	movies, _, _ := s.ListMovies("", 0, 1000)
 	return len(movies)
+}
+
+func parseSeasonInfo(title string) (int, int) {
+	eps := map[string]int{
+		"Breaking Bad":             7,
+		"The Sopranos":             13,
+		"The Wire":                 13,
+		"Friends":                  24,
+		"Seinfeld":                 5,
+		"The X-Files":              24,
+		"Lost":                     25,
+		"The Office":               6,
+		"Twin Peaks":               8,
+		"Buffy the Vampire Slayer": 12,
+		"MacGyver":                 22,
+		"Knight Rider":             22,
+		"Miami Vice":               22,
+		"Dragon Ball Z":            39,
+		"Cowboy Bebop":             26,
+		"Neon Genesis Evangelion":  26,
+		"Fullmetal Alchemist":      25,
+		"Naruto":                   35,
+		"Death Note":               37,
+		"Attack on Titan":          25,
+		"Demon Slayer":             26,
+		"Game of Thrones":          10,
+		"Stranger Things":          8,
+		"Chernobyl":                5,
+		"Rick and Morty":           10,
+		"Arcane":                   9,
+		"Squid Game":               9,
+		"Hunter x Hunter":          148,
+		"Frieren":                  28,
+		"Black Mirror":             3,
+	}
+	sn := 1
+	for prefix, count := range eps {
+		if title == prefix {
+			return 1, count
+		}
+		if strings.HasPrefix(title, prefix+":") {
+			parts := strings.Split(title, ": Season ")
+			if len(parts) >= 2 {
+				fmt.Sscanf(strings.TrimSpace(parts[1]), "%d", &sn)
+			}
+			return sn, count
+		}
+	}
+	return 1, 0
 }
 
 func moviePrice(year int, format string, isNew bool) float64 {

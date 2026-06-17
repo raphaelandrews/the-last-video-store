@@ -47,17 +47,7 @@ const (
 	RateLimitPerMinute   = 100
 	DefaultPageSize      = 20
 	MaxSearchResults     = 10
-
-	FormatVHS    = "VHS"
-	FormatDVD    = "DVD"
-	FormatBluRay = "Blu-ray"
-
-	VHSLateFeeRate = 2.00
-	DVDLateFeeRate = 3.00
-	RewindFeeCost  = 1.00
 )
-
-var GenreList = []string{"Action", "Comedy", "Horror", "SciFi", "Drama", "Thriller", "Romance", "Animation"}
 
 func envOrDefault(key, def string) string {
 	if v := os.Getenv(key); v != "" {

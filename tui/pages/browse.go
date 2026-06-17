@@ -32,6 +32,7 @@ type BrowseModel struct {
 	TotalPages int
 	Mode       BrowseMode
 	Genre      string
+	MediaType  string // "movie" or "series"
 }
 
 func NewBrowseModel() *BrowseModel {
@@ -44,14 +45,18 @@ func (m *BrowseModel) SetMovies(movies []models.MovieResponse, total int, page i
 	m.Page = page
 	if m.Mode == ModeAll {
 		m.TotalPages = (total + m.PageSize - 1) / m.PageSize
-		m.Status = fmt.Sprintf("page %d/%d · %d movies", page, m.TotalPages, total)
+		label := "movies"
+		if m.MediaType == "series" {
+			label = "series"
+		}
+		m.Status = fmt.Sprintf("page %d/%d · %d %s", page, m.TotalPages, total, label)
 	} else {
 		m.TotalPages = 1
 		label := "Staff Picks"
 		if m.Mode == ModeLastChance {
 			label = "Last Chance"
 		}
-		m.Status = fmt.Sprintf("%s · %d movies", label, total)
+		m.Status = fmt.Sprintf("%s · %d titles", label, total)
 	}
 	m.Loading = false
 	if len(movies) > 0 && m.Selected < 0 {
@@ -92,8 +97,12 @@ func (m *BrowseModel) View(w, h int) string {
 			styles.TextStyle.Render("Loading catalog..."))
 	}
 	if len(m.Movies) == 0 {
+		msg := "No movies found"
+		if m.MediaType == "series" {
+			msg = "No series found"
+		}
 		return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
-			styles.TextStyle.Render("No movies found"))
+			styles.TextStyle.Render(msg))
 	}
 
 	cardW := 28
@@ -126,9 +135,20 @@ func (m *BrowseModel) View(w, h int) string {
 			status = "[NEW]"
 			sc = styles.WarningAmb
 		}
+		if mv.MediaType == "series" {
+			status = fmt.Sprintf("S%d", mv.SeasonNumber)
+			if mv.SeasonNumber <= 1 {
+				status = "[TV]"
+			}
+			sc = styles.Coral
+		}
+		info := fmt.Sprintf("(%d)", mv.Year)
+		if mv.EpisodeCount > 0 {
+			info += fmt.Sprintf(" · %d eps", mv.EpisodeCount)
+		}
 		inner := lipgloss.JoinVertical(lipgloss.Center,
 			lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Render(title),
-			styles.DimTextStyle.Render(fmt.Sprintf("(%d)", mv.Year)),
+			styles.DimTextStyle.Render(info),
 			stars,
 			fb+"  "+lipgloss.NewStyle().Foreground(sc).Bold(true).Render(status),
 		)

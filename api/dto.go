@@ -1,10 +1,5 @@
 package api
 
-import (
-	"encoding/json"
-	"net/http"
-)
-
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -92,16 +87,4 @@ type StaffPickResponse struct {
 type TOTPSetupResponse struct {
 	Secret string `json:"secret"`
 	URL    string `json:"url"`
-}
-
-func WriteJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if data != nil {
-		json.NewEncoder(w).Encode(data)
-	}
-}
-
-func WriteError(w http.ResponseWriter, status int, message string) {
-	WriteJSON(w, status, ErrorResponse{Error: message, Code: status})
 }

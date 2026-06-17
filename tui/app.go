@@ -99,6 +99,7 @@ type Model struct {
 	searchBar   *components.SearchbarModel
 	searching   bool
 	tabs        *components.TabsModel
+	genreTabs   *components.TabsModel
 	tempToken   string
 	totpCode    string
 	browseReqID int
@@ -112,7 +113,8 @@ func NewModel(baseURL string) *Model {
 		login:     pages.NewLoginModel(),
 		header:    components.NewHeaderModel(),
 		searchBar: components.NewSearchbarModel(),
-		tabs:      components.NewTabsModel([]string{"ALL", "Action", "SciFi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Animation"}),
+		tabs:      components.NewTabsModel([]string{"🎬 Movies", "📺 Series"}),
+		genreTabs: components.NewTabsModel([]string{"ALL", "Action", "SciFi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Animation"}),
 	}
 }
 
@@ -126,72 +128,17 @@ func autoRefreshCmd() tea.Cmd {
 	})
 }
 
-func (m *Model) setDetailContext() {
-	if m.detail == nil || m.userResp == nil {
-		return
-	}
-	tier := models.TierByName(m.userResp.Subscription)
-	m.detail.SetUserContext(m.userResp.FreeRentals, tier.FreeRentals, m.userResp.Balance)
-	if m.detail.Movie.SequelTo != "" {
-		for _, mv := range m.browse.Movies {
-			if mv.ID == m.detail.Movie.SequelTo {
-				m.detail.SequelTitle = mv.Title
-				break
-			}
-		}
-	}
-	var franchise []models.MovieResponse
-	currentID := m.detail.Movie.ID
-	seen := map[string]bool{currentID: true}
-	// Find prequels
-	id := m.detail.Movie.SequelTo
-	for id != "" && !seen[id] {
-		found := false
-		for _, mv := range m.browse.Movies {
-			if mv.ID == id {
-				seen[id] = true
-				franchise = append([]models.MovieResponse{mv}, franchise...)
-				id = mv.SequelTo
-				found = true
-				break
-			}
-		}
-		if !found {
-			break
-		}
-	}
-	// Add current movie
-	franchise = append(franchise, *m.detail.Movie)
-	// Find sequels
-	queue := []string{currentID}
-	for len(queue) > 0 {
-		prequelID := queue[0]
-		queue = queue[1:]
-		for _, mv := range m.browse.Movies {
-			if mv.SequelTo == prequelID && !seen[mv.ID] {
-				seen[mv.ID] = true
-				franchise = append(franchise, mv)
-				queue = append(queue, mv.ID)
-			}
-		}
-	}
-	// Only show franchise if there are 2+ movies in chain
-	if len(franchise) > 1 {
-		m.detail.Franchise = franchise
+func (m *Model) applyMediaTypeFilter() tea.Cmd {
+	if m.tabs.ActiveTab() == "📺 Series" {
+		m.browse.MediaType = "series"
+		m.browse.Genre = "Series"
 	} else {
-		m.detail.Franchise = nil
+		m.browse.MediaType = "movie"
+		m.browse.Genre = ""
+		m.genreTabs.SetActive(0)
 	}
-
-	var sameGenre []models.MovieResponse
-	for _, mv := range m.browse.Movies {
-		if !seen[mv.ID] && mv.Genre == m.detail.Movie.Genre {
-			sameGenre = append(sameGenre, mv)
-			if len(sameGenre) >= 5 {
-				break
-			}
-		}
-	}
-	m.detail.Recommendations = sameGenre
+	m.browse.Selected = -1
+	return m.loadMovies(1, m.browse.Genre)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
