@@ -256,3 +256,8 @@ func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, user *
 		User:         user.ToResponse(),
 	})
 }
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	user := GetUser(r)
+	WriteJSON(w, http.StatusOK, user.ToResponse())
+}

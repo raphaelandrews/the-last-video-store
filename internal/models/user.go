@@ -102,3 +102,11 @@ func (u *User) RemainingRentals() int {
 	}
 	return remaining
 }
+
+func (u *User) CanSnackBarOrder() bool {
+	return bitmask.CanSnackBarOrder(u.Tier) && !u.Banned
+}
+
+func (u *User) CanSnackBarManage() bool {
+	return bitmask.CanSnackBarManage(u.Tier) && !u.Banned
+}

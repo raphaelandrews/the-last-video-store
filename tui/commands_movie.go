@@ -41,6 +41,9 @@ func (m *Model) loadMovies(page int, genre string) tea.Cmd {
 		if genre != "" {
 			url += "&genre=" + genre
 		}
+		if m.browse.MediaType != "" {
+			url += "&media_type=" + m.browse.MediaType
+		}
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
@@ -61,7 +64,11 @@ func (m *Model) loadStaffPicks() tea.Cmd {
 	return func() tea.Msg {
 		m.browseReqID++
 		rid := m.browseReqID
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/staff-picks", nil)
+		url := m.baseURL + "/api/v1/movies/staff-picks"
+		if m.browse.MediaType != "" {
+			url += "?media_type=" + m.browse.MediaType
+		}
+		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
 		if resp == nil {
@@ -78,7 +85,11 @@ func (m *Model) loadLastChance() tea.Cmd {
 	return func() tea.Msg {
 		m.browseReqID++
 		rid := m.browseReqID
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/last-chance", nil)
+		url := m.baseURL + "/api/v1/movies/last-chance"
+		if m.browse.MediaType != "" {
+			url += "?media_type=" + m.browse.MediaType
+		}
+		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
 		if resp == nil {
@@ -142,7 +153,7 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 			} else {
 				m.browse.Status = err.Error()
 			}
-			return nil
+			return wishlistResultMsg{}
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode == 409 {
@@ -151,7 +162,7 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 			} else {
 				m.browse.Status = "Already in waitlist"
 			}
-			return nil
+			return wishlistResultMsg{}
 		}
 		if resp.StatusCode >= 400 {
 			var e struct{ Error string }
@@ -161,13 +172,13 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 			} else {
 				m.browse.Status = e.Error
 			}
-			return nil
+			return wishlistResultMsg{}
 		}
 		if fromDetail {
 			m.detail.StatusMsg = "Added to waitlist ✓"
 		} else {
 			m.browse.Status = "Added to waitlist ✓"
 		}
-		return nil
+		return wishlistResultMsg{}
 	}
 }

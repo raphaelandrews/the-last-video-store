@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/thelastvideostore/internal/ds/bitmask"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/pages"
 )
@@ -17,6 +18,9 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 		ps = 30
 	}
 	return func() tea.Msg {
+		if m.userResp == nil || !bitmask.CanAdmin(m.userResp.Tier) {
+			return pages.ErrorMsg{Message: "⛔ ACCESS DENIED — Manager or Owner required"}
+		}
 		url := fmt.Sprintf("%s/api/v1/movies?page_size=%d&page=%d", m.baseURL, ps, page)
 		req, _ := http.NewRequest("GET", url, nil)
 		req.Header.Set("Authorization", "Bearer "+m.token)
@@ -43,6 +47,16 @@ func (m *Model) loadAdminUsers() tea.Cmd {
 			return loadAdminUsersMsg{}
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			var e struct {
+				Error string `json:"error"`
+			}
+			json.NewDecoder(resp.Body).Decode(&e)
+			if e.Error == "" {
+				e.Error = "ACCESS DENIED — Insufficient clearance"
+			}
+			return pages.ErrorMsg{Message: e.Error}
+		}
 		var users []models.UserResponse
 		json.NewDecoder(resp.Body).Decode(&users)
 		return loadAdminUsersMsg{users: users}
@@ -78,6 +92,16 @@ func (m *Model) loadAuditLog() tea.Cmd {
 			return loadAuditLogMsg{}
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			var e struct {
+				Error string `json:"error"`
+			}
+			json.NewDecoder(resp.Body).Decode(&e)
+			if e.Error == "" {
+				e.Error = "ACCESS DENIED — Insufficient clearance"
+			}
+			return pages.ErrorMsg{Message: e.Error}
+		}
 		var entries []map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&entries)
 		return loadAuditLogMsg{entries: entries}
@@ -112,6 +136,9 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
+			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
+				return pages.ErrorMsg{Message: e.Error}
+			}
 			m.movieForm.ErrMsg = e.Error
 			return nil
 		}
@@ -148,6 +175,9 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
+			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
+				return pages.ErrorMsg{Message: e.Error}
+			}
 			m.movieForm.ErrMsg = e.Error
 			return nil
 		}
@@ -187,6 +217,9 @@ func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
+			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
+				return pages.ErrorMsg{Message: e.Error}
+			}
 			m.adminUsers.ErrMsg = e.Error
 			return nil
 		}
@@ -205,7 +238,16 @@ func (m *Model) doToggleStaffPick(movieID string, current bool) tea.Cmd {
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
 		if resp != nil {
-			resp.Body.Close()
+			defer resp.Body.Close()
+			if resp.StatusCode >= 400 {
+				var e struct {
+					Error string `json:"error"`
+				}
+				json.NewDecoder(resp.Body).Decode(&e)
+				if e.Error != "" {
+					return pages.ErrorMsg{Message: e.Error}
+				}
+			}
 		}
 		return m.loadAdminMovies(m.adminMovies.Page)()
 	}
@@ -217,7 +259,16 @@ func (m *Model) doDeleteMovie(movieID string) tea.Cmd {
 		req.Header.Set("Authorization", "Bearer "+m.token)
 		resp, _ := http.DefaultClient.Do(req)
 		if resp != nil {
-			resp.Body.Close()
+			defer resp.Body.Close()
+			if resp.StatusCode >= 400 {
+				var e struct {
+					Error string `json:"error"`
+				}
+				json.NewDecoder(resp.Body).Decode(&e)
+				if e.Error != "" {
+					return pages.ErrorMsg{Message: e.Error}
+				}
+			}
 		}
 		return m.loadAdminMovies(m.adminMovies.Page)()
 	}

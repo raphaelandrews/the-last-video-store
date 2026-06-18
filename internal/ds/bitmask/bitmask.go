@@ -3,40 +3,52 @@ package bitmask
 type Permission uint16
 
 const (
-	PermBrowse      Permission = 0b000001
-	PermRent        Permission = 0b000010
-	PermReserve     Permission = 0b000100
-	PermManageUsers Permission = 0b001000
-	PermStaff       Permission = 0b010000
-	PermAdmin       Permission = 0b100000
+	PermBrowse         Permission = 0b00000001
+	PermRent           Permission = 0b00000010
+	PermReserve        Permission = 0b00000100
+	PermManageUsers    Permission = 0b00001000
+	PermStaff          Permission = 0b00010000
+	PermAdmin          Permission = 0b00100000
+	PermSnackBarAccess Permission = 0b01000000
+	PermSnackBarManage Permission = 0b10000000
 )
 
 const (
-	TierBronze     Permission = PermBrowse
-	TierSilver     Permission = PermBrowse | PermRent
-	TierGold       Permission = PermBrowse | PermRent | PermReserve
-	TierEmployee   Permission = PermBrowse | PermRent | PermReserve | PermStaff
-	TierSupervisor Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff
-	TierManager    Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermAdmin
-	TierOwner      Permission = TierManager
+	TierBronze            Permission = PermBrowse | PermSnackBarAccess
+	TierSilver            Permission = PermBrowse | PermRent | PermSnackBarAccess
+	TierGold              Permission = PermBrowse | PermRent | PermReserve | PermSnackBarAccess
+	TierEmployee          Permission = PermBrowse | PermRent | PermReserve | PermStaff | PermSnackBarAccess
+	TierSupervisor        Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermSnackBarAccess
+	TierManager           Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermAdmin | PermSnackBarAccess | PermSnackBarManage
+	TierOwner             Permission = TierManager
+	TierSnackBarAttendant Permission = PermBrowse | PermStaff | PermSnackBarAccess
+	TierSnackBarManager   Permission = PermBrowse | PermStaff | PermSnackBarAccess | PermSnackBarManage
 )
 
+var TierPromotionOrder = []Permission{
+	TierBronze, TierSilver, TierGold, TierEmployee, TierSupervisor, TierManager, TierOwner,
+}
+
 var TierLabels = map[Permission]string{
-	TierBronze:     "Bronze",
-	TierSilver:     "Silver",
-	TierGold:       "Gold",
-	TierEmployee:   "Employee",
-	TierSupervisor: "Supervisor",
-	TierManager:    "Manager",
+	TierBronze:            "Bronze",
+	TierSilver:            "Silver",
+	TierGold:              "Gold",
+	TierEmployee:          "Employee",
+	TierSupervisor:        "Supervisor",
+	TierManager:           "Manager",
+	TierSnackBarAttendant: "SnackBar Attendant",
+	TierSnackBarManager:   "SnackBar Manager",
 }
 
 var TierNamesPT = map[Permission]string{
-	TierBronze:     "Cliente Bronze",
-	TierSilver:     "Cliente Prata",
-	TierGold:       "Cliente Ouro",
-	TierEmployee:   "Atendente",
-	TierSupervisor: "Supervisor",
-	TierManager:    "Gerente",
+	TierBronze:            "Cliente Bronze",
+	TierSilver:            "Cliente Prata",
+	TierGold:              "Cliente Ouro",
+	TierEmployee:          "Atendente",
+	TierSupervisor:        "Supervisor",
+	TierManager:           "Gerente",
+	TierSnackBarAttendant: "Atendente da Lanchonete",
+	TierSnackBarManager:   "Gerente da Lanchonete",
 }
 
 func IsOwner(p Permission) bool {
@@ -85,6 +97,14 @@ func CanManageUsers(p Permission) bool {
 
 func CanAdmin(p Permission) bool {
 	return Has(p, PermAdmin)
+}
+
+func CanSnackBarOrder(p Permission) bool {
+	return Has(p, PermSnackBarAccess)
+}
+
+func CanSnackBarManage(p Permission) bool {
+	return Has(p, PermSnackBarManage)
 }
 
 func TierName(p Permission) string {

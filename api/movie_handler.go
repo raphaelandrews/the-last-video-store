@@ -27,6 +27,7 @@ func NewMovieHandler(store *store.Store, cfg *config.Config, hc *crypto.HashChai
 
 func (h *MovieHandler) List(w http.ResponseWriter, r *http.Request) {
 	genre := r.URL.Query().Get("genre")
+	mediaType := r.URL.Query().Get("media_type")
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
 
@@ -38,7 +39,7 @@ func (h *MovieHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	offset := (page - 1) * pageSize
-	movies, total, err := h.store.ListMovies(genre, offset, pageSize)
+	movies, total, err := h.store.ListMoviesFiltered(genre, mediaType, offset, pageSize)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list movies")
 		return
@@ -87,6 +88,7 @@ func (h *MovieHandler) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MovieHandler) StaffPicks(w http.ResponseWriter, r *http.Request) {
+	mediaType := r.URL.Query().Get("media_type")
 	ids, err := h.store.GetStaffPicks()
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to get staff picks")
@@ -97,6 +99,9 @@ func (h *MovieHandler) StaffPicks(w http.ResponseWriter, r *http.Request) {
 	for _, id := range ids {
 		m, err := h.store.GetMovieByID(id)
 		if err != nil {
+			continue
+		}
+		if mediaType != "" && m.MediaType != mediaType {
 			continue
 		}
 		r := m.ToResponse()
@@ -111,6 +116,7 @@ func (h *MovieHandler) StaffPicks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MovieHandler) LastChance(w http.ResponseWriter, r *http.Request) {
+	mediaType := r.URL.Query().Get("media_type")
 	movies, err := h.store.GetLastChanceMovies()
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to get last chance movies")
@@ -119,6 +125,9 @@ func (h *MovieHandler) LastChance(w http.ResponseWriter, r *http.Request) {
 
 	var responses []interface{}
 	for _, m := range movies {
+		if mediaType != "" && m.MediaType != mediaType {
+			continue
+		}
 		responses = append(responses, m.ToResponse())
 	}
 	if responses == nil {

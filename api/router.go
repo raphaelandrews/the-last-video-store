@@ -27,6 +27,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 	merchHandler := &MerchHandler{Store: store}
 	inventoryHandler := &InventoryHandler{Store: store}
 	tierHandler := &TierHandler{Store: store}
+	snackBarHandler := &SnackBarHandler{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -42,6 +43,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 
 			r.Post("/auth/refresh", authHandler.Refresh)
 			r.Post("/auth/logout", authHandler.Logout)
+			r.Get("/auth/me", authHandler.Me)
 
 			r.Route("/movies", func(r chi.Router) {
 				r.Get("/", movieHandler.List)
@@ -108,6 +110,20 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 			r.Route("/tiers", func(r chi.Router) {
 				r.Get("/", tierHandler.List)
 				r.Post("/purchase", tierHandler.Purchase)
+			})
+
+			r.Route("/snackbar", func(r chi.Router) {
+				r.Get("/", snackBarHandler.List)
+				r.Post("/order", snackBarHandler.PlaceOrder)
+				r.Get("/orders", snackBarHandler.Orders)
+
+				r.Group(func(r chi.Router) {
+					r.Use(RequirePermission(bitmask.PermSnackBarManage))
+					r.Post("/items", snackBarHandler.CreateItem)
+					r.Put("/items/{id}", snackBarHandler.UpdateItem)
+					r.Delete("/items/{id}", snackBarHandler.DeleteItem)
+					r.Post("/restock", snackBarHandler.Restock)
+				})
 			})
 		})
 	})

@@ -130,6 +130,9 @@ func (m *MovieDetailModel) View(w, h int) string {
 	if sequelInfo != "" {
 		lines = append(lines, sequelInfo)
 	}
+	if !mv.Available && !m.Rented {
+		lines = append(lines, styles.ErrorTextStyle.Render("🔴 No copies available — press [W] to join the waitlist"))
+	}
 	if costInfo != "" {
 		lines = append(lines, styles.TextStyle.Render(costInfo))
 	}

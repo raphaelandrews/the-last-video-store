@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/thelastvideostore/internal/ds/bitmask"
 	"github.com/thelastvideostore/tui/pages"
 	"github.com/thelastvideostore/tui/styles"
 )
@@ -65,6 +66,12 @@ func (m *Model) View() string {
 		body = m.adminUsers.View(m.w, ch)
 	case scrAuditLog:
 		body = m.auditLog.View(m.w, ch)
+	case scrSnackBarMenu:
+		body = m.snackBarMenu.View(m.w, ch)
+	case scrSnackBarOrders:
+		body = m.snackBarOrders.View(m.w, ch)
+	case scrSnackBarManage:
+		body = m.snackBarManage.View(m.w, ch)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Top, m.headerView(), body, m.footerView())
@@ -100,7 +107,7 @@ func (m *Model) footerView() string {
 		if m.searching {
 			hints = "[↑↓] results  [ENTER] open  [ESC] cancel search  [Ctrl+C] quit"
 		} else {
-			hints = "[↑↓] navigate  [ENTER] details  [[/]] media  [,/.] genre  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
+			hints = "[↑↓] navigate  [ENTER] details  [[/]] media  [,/.] genre  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [C] snack bar  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
 		}
 	case scrDetail:
 		if m.detail != nil && !m.detail.Rented {
@@ -111,7 +118,17 @@ func (m *Model) footerView() string {
 	case scrRentals:
 		hints = "[↑↓] select  [ENTER] return  [E] extend (30🍿)  [Q] back"
 	case scrProfile:
-		hints = "[L] logout  [T] tiers  [M] rewards  [I] inventory  [Q] back"
+		hints = "[L] logout  [T] tiers  [B] snack bar  [M] rewards  [I] inventory  [Q] back"
+	case scrSnackBarMenu:
+		hints = "[↑↓] select  [ENTER] order  [O] orders"
+		if m.userResp != nil && bitmask.CanSnackBarManage(m.userResp.Tier) {
+			hints += "  [M] manage"
+		}
+		hints += "  [Q] back"
+	case scrSnackBarOrders:
+		hints = "[Q] back to snack bar"
+	case scrSnackBarManage:
+		hints = "[↑↓] select  [R] restock  [Q] back to snack bar"
 	case scrWishlist:
 		hints = "[↑↓] select  [ENTER] info  [D] remove  [Q] back"
 	case scrMerch:

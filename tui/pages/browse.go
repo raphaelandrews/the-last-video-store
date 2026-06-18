@@ -130,17 +130,15 @@ func (m *BrowseModel) View(w, h int) string {
 		if !mv.Available {
 			status = "[OUT]"
 			sc = styles.ErrorRed
-		}
-		if mv.IsNewRelease {
-			status = "[NEW]"
-			sc = styles.WarningAmb
-		}
-		if mv.MediaType == "series" {
+		} else if mv.MediaType == "series" {
 			status = fmt.Sprintf("S%d", mv.SeasonNumber)
 			if mv.SeasonNumber <= 1 {
 				status = "[TV]"
 			}
 			sc = styles.Coral
+		} else if mv.IsNewRelease {
+			status = "[NEW]"
+			sc = styles.WarningAmb
 		}
 		info := fmt.Sprintf("(%d)", mv.Year)
 		if mv.EpisodeCount > 0 {

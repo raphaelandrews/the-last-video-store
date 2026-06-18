@@ -125,6 +125,10 @@ func (s *Store) DeleteMovie(id string) error {
 }
 
 func (s *Store) ListMovies(genre string, offset, limit int) ([]*models.Movie, int, error) {
+	return s.ListMoviesFiltered(genre, "", offset, limit)
+}
+
+func (s *Store) ListMoviesFiltered(genre, mediaType string, offset, limit int) ([]*models.Movie, int, error) {
 	var movies []*models.Movie
 	total := 0
 
@@ -171,6 +175,10 @@ func (s *Store) ListMovies(genre string, offset, limit int) ([]*models.Movie, in
 				}
 				var movie models.Movie
 				if err := json.Unmarshal(v, &movie); err != nil {
+					continue
+				}
+				if mediaType != "" && movie.MediaType != mediaType {
+					total--
 					continue
 				}
 				movies = append(movies, &movie)

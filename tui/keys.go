@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/thelastvideostore/internal/ds/bitmask"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/pages"
 
@@ -44,6 +43,15 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			}
 		case "r":
 			return func() tea.Msg { return pages.NavigateMsg{Page: "rentals"} }
+		case "c":
+			bal := 0.0
+			if m.userResp != nil {
+				bal = m.userResp.Balance
+			}
+			m.snackBarMenu = pages.NewSnackBarMenuModel(bal)
+			m.snackBarMenu.SetItems(nil)
+			m.screen = scrSnackBarMenu
+			return m.loadSnackBarMenu()
 		case "p":
 			return func() tea.Msg { return pages.NavigateMsg{Page: "profile"} }
 		case "v":
@@ -116,29 +124,17 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				return m.loadMovies(m.browse.Page-1, m.browse.Genre)
 			}
 		case "ctrl+a":
-			if m.userResp != nil && bitmask.CanAdmin(m.userResp.Tier) {
-				m.adminMovies = pages.NewAdminMoviesModel()
-				m.screen = scrAdminMovies
-				return m.loadAdminMovies(1)
-			}
-			m.accessDenied = pages.NewAccessDeniedModel("Manager role or higher required to manage movies.")
-			m.screen = scrAccessDenied
+			m.adminMovies = pages.NewAdminMoviesModel()
+			m.screen = scrAdminMovies
+			return m.loadAdminMovies(1)
 		case "ctrl+u":
-			if m.userResp != nil && bitmask.CanManageUsers(m.userResp.Tier) {
-				m.adminUsers = pages.NewAdminUsersModel()
-				m.screen = scrAdminUsers
-				return m.loadAdminUsers()
-			}
-			m.accessDenied = pages.NewAccessDeniedModel("Supervisor role or higher required to manage users.")
-			m.screen = scrAccessDenied
+			m.adminUsers = pages.NewAdminUsersModel()
+			m.screen = scrAdminUsers
+			return m.loadAdminUsers()
 		case "ctrl+g":
-			if m.userResp != nil && bitmask.CanManageUsers(m.userResp.Tier) {
-				m.auditLog = pages.NewAuditLogModel()
-				m.screen = scrAuditLog
-				return m.loadAuditLog()
-			}
-			m.accessDenied = pages.NewAccessDeniedModel("Supervisor role or higher required to view the audit log.")
-			m.screen = scrAccessDenied
+			m.auditLog = pages.NewAuditLogModel()
+			m.screen = scrAuditLog
+			return m.loadAuditLog()
 		case "f5":
 			return m.loadMovies(m.browse.Page, m.browse.Genre)
 		}
@@ -217,6 +213,16 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	case scrProfile:
 		if k == "l" {
 			return func() tea.Msg { return pages.NavigateMsg{Page: "login"} }
+		}
+		if k == "b" {
+			bal := 0.0
+			if m.userResp != nil {
+				bal = m.userResp.Balance
+			}
+			m.snackBarMenu = pages.NewSnackBarMenuModel(bal)
+			m.snackBarMenu.SetItems(nil)
+			m.screen = scrSnackBarMenu
+			return m.loadSnackBarMenu()
 		}
 		if k == "m" {
 			pts := 0
@@ -349,7 +355,7 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		case "enter":
 			tier := m.tierShop.SelectedTier()
 			if tier != nil && tier.Name != m.tierShop.Current && (tier.Price == 0 || m.userResp.Balance >= tier.Price) {
-				return m.doPurchaseTier(tier.Name)
+				return tea.Sequence(m.doPurchaseTier(tier.Name), m.doRefreshMe())
 			}
 		}
 	case scrMovieForm:
@@ -357,6 +363,40 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.screen = scrAdminMovies
 			m.movieForm = nil
 		}
+	case scrSnackBarMenu:
+		switch k {
+		case "down", "j":
+			m.snackBarMenu.MoveDown()
+		case "up", "k":
+			m.snackBarMenu.MoveUp()
+		case "enter":
+			item := m.snackBarMenu.SelectedItem()
+			if item != nil && item.Stock > 0 && m.userResp != nil && m.userResp.Balance >= item.Price {
+				return func() tea.Msg { return pages.SnackBarOrderMsg{ItemID: item.ID} }
+			}
+		case "o":
+			m.snackBarOrders = pages.NewSnackBarOrdersModel()
+			m.screen = scrSnackBarOrders
+			return m.loadSnackBarOrders()
+		case "m":
+			m.snackBarManage = pages.NewSnackBarManageModel(m.userResp.Tier)
+			m.screen = scrSnackBarManage
+			return m.loadSnackBarManage()
+		}
+	case scrSnackBarManage:
+		switch k {
+		case "down", "j":
+			m.snackBarManage.MoveDown()
+		case "up", "k":
+			m.snackBarManage.MoveUp()
+		case "r":
+			item := m.snackBarManage.SelectedItem()
+			if item != nil {
+				return m.doSnackBarRestock(item.ID)
+			}
+		}
+	case scrSnackBarOrders:
+		_ = k
 	}
 	return nil
 }

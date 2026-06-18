@@ -1,22 +1,24 @@
 package tui
 
-import "strings"
+import (
+	"strings"
 
-var tierOrder = []string{"Bronze", "Silver", "Gold", "Employee", "Supervisor", "Manager", "Owner"}
+	"github.com/thelastvideostore/internal/ds/bitmask"
+)
 
 func nextTier(current string) string {
-	for i, t := range tierOrder {
-		if t == current && i+1 < len(tierOrder) {
-			return strings.ToLower(tierOrder[i+1])
+	for i, t := range bitmask.TierPromotionOrder {
+		if bitmask.TierLabels[t] == current && i+1 < len(bitmask.TierPromotionOrder) {
+			return strings.ToLower(bitmask.TierLabels[bitmask.TierPromotionOrder[i+1]])
 		}
 	}
 	return strings.ToLower(current)
 }
 
 func prevTier(current string) string {
-	for i, t := range tierOrder {
-		if t == current && i > 0 {
-			return strings.ToLower(tierOrder[i-1])
+	for i, t := range bitmask.TierPromotionOrder {
+		if bitmask.TierLabels[t] == current && i > 0 {
+			return strings.ToLower(bitmask.TierLabels[bitmask.TierPromotionOrder[i-1]])
 		}
 	}
 	return strings.ToLower(current)

@@ -31,6 +31,9 @@ const (
 	scrAuditLog
 	scrMovieForm
 	scrAccessDenied
+	scrSnackBarMenu
+	scrSnackBarOrders
+	scrSnackBarManage
 )
 
 type loadMoviesMsg struct {
@@ -51,6 +54,10 @@ type loadWishlistMsg struct {
 type searchResultsMsg struct {
 	results []models.MovieResponse
 }
+type wishlistResultMsg struct{}
+type refreshMeMsg struct {
+	user *models.UserResponse
+}
 type autoRefreshMsg struct{}
 type loadAdminMoviesMsg struct {
 	movies []models.MovieResponse
@@ -69,6 +76,15 @@ type loadMerchMsg struct {
 type loadInventoryMsg struct {
 	items []pages.InventoryItem
 }
+type loadSnackBarMenuMsg struct {
+	items []models.SnackBarItem
+}
+type loadSnackBarOrdersMsg struct {
+	orders []models.SnackBarOrder
+}
+type loadSnackBarManageMsg struct {
+	items []models.SnackBarItem
+}
 
 type Model struct {
 	baseURL  string
@@ -78,23 +94,26 @@ type Model struct {
 	token    string
 	userResp *models.UserResponse
 
-	splash       *pages.SplashModel
-	login        *pages.LoginModel
-	register     *pages.RegisterModel
-	browse       *pages.BrowseModel
-	detail       *pages.MovieDetailModel
-	rentals      *pages.MyRentalsModel
-	profile      *pages.ProfileModel
-	wishlist     *pages.WishlistModel
-	merch        *pages.MerchModel
-	inventory    *pages.InventoryModel
-	tierShop     *pages.TierShopModel
-	header       *components.HeaderModel
-	adminMovies  *pages.AdminMoviesModel
-	adminUsers   *pages.AdminUsersModel
-	auditLog     *pages.AuditLogModel
-	movieForm    *pages.MovieFormModel
-	accessDenied *pages.AccessDeniedModel
+	splash         *pages.SplashModel
+	login          *pages.LoginModel
+	register       *pages.RegisterModel
+	browse         *pages.BrowseModel
+	detail         *pages.MovieDetailModel
+	rentals        *pages.MyRentalsModel
+	profile        *pages.ProfileModel
+	wishlist       *pages.WishlistModel
+	merch          *pages.MerchModel
+	inventory      *pages.InventoryModel
+	tierShop       *pages.TierShopModel
+	header         *components.HeaderModel
+	adminMovies    *pages.AdminMoviesModel
+	adminUsers     *pages.AdminUsersModel
+	auditLog       *pages.AuditLogModel
+	movieForm      *pages.MovieFormModel
+	accessDenied   *pages.AccessDeniedModel
+	snackBarMenu   *pages.SnackBarMenuModel
+	snackBarOrders *pages.SnackBarOrdersModel
+	snackBarManage *pages.SnackBarManageModel
 
 	searchBar   *components.SearchbarModel
 	searching   bool
@@ -159,8 +178,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.searchKey(msg)
 		}
 		if k == "q" && m.screen != scrLogin && m.screen != scrSplash && m.screen != scrBrowse && m.screen != scrTOTP && m.screen != scrMovieForm && m.screen != scrAccessDenied && m.screen != scrRegister {
-			if m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop {
+			if m.screen == scrMerch || m.screen == scrInventory || m.screen == scrTierShop || m.screen == scrSnackBarMenu {
+				if m.profile == nil {
+					m.profile = pages.NewProfileModel(m.userResp)
+				}
 				m.screen = scrProfile
+				return m, m.loadProfile()
+			}
+			if m.screen == scrSnackBarOrders || m.screen == scrSnackBarManage {
+				m.screen = scrSnackBarMenu
 				return m, nil
 			}
 			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
@@ -192,6 +218,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.token = msg.AccessToken
 			m.userResp = msg.User
 			m.browse = pages.NewBrowseModel()
+			m.browse.MediaType = "movie"
 			m.screen = scrBrowse
 			return m, tea.Batch(m.loadMovies(1, ""), autoRefreshCmd())
 
@@ -220,11 +247,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case pages.RentRequestMsg:
-			return m, m.doRent(msg.MovieID)
+			return m, tea.Sequence(m.doRent(msg.MovieID), m.doRefreshMe())
 		case pages.ReturnRequestMsg:
-			return m, m.doReturn(msg.RentalID)
+			return m, tea.Sequence(m.doReturn(msg.RentalID), m.doRefreshMe())
 		case pages.ExtendRentalMsg:
-			return m, m.doExtendRental(msg.RentalID)
+			return m, tea.Sequence(m.doExtendRental(msg.RentalID), m.doRefreshMe())
 
 		case loadMoviesMsg:
 			if msg.reqID != 0 && msg.reqID != m.browseReqID {
@@ -247,6 +274,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.profile.SetStats(msg.stats)
 		case loadWishlistMsg:
 			m.wishlist.SetItems(msg.items)
+		case wishlistResultMsg:
+			return m, nil
+		case refreshMeMsg:
+			if msg.user != nil {
+				m.userResp = msg.user
+				if m.snackBarMenu != nil {
+					m.snackBarMenu.Balance = msg.user.Balance
+				}
+				if m.detail != nil {
+					m.detail.Balance = msg.user.Balance
+					m.detail.FreeRentals = msg.user.FreeRentals
+				}
+			}
 		case pages.WishlistRemoveMsg:
 			return m, m.doRemoveFromWishlist(msg.MovieID)
 		case searchResultsMsg:
@@ -266,8 +306,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, autoRefreshCmd()
 		case loadInventoryMsg:
 			m.inventory.SetItems(msg.items)
+		case loadSnackBarMenuMsg:
+			m.snackBarMenu.SetItems(msg.items)
+		case loadSnackBarOrdersMsg:
+			m.snackBarOrders.SetOrders(msg.orders)
+		case loadSnackBarManageMsg:
+			m.snackBarManage.SetItems(msg.items)
+		case pages.SnackBarOrderMsg:
+			return m, tea.Sequence(m.doSnackBarOrder(msg.ItemID), m.doRefreshMe())
 		case pages.MerchRedeemMsg:
-			return m, m.doRedeemMerch(msg.ItemID)
+			return m, tea.Sequence(m.doRedeemMerch(msg.ItemID), m.doRefreshMe())
 		case pages.MovieFormSubmitMsg:
 			if msg.Mode == pages.FormAdd {
 				return m, m.doCreateMovie(msg)

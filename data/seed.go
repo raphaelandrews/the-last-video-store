@@ -36,7 +36,8 @@ func main() {
 	seedUsers(s)
 	seedMovies(s)
 	seedMerch(s)
-	fmt.Printf("Seeded %d movies, 8 users, and 7 merch items.\n", countMovies(s))
+	seedSnackBar(s)
+	fmt.Printf("Seeded %d movies, 10 users, 26 merch items, and snack bar.\n", countMovies(s))
 }
 
 func seedUsers(s *store.Store) {
@@ -54,6 +55,8 @@ func seedUsers(s *store.Store) {
 		{"manager", "123", "diamond", bitmask.TierManager, false, 100},
 		{"owner", "123", "diamond", bitmask.TierOwner, false, 100},
 		{"banned", "123", "wood", bitmask.TierBronze, true, 5},
+		{"bar_attendant", "123", "wood", bitmask.TierSnackBarAttendant, false, 30},
+		{"bar_manager", "123", "wood", bitmask.TierSnackBarManager, false, 50},
 	}
 
 	for _, e := range entries {
@@ -279,6 +282,71 @@ func seedMovies(s *store.Store) {
 		{"Hunter x Hunter", 2011, "Series", "DVD", "Kojina", []string{"Megumi Han", "Mariya Ise", "Keiji Fujiwara"}, "Gon Freecss aspires to become a Hunter to find his father, encountering allies and deadly challenges along the way.", 3, false},
 		{"Frieren", 2023, "Series", "Blu-ray", "Saito", []string{"Atsumi Tanezaki", "Kana Ichinose", "Nobuhiko Okamoto"}, "An elven mage confronts the nature of mortality as she retraces the journey of her heroic party decades later.", 3, false},
 		{"Black Mirror", 2011, "Series", "DVD", "Brooker", []string{"Various Actors"}, "Stand-alone dramas exploring techno-paranoia — each episode a sharp, suspenseful tale of modern technology gone wrong.", 3, false},
+		{"Star Trek: The Next Generation: Season 1", 1987, "Series", "VHS", "Roddenberry", []string{"Patrick Stewart", "Jonathan Frakes", "Brent Spiner"}, "Captain Jean-Luc Picard leads the USS Enterprise-D on a continuing mission to explore strange new worlds.", 2, false},
+		{"Star Trek: The Next Generation: Season 2", 1988, "Series", "VHS", "Roddenberry", []string{"Patrick Stewart", "Jonathan Frakes", "Brent Spiner"}, "The crew faces the Borg threat for the first time as Dr. Pulaski joins the Enterprise.", 2, false},
+		{"Star Trek: The Next Generation: Season 3", 1989, "Series", "VHS", "Berman", []string{"Patrick Stewart", "Jonathan Frakes", "Brent Spiner"}, "The Best of Both Worlds — the Borg invade Federation space and capture Captain Picard.", 2, false},
+		{"The Twilight Zone", 1959, "Series", "VHS", "Serling", []string{"Rod Serling"}, "Classic anthology series exploring the strange, the terrifying, and the thought-provoking in another dimension.", 2, false},
+		{"Doctor Who", 2005, "Series", "DVD", "Davies", []string{"Christopher Eccleston", "Billie Piper", "John Barrowman"}, "The Doctor, a time-traveling alien, explores the universe in the TARDIS with his human companion Rose.", 3, false},
+		{"Sherlock: Season 1", 2010, "Series", "DVD", "Moffat", []string{"Benedict Cumberbatch", "Martin Freeman", "Andrew Scott"}, "A modern-day consulting detective and his flatmate solve crimes in 21st century London.", 3, false},
+		{"Sherlock: Season 2", 2012, "Series", "DVD", "Moffat", []string{"Benedict Cumberbatch", "Martin Freeman", "Lara Pulver"}, "Sherlock faces his greatest foe Moriarty in a game that ends with a fall from the rooftop.", 3, false},
+		{"True Detective: Season 1", 2014, "Series", "Blu-ray", "Fukunaga", []string{"Matthew McConaughey", "Woody Harrelson", "Michelle Monaghan"}, "Two Louisiana detectives hunt a serial killer across seventeen years in this Southern Gothic mystery.", 3, false},
+		{"Fargo: Season 1", 2014, "Series", "Blu-ray", "Hawley", []string{"Martin Freeman", "Billy Bob Thornton", "Allison Tolman"}, "A drifter brings murder and chaos to a small Minnesota town in this darkly comic crime drama.", 3, false},
+		{"Fargo: Season 2", 2015, "Series", "Blu-ray", "Hawley", []string{"Kirsten Dunst", "Patrick Wilson", "Jesse Plemons"}, "A beautician, her butcher husband, and the Gerhardt crime family collide in 1979 Sioux Falls.", 3, false},
+		{"Mad Men: Season 1", 2007, "Series", "DVD", "Weiner", []string{"Jon Hamm", "Elisabeth Moss", "John Slattery"}, "1960s New York ad executive Don Draper navigates Madison Avenue's high-pressure world of advertising.", 2, false},
+		{"Mad Men: Season 2", 2008, "Series", "DVD", "Weiner", []string{"Jon Hamm", "Elisabeth Moss", "John Slattery"}, "Sterling Cooper faces acquisition while Don's past catches up with him in unexpected ways.", 2, false},
+		{"The Handmaid's Tale: Season 1", 2017, "Series", "Blu-ray", "Miller", []string{"Elisabeth Moss", "Joseph Fiennes", "Yvonne Strahovski"}, "In a dystopian future, a woman is forced into sexual servitude as a last resort to repopulate the world.", 2, false},
+		{"Westworld: Season 1", 2016, "Series", "Blu-ray", "Nolan", []string{"Evan Rachel Wood", "Anthony Hopkins", "Ed Harris"}, "Guests indulge fantasies in an android-populated amusement park where the hosts begin gaining consciousness.", 3, false},
+		{"Succession: Season 1", 2018, "Series", "Blu-ray", "Armstrong", []string{"Brian Cox", "Jeremy Strong", "Kieran Culkin"}, "The Roy family fights for control of a global media empire as the patriarch's health declines.", 3, false},
+		{"Succession: Season 2", 2019, "Series", "Blu-ray", "Armstrong", []string{"Brian Cox", "Jeremy Strong", "Sarah Snook"}, "The Roys scramble to secure a safe harbor for Waystar Royco amid a hostile takeover bid.", 3, false},
+		{"Better Call Saul: Season 1", 2015, "Series", "DVD", "Gilligan", []string{"Bob Odenkirk", "Jonathan Banks", "Rhea Seehorn"}, "The transformation of Jimmy McGill, a small-time lawyer, into the morally challenged Saul Goodman.", 3, false},
+		{"Better Call Saul: Season 2", 2016, "Series", "DVD", "Gilligan", []string{"Bob Odenkirk", "Jonathan Banks", "Rhea Seehorn"}, "Jimmy navigates his relationship with Kim while getting drawn deeper into the criminal underworld.", 3, false},
+		{"The Bear: Season 1", 2022, "Series", "Blu-ray", "Storer", []string{"Jeremy Allen White", "Ebon Moss-Bachrach", "Ayo Edebiri"}, "A fine-dining chef returns to Chicago to run his family's chaotic Italian beef sandwich shop.", 3, false},
+		{"Severance", 2022, "Series", "Blu-ray", "Erickson", []string{"Adam Scott", "Patricia Arquette", "John Turturro"}, "Office workers undergo a procedure that separates their work memories from their personal lives.", 3, false},
+		{"The Last of Us: Season 1", 2023, "Series", "Blu-ray", "Mazin", []string{"Pedro Pascal", "Bella Ramsey", "Anna Torv"}, "A smuggler escorts a teenager across a post-apocalyptic America ravaged by a fungal pandemic.", 3, false},
+		{"Mindhunter: Season 1", 2017, "Series", "Blu-ray", "Fincher", []string{"Jonathan Groff", "Holt McCallany", "Anna Torv"}, "FBI agents in the late 1970s interview serial killers to understand their psychology and solve open cases.", 2, false},
+		{"The Witcher: Season 1", 2019, "Series", "Blu-ray", "Schmidt Hissrich", []string{"Henry Cavill", "Anya Chalotra", "Freya Allan"}, "A mutated monster hunter struggles to find his place in a world where people are often more wicked than beasts.", 3, false},
+		{"The Witcher: Season 2", 2021, "Series", "Blu-ray", "Schmidt Hissrich", []string{"Henry Cavill", "Anya Chalotra", "Freya Allan"}, "Geralt takes Ciri to Kaer Morhen while Yennefer faces the consequences of the Battle of Sodden.", 3, false},
+		{"Jujutsu Kaisen: Season 1", 2020, "Series", "Blu-ray", "Park", []string{"Junya Enoki", "Yuma Uchida", "Asami Seto"}, "A high schooler swallows a cursed finger and joins a secret organization of sorcerers to collect the remaining ones.", 3, false},
+		{"Chainsaw Man", 2022, "Series", "Blu-ray", "Nakayama", []string{"Kikunosuke Toya", "Tomori Kusunoki", "Shogo Sakata"}, "A young man merges with his pet devil to become Chainsaw Man and fight devil hunters.", 3, false},
+		{"The Boys: Season 1", 2019, "Series", "Blu-ray", "Kripke", []string{"Karl Urban", "Jack Quaid", "Antony Starr"}, "A vigilante group sets out to take down corrupt superheroes who abuse their powers.", 3, false},
+		{"The Boys: Season 2", 2020, "Series", "Blu-ray", "Kripke", []string{"Karl Urban", "Jack Quaid", "Antony Starr"}, "The Boys are on the run from the law while a new supe, Stormfront, shakes up The Seven.", 3, false},
+		{"Wednesday", 2022, "Series", "Blu-ray", "Burton", []string{"Jenna Ortega", "Catherine Zeta-Jones", "Luis Guzman"}, "Wednesday Addams investigates a monster-spree at Nevermore Academy while navigating her psychic abilities.", 3, false},
+		{"Ted Lasso: Season 1", 2020, "Series", "Blu-ray", "Lawrence", []string{"Jason Sudeikis", "Hannah Waddingham", "Juno Temple"}, "An American football coach is hired to manage an English Premier League soccer team — despite zero experience.", 3, false},
+		{"Ted Lasso: Season 2", 2021, "Series", "Blu-ray", "Lawrence", []string{"Jason Sudeikis", "Hannah Waddingham", "Brett Goldstein"}, "AFC Richmond returns to the Championship while Roy Kent faces retirement and the team deals with a sports psychologist.", 3, false},
+		{"The Mandalorian: Season 1", 2019, "Series", "Blu-ray", "Favreau", []string{"Pedro Pascal", "Carl Weathers", "Gina Carano"}, "A lone bounty hunter in the outer reaches of the galaxy protects a mysterious child known as The Child.", 3, false},
+		{"The Mandalorian: Season 2", 2020, "Series", "Blu-ray", "Favreau", []string{"Pedro Pascal", "Temuera Morrison", "Katee Sackhoff"}, "The Mandalorian seeks Jedi to return Grogu to his people while facing Moff Gideon's dark troopers.", 3, false},
+		{"Band of Brothers", 2001, "Series", "Blu-ray", "Hanks", []string{"Damian Lewis", "Ron Livingston", "Donnie Wahlberg"}, "The story of Easy Company, 506th PIR, 101st Airborne, from training through the end of WWII.", 3, false},
+		{"The Pacific", 2010, "Series", "Blu-ray", "Hanks", []string{"James Badge Dale", "Joseph Mazzello", "Jon Seda"}, "The intertwined stories of three Marines during America's battle with the Japanese in the Pacific during WWII.", 2, false},
+		{"The Simpsons: Season 1", 1989, "Series", "VHS", "Groening", []string{"Dan Castellaneta", "Julie Kavner", "Nancy Cartwright"}, "The misadventures of Homer Simpson and his family in the town of Springfield.", 3, false},
+		{"The Simpsons: Season 2", 1990, "Series", "VHS", "Groening", []string{"Dan Castellaneta", "Julie Kavner", "Nancy Cartwright"}, "Bart faces off against Sideshow Bob for the first time — and the legendary Mr. Plow episode arrives.", 3, false},
+		{"Firefly", 2002, "Series", "Blu-ray", "Whedon", []string{"Nathan Fillion", "Gina Torres", "Alan Tudyk"}, "Five hundred years in the future, a renegade crew aboard a small ship tries to survive as they travel unknown parts of the galaxy.", 3, false},
+		{"Battlestar Galactica", 2004, "Series", "Blu-ray", "Moore", []string{"Edward James Olmos", "Mary McDonnell", "Katee Sackhoff"}, "The survivors of a devastating attack by the Cylons search for the mythical lost thirteenth colony, Earth.", 3, false},
+		{"The Expanse: Season 1", 2015, "Series", "Blu-ray", "Fergus", []string{"Thomas Jane", "Steven Strait", "Cas Anvar"}, "A detective, a ship captain, and a politician uncover a conspiracy threatening the fragile peace of the solar system.", 3, false},
+		{"The Expanse: Season 2", 2017, "Series", "Blu-ray", "Fergus", []string{"Thomas Jane", "Steven Strait", "Shohreh Aghdashloo"}, "The protomolecule transforms Venus while Earth and Mars teeter on the brink of war.", 3, false},
+		{"Dark: Season 1", 2017, "Series", "Blu-ray", "Odar", []string{"Louis Hofmann", "Lisa Vicari", "Andreas Pietschmann"}, "A child's disappearance in a German town exposes the fractured relationships and dark secrets among four families.", 2, false},
+		{"Peaky Blinders: Season 1", 2013, "Series", "Blu-ray", "Knight", []string{"Cillian Murphy", "Sam Neill", "Helen McCrory"}, "Thomas Shelby and his Birmingham gang rise to power in 1919 England through illicit horse racing and razor-tipped caps.", 3, false},
+		{"Peaky Blinders: Season 2", 2014, "Series", "Blu-ray", "Knight", []string{"Cillian Murphy", "Tom Hardy", "Helen McCrory"}, "The Shelbys expand to London while Inspector Campbell returns with a vendetta and a new threat emerges.", 3, false},
+		{"Mr. Robot: Season 1", 2015, "Series", "Blu-ray", "Esmail", []string{"Rami Malek", "Christian Slater", "Carly Chaikin"}, "A cybersecurity engineer with social anxiety is recruited by a mysterious anarchist to hack the world's largest corporation.", 3, false},
+		{"Alien", 1979, "SciFi", "VHS", "Scott", []string{"Tom Skerritt", "Sigourney Weaver", "John Hurt"}, "The crew of the commercial tug Nostromo encounter a deadly alien lifeform that stalks them through their ship.", 3, false},
+		{"The Abyss", 1986, "Drama", "DVD", "Cameron", []string{"Ed Harris", "Mary Elizabeth Mastrantonio", "Michael Biehn"}, "A civilian oil-rig crew is recruited for a dangerous undersea mission to retrieve a lost nuclear submarine.", 2, false},
+		{"Bojack Horseman: Season 1", 2014, "Series", "DVD", "Bob-Waksberg", []string{"Will Arnett", "Aaron Paul", "Amy Sedaris"}, "A washed-up 90s sitcom star plans his comeback with an autobiography while navigating depression and addiction.", 3, false},
+		{"Futurama: Season 1", 1999, "Series", "DVD", "Groening", []string{"Billy West", "Katey Sagal", "John DiMaggio"}, "A pizza delivery boy is accidentally frozen in 1999 and wakes up in the year 3000.", 3, false},
+		{"Parks and Recreation: Season 1", 2009, "Series", "DVD", "Daniels", []string{"Amy Poehler", "Nick Offerman", "Rashida Jones"}, "A mid-level bureaucrat in the Parks Department of Pawnee, Indiana, tries to make her city a better place.", 3, false},
+		{"Parks and Recreation: Season 2", 2009, "Series", "DVD", "Daniels", []string{"Amy Poehler", "Nick Offerman", "Aziz Ansari"}, "Leslie Knope fights to get the pit filled while Ron Swanson perfects the art of government-free living.", 3, false},
+		{"What We Do in the Shadows: Season 1", 2019, "Series", "Blu-ray", "Waititi", []string{"Kayvan Novak", "Matt Berry", "Natasia Demetriou"}, "Four vampires who've been roommates for hundreds of years navigate modern life in Staten Island.", 3, false},
+		{"House of the Dragon: Season 1", 2022, "Series", "Blu-ray", "Condal", []string{"Paddy Considine", "Matt Smith", "Emma D'Arcy"}, "The Targaryen civil war that tore the dynasty apart nearly 200 years before Game of Thrones.", 3, false},
+		{"The White Lotus: Season 1", 2021, "Series", "Blu-ray", "White", []string{"Murray Bartlett", "Jennifer Coolidge", "Alexandra Daddario"}, "The darkly comedic exploits of guests and employees at an exclusive Hawaiian resort over one tumultuous week.", 3, false},
+		{"Shogun", 2024, "Series", "Blu-ray", "Marks", []string{"Hiroyuki Sanada", "Cosmo Jarvis", "Anna Sawai"}, "An English sailor shipwrecked in feudal Japan rises to become a samurai in the service of Lord Toranaga.", 3, false},
+		{"Andor: Season 1", 2022, "Series", "Blu-ray", "Gilroy", []string{"Diego Luna", "Stellan Skarsgard", "Genevieve O'Reilly"}, "Five years before Rogue One, Cassian Andor transforms from thief to rebel in the early days of the Rebellion.", 3, false},
+		{"Fallout: Season 1", 2024, "Series", "Blu-ray", "Nolan", []string{"Ella Purnell", "Walton Goggins", "Kyle MacLachlan"}, "In a post-apocalyptic future, a vault dweller emerges into a hostile wasteland ruled by survivors and mutated creatures.", 3, false},
+		{"Ozark: Season 1", 2017, "Series", "Blu-ray", "Mundy", []string{"Jason Bateman", "Laura Linney", "Julia Garner"}, "A financial advisor drags his family from Chicago to the Missouri Ozarks to launder $500 million for a drug cartel.", 3, false},
+		{"Narcos: Season 1", 2015, "Series", "Blu-ray", "Brancato", []string{"Wagner Moura", "Pedro Pascal", "Boyd Holbrook"}, "The rise and fall of Pablo Escobar and the Medellin cartel through the eyes of DEA agents and Colombian authorities.", 3, false},
+		{"The Leftovers: Season 1", 2014, "Series", "Blu-ray", "Lindelof", []string{"Justin Theroux", "Carrie Coon", "Amy Brenneman"}, "Three years after 2% of the world's population vanishes, a small town struggles to make sense of the Departure.", 2, false},
+		{"Arrested Development: Season 1", 2003, "Series", "DVD", "Hurwitz", []string{"Jason Bateman", "Michael Cera", "Will Arnett"}, "The dysfunctional Bluth family loses everything and must pull together to keep their company afloat.", 3, false},
+		{"Invincible: Season 1", 2021, "Series", "Blu-ray", "Kirkman", []string{"Steven Yeun", "J.K. Simmons", "Sandra Oh"}, "A teenager inherits his father's superpowers and discovers his superhero dad may not be the hero he appears to be.", 3, false},
+		{"House M.D.: Season 1", 2004, "Series", "DVD", "Shore", []string{"Hugh Laurie", "Lisa Edelstein", "Robert Sean Leonard"}, "A misanthropic genius doctor leads a team of diagnosticians solving medical mysteries at Princeton-Plainsboro Hospital.", 3, false},
+		{"Silo: Season 1", 2023, "Series", "Blu-ray", "Yost", []string{"Rebecca Ferguson", "Tim Robbins", "Common"}, "The last 10,000 people on earth live in a mile-deep underground silo where speaking of the outside is forbidden.", 3, false},
+		{"Dexter: Season 1", 2006, "Series", "DVD", "Manos", []string{"Michael C. Hall", "Jennifer Carpenter", "Julie Benz"}, "A Miami blood-spatter analyst moonlights as a serial killer targeting criminals who have escaped justice.", 2, false},
 	}
 
 	for _, m := range movies {
@@ -473,8 +541,51 @@ func seedMerch(s *store.Store) {
 		{ID: "merch-free-rental", Name: "Free Rental Coupon", Description: "One free rental on any movie, any format. No late fees.", PointsCost: 200, Stock: 4},
 		{ID: "merch-screening", Name: "Private Screening", Description: "After-hours theater access. Bring 5 friends, 2 free rentals each.", PointsCost: 500, Stock: 1},
 		{ID: "merch-membership-upgrade", Name: "Tier Upgrade", Description: "Permanent tier upgrade to the next level (max Gold). One-time use.", PointsCost: 1000, Stock: 2},
+
+		{ID: "merch-pokemon-card", Name: "Pokemon TCG Booster", Description: "Vintage Jungle expansion booster pack. Chance of holographic Pikachu — or a Porygon cosplaying as a VHS tape.", PointsCost: 120, Stock: 6},
+		{ID: "merch-matrix-pill", Name: "Red Pill / Blue Pill Set", Description: "Resin-cast pill keychain pair in a velvet pouch. Choose wisely — or collect both. Glows under blacklight.", PointsCost: 180, Stock: 4},
+		{ID: "merch-matrix-coat", Name: "Neo's Trench Coat", Description: "Full-length black leather-look trench. Lined with Matrix digital rain pattern. One size, dramatic wind sold separately.", PointsCost: 800, Stock: 2},
+		{ID: "merch-blade-runner", Name: "Origami Unicorn", Description: "Hand-folded metallic paper unicorn, just like Gaff leaves behind. Comes in a miniature evidence bag.", PointsCost: 90, Stock: 5},
+		{ID: "merch-jurassic-amber", Name: "Jurassic Park Amber Cane", Description: "Polished resin cane top with a faux mosquito inclusion. Spared no expense. Does not actually contain dino DNA.", PointsCost: 350, Stock: 3},
+		{ID: "merch-godfather-cat", Name: "Marlon Brando Cat Plush", Description: "Plush ginger tabby — the real star of the opening scene. Sits on your lap while you make offers they can't refuse.", PointsCost: 130, Stock: 4},
+		{ID: "merch-shining-carpet", Name: "Overlook Carpet Coaster Set", Description: "Set of 4 hexagonal coasters with the iconic carpet pattern. All work and no play not included.", PointsCost: 60, Stock: 10},
+		{ID: "merch-pulp-fiction", Name: "Big Kahuna Burger Box", Description: "Tasty burger-shaped tin lunchbox. Royale with cheese styling. That IS a tasty burger.", PointsCost: 140, Stock: 4},
+		{ID: "merch-lotr-ring", Name: "One Ring Replica", Description: "Tungsten band with elvish inscription. Comes with a chain — you'll need it. Wearing it does not turn you invisible, unfortunately.", PointsCost: 250, Stock: 3},
+		{ID: "merch-ghibli-soot", Name: "Soot Sprite Plushies", Description: "Set of 3 hand-sewn susuwatari from Spirited Away. Feed them konpeito (not included) and they'll carry coal for you.", PointsCost: 110, Stock: 6},
+		{ID: "merch-back-future", Name: "Mr. Fusion Prop Replica", Description: "Desktop model of Doc Brown's Mr. Fusion. Banana peel and beer can come pre-loaded. 1.21 gigawatts of style.", PointsCost: 300, Stock: 2},
+		{ID: "merch-alien-plush", Name: "Chestburster Plush", Description: "Surprisingly cute plush xenomorph hatchling. Squeeze it and it makes no sound — just stares into your soul.", PointsCost: 160, Stock: 5},
+		{ID: "merch-inception-top", Name: "Totem Spinning Top", Description: "Brass spinning top in a felt-lined case. If it stops spinning, you're awake. If not — enjoy the ride.", PointsCost: 200, Stock: 4},
+		{ID: "merch-fight-club-soap", Name: "Paper Street Soap Co. Bar", Description: "Handmade pink soap bar with Fight Club emboss. First rule: you do not talk about how good it smells.", PointsCost: 45, Stock: 12},
+		{ID: "merch-indy-hat", Name: "Indiana Jones Fedora", Description: "Brown felt fedora, adventure-ready. Bullwhip not included — you'll have to earn that one in the temple.", PointsCost: 280, Stock: 3},
+		{ID: "merch-hitchcock-birds", Name: "Crow Plush (Hitchcock Edition)", Description: "Surprisingly heavy plush crow — feels like a thousand of them are staring at you. Bodega Bay not included.", PointsCost: 100, Stock: 5},
+		{ID: "merch-akira-pill", Name: "Akira Capsule Jacket Patch", Description: "Embroidered patch of the iconic pill capsule. Iron it onto your red jacket and yell TETSUO!", PointsCost: 70, Stock: 10},
+		{ID: "merch-tarantino-feet", Name: "Tarantino Socks", Description: "Limited edition socks — each pair features a different Tarantino character's feet. Maya, is that a foot joke?", PointsCost: 55, Stock: 8},
+		{ID: "merch-2001-monolith", Name: "Mini Monolith", Description: "Solid obsidian-black monolith paperweight. 1:4:9 proportions. Touch it and you might evolve.", PointsCost: 220, Stock: 4},
 	}
 	for i := range items {
 		s.CreateMerchItem(&items[i])
+	}
+}
+
+func seedSnackBar(s *store.Store) {
+	items := []models.SnackBarItem{
+		{ID: "snack-popcorn", Name: "Popcorn", Description: "Freshly popped, buttery classic.", Price: 3.99, Category: "snack", Stock: 50, Emoji: "🍿"},
+		{ID: "snack-nachos", Name: "Nachos", Description: "Crispy tortilla chips with warm cheese sauce.", Price: 5.99, Category: "snack", Stock: 30, Emoji: "🧀"},
+		{ID: "snack-hotdog", Name: "Hot Dog", Description: "All-beef frank on a toasted bun with condiments.", Price: 4.99, Category: "snack", Stock: 25, Emoji: "🌭"},
+		{ID: "snack-pizza", Name: "Pizza Slice", Description: "Pepperoni pizza slice, hot and ready.", Price: 4.49, Category: "snack", Stock: 20, Emoji: "🍕"},
+		{ID: "snack-pretzel", Name: "Soft Pretzel", Description: "Warm salted pretzel with cheese dip.", Price: 3.99, Category: "snack", Stock: 30, Emoji: "🥨"},
+		{ID: "snack-fries", Name: "French Fries", Description: "Crispy golden fries with ketchup.", Price: 3.49, Category: "snack", Stock: 40, Emoji: "🍟"},
+		{ID: "snack-burger", Name: "Cheeseburger", Description: "Quarter-pound patty with lettuce, tomato, and cheese.", Price: 6.99, Category: "snack", Stock: 15, Emoji: "🍔"},
+		{ID: "snack-candy", Name: "Candy Assortment", Description: "Mixed box of theater candies — Sour Patch, M&Ms, Skittles.", Price: 2.99, Category: "candy", Stock: 60, Emoji: "🍬"},
+		{ID: "snack-chocolate", Name: "Chocolate Bar", Description: "Large milk chocolate bar. Classic concession companion.", Price: 2.49, Category: "candy", Stock: 45, Emoji: "🍫"},
+		{ID: "snack-icecream", Name: "Ice Cream Cup", Description: "Vanilla soft serve with your choice of topping.", Price: 3.49, Category: "candy", Stock: 35, Emoji: "🍦"},
+		{ID: "snack-soda", Name: "Fountain Soda", Description: "Large 32oz soda — Coke, Sprite, Fanta, or Dr Pepper.", Price: 2.99, Category: "drink", Stock: 80, Emoji: "🥤"},
+		{ID: "snack-water", Name: "Bottled Water", Description: "Pure spring water, 500ml.", Price: 1.49, Category: "drink", Stock: 60, Emoji: "💧"},
+		{ID: "snack-slushie", Name: "Slushie", Description: "Ice-cold slushie — cherry, blue raspberry, or cola.", Price: 3.99, Category: "drink", Stock: 40, Emoji: "🧊"},
+		{ID: "snack-coffee", Name: "Coffee", Description: "Fresh brewed hot coffee. Regular or decaf.", Price: 2.49, Category: "drink", Stock: 50, Emoji: "☕"},
+		{ID: "snack-milkshake", Name: "Milkshake", Description: "Thick milkshake — chocolate, vanilla, or strawberry.", Price: 4.99, Category: "drink", Stock: 25, Emoji: "🥛"},
+	}
+	for i := range items {
+		s.CreateSnackBarItem(&items[i])
 	}
 }

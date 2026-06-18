@@ -8,22 +8,25 @@ import (
 )
 
 var (
-	bucketUsers           = []byte("users")
-	bucketUsersByUsername = []byte("users_by_username")
-	bucketMovies          = []byte("movies")
-	bucketMoviesByGenre   = []byte("movies_by_genre")
-	bucketMoviesByTitle   = []byte("movies_by_title")
-	bucketRentals         = []byte("rentals")
-	bucketRentalsByUser   = []byte("rentals_by_user")
-	bucketAuditLogs       = []byte("audit_logs")
-	bucketSessions        = []byte("sessions")
-	bucketBanned          = []byte("banned")
-	bucketWishlists       = []byte("wishlists")
-	bucketStaffPicks      = []byte("staff_picks")
-	bucketTOTPSecrets     = []byte("totp_secrets")
-	bucketLockouts        = []byte("lockouts")
-	bucketMerch           = []byte("merch")
-	bucketInventory       = []byte("inventory")
+	bucketUsers                = []byte("users")
+	bucketUsersByUsername      = []byte("users_by_username")
+	bucketMovies               = []byte("movies")
+	bucketMoviesByGenre        = []byte("movies_by_genre")
+	bucketMoviesByTitle        = []byte("movies_by_title")
+	bucketRentals              = []byte("rentals")
+	bucketRentalsByUser        = []byte("rentals_by_user")
+	bucketAuditLogs            = []byte("audit_logs")
+	bucketSessions             = []byte("sessions")
+	bucketBanned               = []byte("banned")
+	bucketWishlists            = []byte("wishlists")
+	bucketStaffPicks           = []byte("staff_picks")
+	bucketTOTPSecrets          = []byte("totp_secrets")
+	bucketLockouts             = []byte("lockouts")
+	bucketMerch                = []byte("merch")
+	bucketInventory            = []byte("inventory")
+	bucketSnackBarItems        = []byte("snackbar_items")
+	bucketSnackBarOrders       = []byte("snackbar_orders")
+	bucketSnackBarOrdersByUser = []byte("snackbar_orders_by_user")
 )
 
 type Store struct {
@@ -43,6 +46,7 @@ func Open(path string) (*Store, error) {
 			bucketRentalsByUser, bucketAuditLogs, bucketSessions,
 			bucketBanned, bucketWishlists, bucketStaffPicks,
 			bucketTOTPSecrets, bucketLockouts, bucketMerch, bucketInventory,
+			bucketSnackBarItems, bucketSnackBarOrders, bucketSnackBarOrdersByUser,
 		}
 		for _, b := range buckets {
 			if _, err := tx.CreateBucketIfNotExists(b); err != nil {
