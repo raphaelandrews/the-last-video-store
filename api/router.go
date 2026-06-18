@@ -28,6 +28,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 	inventoryHandler := &InventoryHandler{Store: store}
 	tierHandler := &TierHandler{Store: store}
 	snackBarHandler := &SnackBarHandler{Store: store}
+	gameHandler := &GameHandler{Store: store}
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -123,6 +124,16 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 					r.Put("/items/{id}", snackBarHandler.UpdateItem)
 					r.Delete("/items/{id}", snackBarHandler.DeleteItem)
 					r.Post("/restock", snackBarHandler.Restock)
+				})
+			})
+
+			r.Route("/games", func(r chi.Router) {
+				r.Post("/play/start", gameHandler.PlayStart)
+				r.Post("/play/end", gameHandler.PlayEnd)
+
+				r.Group(func(r chi.Router) {
+					r.Use(RequirePermission(bitmask.PermGameManage))
+					r.Get("/play/active", gameHandler.ActiveSessions)
 				})
 			})
 		})

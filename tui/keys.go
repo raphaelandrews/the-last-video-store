@@ -30,16 +30,36 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		case "enter":
 			mv := m.browse.SelectedMovie()
 			if mv != nil {
-				m.detail = pages.NewMovieDetailModel(mv)
-				m.setDetailContext()
-				m.screen = scrDetail
+				if mv.MediaType == "game" {
+					m.gameDetail = pages.NewGameDetailModel(mv)
+					bal := 0.0
+					if m.userResp != nil {
+						bal = m.userResp.Balance
+					}
+					m.gameDetail.Balance = bal
+					m.screen = scrGameDetail
+				} else {
+					m.detail = pages.NewMovieDetailModel(mv)
+					m.setDetailContext()
+					m.screen = scrDetail
+				}
 			}
 		case "d":
 			mv := m.browse.SelectedMovie()
 			if mv != nil {
-				m.detail = pages.NewMovieDetailModel(mv)
-				m.setDetailContext()
-				m.screen = scrDetail
+				if mv.MediaType == "game" {
+					m.gameDetail = pages.NewGameDetailModel(mv)
+					bal := 0.0
+					if m.userResp != nil {
+						bal = m.userResp.Balance
+					}
+					m.gameDetail.Balance = bal
+					m.screen = scrGameDetail
+				} else {
+					m.detail = pages.NewMovieDetailModel(mv)
+					m.setDetailContext()
+					m.screen = scrDetail
+				}
 			}
 		case "r":
 			return func() tea.Msg { return pages.NavigateMsg{Page: "rentals"} }
@@ -94,7 +114,7 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				return m.applyMediaTypeFilter()
 			}
 		case ",":
-			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() == "🎬 Movies" {
+			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() != "🍿 SnackBar" && m.genreTabs.ActiveTab() != "" {
 				m.genreTabs.Prev()
 				m.browse.Genre = m.genreTabs.ActiveTab()
 				if m.browse.Genre == "ALL" {
@@ -104,7 +124,7 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 				return m.loadMovies(1, m.browse.Genre)
 			}
 		case ".":
-			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() == "🎬 Movies" {
+			if m.browse.Mode == pages.ModeAll && m.tabs.ActiveTab() != "🍿 SnackBar" && m.genreTabs.ActiveTab() != "" {
 				m.genreTabs.Next()
 				m.browse.Genre = m.genreTabs.ActiveTab()
 				if m.browse.Genre == "ALL" {
@@ -396,6 +416,27 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			}
 		}
 	case scrSnackBarOrders:
+		_ = k
+	case scrGameDetail:
+		switch k {
+		case "r":
+			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && m.gameDetail.Game.Available && m.gameDetail.Game.RentalPrice > 0 {
+				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.gameDetail.Game.ID} }
+			}
+		case "p":
+			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && m.gameDetail.Game.Available && m.gameDetail.Game.PlayPrice > 0 {
+				return m.doGamePlayStart(m.gameDetail.Game.ID, m.gameDetail.Game.Title)
+			}
+		case "e":
+			if m.gameDetail != nil && m.gameDetail.Playing && m.gameDetail.Session != nil {
+				return m.doGamePlayEnd(m.gameDetail.Session.ID)
+			}
+		case "down", "j":
+			m.gameDetail.MoveRelatedDown()
+		case "up", "k":
+			m.gameDetail.MoveRelatedUp()
+		}
+	case scrGameSessions:
 		_ = k
 	}
 	return nil

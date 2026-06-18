@@ -34,6 +34,8 @@ const (
 	scrSnackBarMenu
 	scrSnackBarOrders
 	scrSnackBarManage
+	scrGameDetail
+	scrGameSessions
 )
 
 type loadMoviesMsg struct {
@@ -85,6 +87,10 @@ type loadSnackBarOrdersMsg struct {
 type loadSnackBarManageMsg struct {
 	items []models.SnackBarItem
 }
+type loadGameSessionsMsg struct {
+	sessions []models.GameSession
+}
+type gameRefreshMsg struct{}
 
 type Model struct {
 	baseURL  string
@@ -114,6 +120,8 @@ type Model struct {
 	snackBarMenu   *pages.SnackBarMenuModel
 	snackBarOrders *pages.SnackBarOrdersModel
 	snackBarManage *pages.SnackBarManageModel
+	gameDetail     *pages.GameDetailModel
+	gameSessions   *pages.GameSessionModel
 
 	searchBar   *components.SearchbarModel
 	searching   bool
@@ -132,7 +140,7 @@ func NewModel(baseURL string) *Model {
 		login:     pages.NewLoginModel(),
 		header:    components.NewHeaderModel(),
 		searchBar: components.NewSearchbarModel(),
-		tabs:      components.NewTabsModel([]string{"🎬 Movies", "📺 Series"}),
+		tabs:      components.NewTabsModel([]string{"🎬 Movies", "📺 Series", "🕹️ Games", "🍿 SnackBar"}),
 		genreTabs: components.NewTabsModel([]string{"ALL", "Action", "SciFi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Animation"}),
 	}
 }
@@ -148,13 +156,29 @@ func autoRefreshCmd() tea.Cmd {
 }
 
 func (m *Model) applyMediaTypeFilter() tea.Cmd {
-	if m.tabs.ActiveTab() == "📺 Series" {
+	switch m.tabs.ActiveTab() {
+	case "📺 Series":
 		m.browse.MediaType = "series"
-		m.browse.Genre = "Series"
-	} else {
+		m.browse.Genre = ""
+		m.genreTabs = components.NewTabsModel(append([]string{"ALL"}, models.SeriesGenreList...))
+	case "🕹️ Games":
+		m.browse.MediaType = "game"
+		m.browse.Genre = ""
+		m.genreTabs = components.NewTabsModel(append([]string{"ALL"}, models.GameGenreList...))
+	case "🍿 SnackBar":
+		bal := 0.0
+		if m.userResp != nil {
+			bal = m.userResp.Balance
+		}
+		m.snackBarMenu = pages.NewSnackBarMenuModel(bal)
+		m.snackBarMenu.SetItems(nil)
+		m.screen = scrSnackBarMenu
+		m.genreTabs = components.NewTabsModel([]string{})
+		return m.loadSnackBarMenu()
+	default:
 		m.browse.MediaType = "movie"
 		m.browse.Genre = ""
-		m.genreTabs.SetActive(0)
+		m.genreTabs = components.NewTabsModel(append([]string{"ALL"}, models.GenreList...))
 	}
 	m.browse.Selected = -1
 	return m.loadMovies(1, m.browse.Genre)
@@ -187,6 +211,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.screen == scrSnackBarOrders || m.screen == scrSnackBarManage {
 				m.screen = scrSnackBarMenu
+				return m, nil
+			}
+			if m.screen == scrGameDetail || m.screen == scrGameSessions {
+				m.screen = scrBrowse
 				return m, nil
 			}
 			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
@@ -312,6 +340,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.snackBarOrders.SetOrders(msg.orders)
 		case loadSnackBarManageMsg:
 			m.snackBarManage.SetItems(msg.items)
+		case loadGameSessionsMsg:
+			m.gameSessions.SetSessions(msg.sessions)
+		case gameRefreshMsg:
+			return m, nil
 		case pages.SnackBarOrderMsg:
 			return m, tea.Sequence(m.doSnackBarOrder(msg.ItemID), m.doRefreshMe())
 		case pages.MerchRedeemMsg:

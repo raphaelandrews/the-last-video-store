@@ -3,26 +3,30 @@ package bitmask
 type Permission uint16
 
 const (
-	PermBrowse         Permission = 0b00000001
-	PermRent           Permission = 0b00000010
-	PermReserve        Permission = 0b00000100
-	PermManageUsers    Permission = 0b00001000
-	PermStaff          Permission = 0b00010000
-	PermAdmin          Permission = 0b00100000
-	PermSnackBarAccess Permission = 0b01000000
-	PermSnackBarManage Permission = 0b10000000
+	PermBrowse         Permission = 0b0000000001
+	PermRent           Permission = 0b0000000010
+	PermReserve        Permission = 0b0000000100
+	PermManageUsers    Permission = 0b0000001000
+	PermStaff          Permission = 0b0000010000
+	PermAdmin          Permission = 0b0000100000
+	PermSnackBarAccess Permission = 0b0001000000
+	PermSnackBarManage Permission = 0b0010000000
+	PermGameAccess     Permission = 0b0100000000
+	PermGameManage     Permission = 0b1000000000
 )
 
 const (
-	TierBronze            Permission = PermBrowse | PermSnackBarAccess
-	TierSilver            Permission = PermBrowse | PermRent | PermSnackBarAccess
-	TierGold              Permission = PermBrowse | PermRent | PermReserve | PermSnackBarAccess
-	TierEmployee          Permission = PermBrowse | PermRent | PermReserve | PermStaff | PermSnackBarAccess
-	TierSupervisor        Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermSnackBarAccess
-	TierManager           Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermAdmin | PermSnackBarAccess | PermSnackBarManage
+	TierBronze            Permission = PermBrowse | PermSnackBarAccess | PermGameAccess
+	TierSilver            Permission = PermBrowse | PermRent | PermSnackBarAccess | PermGameAccess
+	TierGold              Permission = PermBrowse | PermRent | PermReserve | PermSnackBarAccess | PermGameAccess
+	TierEmployee          Permission = PermBrowse | PermRent | PermReserve | PermStaff | PermSnackBarAccess | PermGameAccess
+	TierSupervisor        Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermSnackBarAccess | PermGameAccess
+	TierManager           Permission = PermBrowse | PermRent | PermReserve | PermManageUsers | PermStaff | PermAdmin | PermSnackBarAccess | PermSnackBarManage | PermGameAccess | PermGameManage
 	TierOwner             Permission = TierManager
 	TierSnackBarAttendant Permission = PermBrowse | PermStaff | PermSnackBarAccess
 	TierSnackBarManager   Permission = PermBrowse | PermStaff | PermSnackBarAccess | PermSnackBarManage
+	TierGameAttendant     Permission = PermBrowse | PermStaff | PermGameAccess
+	TierGameManager       Permission = PermBrowse | PermStaff | PermGameAccess | PermGameManage
 )
 
 var TierPromotionOrder = []Permission{
@@ -38,6 +42,8 @@ var TierLabels = map[Permission]string{
 	TierManager:           "Manager",
 	TierSnackBarAttendant: "SnackBar Attendant",
 	TierSnackBarManager:   "SnackBar Manager",
+	TierGameAttendant:     "Game Attendant",
+	TierGameManager:       "Game Manager",
 }
 
 var TierNamesPT = map[Permission]string{
@@ -49,6 +55,8 @@ var TierNamesPT = map[Permission]string{
 	TierManager:           "Gerente",
 	TierSnackBarAttendant: "Atendente da Lanchonete",
 	TierSnackBarManager:   "Gerente da Lanchonete",
+	TierGameAttendant:     "Atendente de Games",
+	TierGameManager:       "Gerente de Games",
 }
 
 func IsOwner(p Permission) bool {
@@ -105,6 +113,14 @@ func CanSnackBarOrder(p Permission) bool {
 
 func CanSnackBarManage(p Permission) bool {
 	return Has(p, PermSnackBarManage)
+}
+
+func CanGameAccess(p Permission) bool {
+	return Has(p, PermGameAccess)
+}
+
+func CanGameManage(p Permission) bool {
+	return Has(p, PermGameManage)
 }
 
 func TierName(p Permission) string {

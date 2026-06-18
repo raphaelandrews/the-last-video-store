@@ -2,9 +2,9 @@
 
 ## Overview
 
-A retro VHS-themed video rental store TUI application — built for academic demonstration of **Cybersecurity & Data Structures**. Browse, rent, return, wishlist movies, earn Popcorn Points, purchase premium subscription tiers, and redeem rewards — all through a terminal interface backed by a REST API and BoltDB.
+A retro VHS-themed video rental store TUI application — built for academic demonstration of **Cybersecurity & Data Structures**. Browse, rent, return, wishlist movies/series/games, order from the snackbar, play games in-store, earn Popcorn Points, purchase premium subscription tiers, and redeem rewards — all through a terminal interface backed by a REST API and BoltDB.
 
-**Two-tier access control**: Premium subscription tiers (Wood→Diamond) govern rental perks and costs. RBAC roles (Employee→Owner) govern admin access — both are separate, demonstrating layered security.
+**Two-tier access control**: Premium subscription tiers (Wood→Diamond) govern rental perks and costs. RBAC roles (Bronze→Owner + SnackBar Attendant/Manager + Game Attendant/Manager) govern admin access — both are separate, demonstrating layered security.
 
 ---
 
@@ -18,10 +18,10 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 | Challenge | Implementation |
 |-----------|---------------|
 | **a) Read the file/database line by line** | BoltDB with `First()`/`Next()` cursors — sequential record iteration with middleware-enforced access control |
-| **b) Only allow authorized users to read** | JWT + 6-bit RBAC bitmask — every route checks `RequirePermission(flag)`; no token = HTTP 401, no permission = HTTP 403 |
+| **b) Only allow authorized users to read** | JWT + 10-bit RBAC bitmask — every route checks `RequirePermission(flag)`; no token = HTTP 401, no permission = HTTP 403 |
 | **c) Display the user and the data** | Header shows `🎫 username | 🏷️ Role | 🍿 pts | 💵 balance`; catalog and audit log display data based on permissions |
 | **d) User registration via file/database** | Register screen (`POST /api/v1/auth/register`) + Admin Users panel (`PUT /api/v1/users/{id}`) for promote/demote/ban |
-| **e) "Permissão Negada" (Access Denied)** | Dedicated `⛔ ACCESS DENIED` screen when attempting unauthorized routes (e.g., Silver user tries `Ctrl+A` → "Manager role or higher required") |
+| **e) "Permissão Negada" (Access Denied)** | Dedicated `⛔ ACCESS DENIED` screen when server returns 403 via API middleware — all authorization is server-side, single source of truth |
 | **f) Add or remove user access** | Admin Users → keys `P` (promote) / `D` (demote) / `B` (ban) — modify RBAC tier via API |
 
 ### Cybersecurity Technologies
@@ -31,7 +31,7 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 | Password hashing | bcrypt | Cost 12, per-password salt |
 | Authentication | JWT HS256 | Access token (15min) + Refresh token (7 days) with rotation |
 | Two-factor auth | TOTP RFC 6238 | HMAC-SHA1, ±30s window, AES-256-GCM encrypted secret |
-| Authorization | RBAC Bitmask | 6-bit permission flags, O(1) check |
+| Authorization | RBAC Bitmask | 10-bit permission flags, O(1) check |
 | Attack protection | Lockout | 5 failed logins = 30min lock; 3 failed TOTP = 10min lock |
 | Attack protection | Rate limiting | Per-IP rate limiter on all API routes |
 | Integrity | SHA-256 Hash Chain | Immutable audit trail with chain verification |
@@ -42,7 +42,7 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 
 | Structure | Application |
 |-----------|------------|
-| **Bitmask** (6-bit) | RBAC access control — stores permissions in 6 bits |
+| **Bitmask** (10-bit) | RBAC access control — stores permissions in 10 bits across 10 roles |
 | **Doubly Linked List** | Rental history — O(1) insert/remove |
 | **Deque** (Ring Buffer) | Staff priority return queue |
 | **Min-Heap** | Waitlist — ordered by wait time |
@@ -54,7 +54,7 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 
 ---
 
-## Screens (16 total)
+## Screens (20 total)
 
 | Screen | Access | Description |
 |--------|--------|-------------|
@@ -62,15 +62,20 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 | **Login** | All | Username + password, TOTP challenge if enabled |
 | **Register** | All | Create new account (3 fields, validations) |
 | **TOTP** | 2FA users | 🔒 6-digit authenticator code entry |
-| **Browse** | Authenticated | Catalog grid, pagination, search, staff picks, last chance |
+| **Browse** | Authenticated | Tabbed catalog: Movies · Series · Games · SnackBar, pagination, search, staff picks, last chance |
 | **Detail** | Authenticated | Synopsis, rating, cast, choose payment method, rent/waitlist |
+| **Game Detail** | Authenticated | Game info, platform badge, rent (`R`) or play in-store (`P`), play session timer |
 | **Rentals** | Authenticated | Active + history, countdown timer, extend, return with fees |
 | **Profile** | Authenticated | Membership card, role badge, subscription tier, money + 🍿 |
 | **Tier Shop** | Authenticated | Purchase/upgrade premium subscription (Wood→Diamond) |
 | **Wishlist** | Authenticated | Personal waitlist with availability indicators |
-| **Rewards** | Authenticated | 🍿 Popcorn Points shop: redeem for collectibles, free rentals |
+| **SnackBar Menu** | Authenticated | 🍿 Concession stand — order drinks, snacks, candy |
+| **SnackBar Orders** | Authenticated | View past snackbar orders |
+| **SnackBar Manage** | SnackBarManager+ | Restock snackbar items, manage inventory |
+| **Rewards** | Authenticated | 🍿 Popcorn Points shop: 26 film-themed collectibles |
 | **Inventory** | Authenticated | View owned collectibles |
-| **Access Denied** | Authenticated | ⛔ Full-screen denial with role requirement message |
+| **Game Sessions** | GameManager+ | Active in-store play sessions monitor |
+| **Access Denied** | Authenticated | ⛔ Full-screen denial with role requirement from server |
 | **Admin Movies** | Manager+ | Movie CRUD, staff pick toggle, paginated list |
 | **Admin Users** | Supervisor+ | Promote/demote RBAC role, toggle ban |
 | **Audit Log** | Supervisor+ | SHA-256 hash chain viewer, chain integrity verification |
@@ -80,14 +85,20 @@ A retro VHS-themed video rental store TUI application — built for academic dem
 ## Navigation Flow
 
 ```
-Splash ──ENTER──→ Login ──login──→ Browse ──┬── Detail ──── rent / waitlist
-                     ↑                      ├── Rentals ─── return / extend
-                     │                      ├── Profile ─── logout → Login
-                Register                    │   ├── Tier Shop (T)
-                     │                      │   ├── Rewards Shop (M)
-                     └──────────────────────│   └── Inventory (I)
-                                            ├── Wishlist ─── view / remove
-                                            ├── ⛔ Access Denied (when unauthorized)
+Splash ──ENTER──→ Login ──login──→ Browse ──┬── Movie Detail ──── rent / waitlist
+                     ↑                      ├── Game Detail ───── rent / play / end
+                     │                      ├── Rentals ────────── return / extend
+                 Register                   ├── Profile ────────── logout → Login
+                     │                      │   ├── Tier Shop (T)
+                     └──────────────────────│   ├── SnackBar (B)
+                                            │   ├── Rewards Shop (M)
+                                            │   └── Inventory (I)
+                                            ├── SnackBar Menu ─── order / orders / manage
+                                            │   ├── Orders (O)
+                                            │   └── Manage (M, SnackBarManager+)
+                                            ├── Wishlist ───────── view / remove
+                                            ├── Game Sessions ──── active sessions (GameManager+)
+                                            ├── ⛔ Access Denied (server 403)
                                             ├── Admin Movies (Ctrl+A, Manager+)
                                             ├── Admin Users (Ctrl+U, Supervisor+)
                                             └── Audit Log (Ctrl+G, Supervisor+)
@@ -101,28 +112,31 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 | Key | Action |
 |-----|--------|
 | `Ctrl+C` / `Ctrl+D` | Quit |
-| `Q` | Back to parent screen (see navigation hierarchy below) |
+| `Q` | Back to parent screen |
 
 **Q-back hierarchy:**
 | From | Returns to |
 |------|-----------|
-| Detail, Rentals, Wishlist | Browse |
-| Rewards Shop, Tier Shop, Inventory | Profile |
+| Detail, Rentals, Wishlist, Game Detail, Game Sessions | Browse |
+| Rewards Shop, Tier Shop, Inventory, SnackBar Menu | Profile |
 | Admin Movies, Users, Audit Log | Browse |
 | Access Denied | Browse |
 | Movie Form (`ESC`) | Admin Movies |
 | Profile | Browse |
+| SnackBar Orders, Manage | SnackBar Menu |
 
 ### Browse (Main Catalog)
 | Key | Action |
 |-----|--------|
 | `↑↓` / `J` `K` | Navigate grid |
-| `ENTER` / `D` | Open movie detail |
+| `ENTER` / `D` | Open detail (movies/series → Detail, games → Game Detail) |
+| `[` / `]` | Media type tabs (Movies / Series / Games / SnackBar) |
+| `,` / `.` | Genre subtabs (dynamic per media type) |
 | `R` | My Rentals |
 | `P` | Profile |
 | `V` | View Wishlist |
-| `/` | Search movies (live prefix with Trie backend) |
-| `[` / `]` | Genre tabs (Action, SciFi, Horror, Comedy, Drama, Thriller, Romance, Animation) |
+| `C` | SnackBar |
+| `/` | Search (live prefix with Trie backend) |
 | `S` | Staff Picks mode |
 | `L` | Last Chance mode |
 | `A` | All catalog |
@@ -137,10 +151,10 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 |-----|--------|
 | Type | Live prefix search via API |
 | `↑↓` / `J` `K` | Navigate results |
-| `ENTER` | Open selected movie |
+| `ENTER` | Open selected item |
 | `ESC` | Cancel search |
 
-### Detail
+### Detail (Movies/Series)
 | Key | Action |
 |-----|--------|
 | `ENTER` | Open highlighted related movie, or rent current movie |
@@ -150,6 +164,15 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 | `ESC` | Cancel payment choice |
 | `W` | Add to waitlist |
 | `F5` | Refresh |
+| `Q` | Back to Browse |
+
+### Game Detail
+| Key | Action |
+|-----|--------|
+| `R` | Rent game (takes home, like movie) |
+| `P` | Start in-store play session (hourly rate) |
+| `E` | End play session |
+| `↑↓` / `J` `K` | Navigate related games |
 | `Q` | Back to Browse |
 
 ### Rentals
@@ -165,9 +188,26 @@ Splash ──ENTER──→ Login ──login──→ Browse ──┬── De
 |-----|--------|
 | `L` | Logout |
 | `T` | Tier Shop |
+| `B` | SnackBar |
 | `M` | Rewards Shop |
 | `I` | Inventory |
 | `Q` | Back to browse |
+
+### SnackBar Menu
+| Key | Action |
+|-----|--------|
+| `↑↓` / `J` `K` | Navigate items |
+| `ENTER` | Place order (deducts 💵 from balance) |
+| `O` | Order History |
+| `M` | Manage (SnackBarManager+) |
+| `Q` | Back to Profile |
+
+### SnackBar Manage
+| Key | Action |
+|-----|--------|
+| `↑↓` / `J` `K` | Navigate items |
+| `R` | Restock +5 units |
+| `Q` | Back to SnackBar Menu |
 
 ### Admin Screens
 | Screen | Key | Action |
@@ -207,7 +247,7 @@ Users start with **Wood** (free). Purchase higher tiers from Profile → `T`.
 
 | Currency | Earned By | Used For |
 |----------|-----------|----------|
-| **💵 Money** | Seed starting balance ($50–$100) | Renting beyond tier allowance, buying premium tiers |
+| **💵 Money** | Seed starting balance ($5–$100) | Rentals beyond tier allowance, snackbar orders, game play sessions, buying premium tiers |
 | **🍿 Popcorn Points** | Returns (+10 on-time, -5 late), Popcorn Bucket bonus (+5) | Rewards shop, extend rentals (30🍿) |
 
 ### Movie-Specific Rental Pricing
@@ -221,17 +261,47 @@ Users start with **Wood** (free). Purchase higher tiers from Profile → `T`.
 
 ## RBAC Roles (Admin Access)
 
-7-tier 6-bit bitmask — O(1) permission checks:
+10-role 10-bit bitmask — O(1) permission checks:
 
-| Role | Bitmask | Access |
-|------|:------:|--------|
-| Bronze | `0b000001` | Browse catalog |
-| Silver | `0b000011` | Browse + Rent |
-| Gold | `0b000111` | + New Releases |
-| Employee | `0b010111` | + Staff tools |
-| Supervisor | `0b011111` | + User management + Audit |
-| Manager | `0b111111` | + Movie management |
-| Owner | `0b111111` | Full access |
+| Role | Access |
+|------|--------|
+| **Bronze** | Browse catalog, access snackbar + games |
+| **Silver** | + Rent movies/games |
+| **Gold** | + New Releases, reservations |
+| **Employee** | + Staff tools, browse all sections |
+| **Supervisor** | + User management + Audit log |
+| **Manager** | + Movie/game/snackbar management |
+| **Owner** | Full access |
+| **SnackBar Attendant** | Browse + SnackBar access (no movie/game management) |
+| **SnackBar Manager** | + SnackBar inventory management |
+| **Game Attendant** | Browse + Game access (no movie/snackbar management) |
+| **Game Manager** | + Game inventory + play session management |
+
+Permission bits: Browse (1), Rent (2), Reserve (4), ManageUsers (8), Staff (16), Admin (32), SnackBarAccess (64), SnackBarManage (128), GameAccess (256), GameManage (512).
+
+---
+
+## SnackBar Menu
+
+| Category | Items |
+|----------|-------|
+| **Snacks** | 🍿 Popcorn ($3.99), 🧀 Nachos ($5.99), 🌭 Hot Dog ($4.99), 🍕 Pizza Slice ($4.49), 🥨 Soft Pretzel ($3.99), 🍟 Fries ($3.49), 🍔 Cheeseburger ($6.99) |
+| **Candy** | 🍬 Candy Assortment ($2.99), 🍫 Chocolate Bar ($2.49), 🍦 Ice Cream ($3.49) |
+| **Drinks** | 🥤 Fountain Soda ($2.99), 💧 Water ($1.49), 🧊 Slushie ($3.99), ☕ Coffee ($2.49), 🥛 Milkshake ($4.99) |
+
+---
+
+## Game Catalog (47 titles)
+
+| Platform | Titles |
+|----------|--------|
+| **NES** | Super Mario Bros 3, The Legend of Zelda, Metroid, Mega Man 2, Castlevania, Contra, Duck Hunt, Tetris, Punch-Out!! |
+| **SNES** | Super Mario World, Zelda: ALTTP, Super Metroid, Chrono Trigger, FF6, Donkey Kong Country, Street Fighter II Turbo, Super Mario Kart, EarthBound |
+| **Genesis** | Sonic 2, Streets of Rage 2, Gunstar Heroes, Mortal Kombat II |
+| **PS1** | FF VII, Metal Gear Solid, Crash Bandicoot 2, Resident Evil 2, Tony Hawk 2, Castlevania SOTN, Tekken 3 |
+| **N64** | Super Mario 64, Zelda OoT, GoldenEye 007, Mario Kart 64, Super Smash Bros, Banjo-Kazooie |
+| **PC** | Doom, Half-Life, StarCraft, Age of Empires II, Diablo II, The Sims, RollerCoaster Tycoon 2 |
+| **Arcade** | Pac-Man, Space Invaders, Galaga, Street Fighter II, Donkey Kong |
 
 ---
 
@@ -242,7 +312,10 @@ Users start with **Wood** (free). Purchase higher tiers from Profile → `T`.
 | VHS | 2 min | ~$0.20/min |
 | DVD | 3 min | ~$0.30/min |
 | Blu-ray | 4 min | ~$0.40/min |
+| Games (cartridge) | 3 min | ~$0.30/min |
+| Games (CD) | 4 min | ~$0.40/min |
 | **Extend** | +1 min | costs 30🍿 |
+| **Play in-store** | Per hour | Deducted from balance on start |
 
 Full lifecycle (rent → overdue → late fee → extend → return) demonstrable in ~5 minutes.
 
@@ -255,8 +328,9 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 | **Authentication** | bcrypt | Cost factor 12, salt per password |
 | **Authentication** | JWT | HS256, 15min access + 7-day refresh rotation |
 | **Authentication** | TOTP 2FA | RFC 6238, HMAC-SHA1, 30s window ±1, AES-256-GCM encrypted secrets |
-| **Authorization** | RBAC Bitmask | 6-bit permission flags, O(1) check via `p & flag != 0` |
+| **Authorization** | RBAC Bitmask | 10-bit permission flags, O(1) check via `p & flag != 0` |
 | **Authorization** | Middleware chain | JWT validation → ban check → permission check → handler |
+| **Authorization** | Server-side enforcement | API is single source of truth — all denials route through 403 → access denied screen |
 | **Attack Protection** | Brute-force lockout | 5 failed logins = 30min lock, 3 failed TOTP = 10min lock |
 | **Attack Protection** | Rate limiting | Per-IP rate limiter on all API routes |
 | **Integrity** | Hash Chain Audit | SHA-256 Merkle-Damgård chaining, chain verification endpoint |
@@ -269,7 +343,7 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 
 | Structure | Application | Complexity |
 |-----------|------------|:---:|
-| **Bitmask** (6-bit) | RBAC permissions | O(1) |
+| **Bitmask** (10-bit) | RBAC permissions | O(1) |
 | **Doubly Linked List** | Rental history ordering | O(1) insert/remove |
 | **Deque** (Ring Buffer) | Staff return priority queue | O(1) push/pop |
 | **Min-Heap** | New release waitlist ordering | O(log n) |
@@ -281,7 +355,7 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 
 ---
 
-## Popcorn Points Rewards
+## Popcorn Points Rewards (26 items)
 
 | Item | 🍿 Cost | Effect |
 |------|:------:|--------|
@@ -292,6 +366,25 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 | Free Rental Coupon | 200 | +1 free rental (bypasses limit, no fees) |
 | Private Screening | 500 | +5 free rentals |
 | Tier Upgrade | 1000 | Promote RBAC role one level (up to Gold) |
+| Pokemon TCG Booster | 120 | Vintage Jungle expansion — chance of holographic Pikachu |
+| Red Pill / Blue Pill Set | 180 | Matrix resin-cast pill keychain pair in velvet pouch |
+| Neo's Trench Coat | 800 | Full-length leather-look, Matrix digital rain lining |
+| Origami Unicorn | 90 | Hand-folded metallic paper — Blade Runner Gaff tribute |
+| Jurassic Park Amber Cane | 350 | Polished resin cane top with faux mosquito inclusion |
+| Marlon Brando Cat Plush | 130 | Plush ginger tabby — Godfather opening scene |
+| Overlook Carpet Coasters | 60 | Shining hexagonal carpet pattern, set of 4 |
+| Big Kahuna Burger Box | 140 | Pulp Fiction burger-shaped tin lunchbox |
+| One Ring Replica | 250 | Tungsten LOTR band with elvish inscription |
+| Soot Sprite Plushies | 110 | Spirited Away susuwatari, set of 3 |
+| Mr. Fusion Prop Replica | 300 | BTTF desktop model — 1.21 gigawatts of style |
+| Chestburster Plush | 160 | Surprisingly cute Alien xenomorph hatchling |
+| Totem Spinning Top | 200 | Inception brass spinning top in felt-lined case |
+| Paper Street Soap Co. Bar | 45 | Fight Club handmade pink soap |
+| Indiana Jones Fedora | 280 | Brown felt, adventure-ready |
+| Crow Plush (Hitchcock Ed.) | 100 | Surprisingly heavy — The Birds tribute |
+| Akira Capsule Patch | 70 | Embroidered pill capsule jacket patch |
+| Tarantino Socks | 55 | Feet of various Tarantino characters |
+| Mini Monolith | 220 | Solid obsidian-black 2001: A Space Odyssey paperweight |
 
 ---
 
@@ -303,19 +396,32 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 | `POST` | `/api/v1/auth/login` | — | Authenticate (TOTP prompt if enabled) |
 | `POST` | `/api/v1/auth/login/totp` | Temp | TOTP 2FA verification |
 | `POST` | `/api/v1/auth/refresh` | JWT | Rotate refresh token |
-| `GET` | `/api/v1/movies` | JWT | List movies (paginated) |
+| `POST` | `/api/v1/auth/logout` | JWT | Revoke tokens |
+| `GET` | `/api/v1/auth/me` | JWT | Get current user state |
+| `GET` | `/api/v1/movies` | JWT | List items (paginated, genre + media_type filters) |
 | `GET` | `/api/v1/movies/search` | JWT | Trie-based prefix search |
 | `GET` | `/api/v1/movies/staff-picks` | JWT | Staff picks |
 | `GET` | `/api/v1/movies/last-chance` | JWT | Last copies |
-| `GET` | `/api/v1/movies/{id}` | JWT | Movie detail |
-| `POST` | `/api/v1/movies` | Manager+ | Create movie |
-| `PUT` | `/api/v1/movies/{id}` | Manager+ | Update movie |
-| `DELETE` | `/api/v1/movies/{id}` | Manager+ | Delete movie |
-| `POST` | `/api/v1/movies/{id}/staff-pick` | Manager+ | Toggle staff pick |
-| `POST` | `/api/v1/rentals/rent` | JWT | Rent (ticket or 💵, with payment choice) |
+| `GET` | `/api/v1/movies/{id}` | JWT | Detail |
+| `POST` | `/api/v1/movies` | Manager+ | Create |
+| `PUT` | `/api/v1/movies/{id}` | Manager+ | Update |
+| `DELETE` | `/api/v1/movies/{id}` | Manager+ | Delete |
+| `POST` | `/api/v1/movies/{id}/staff-pick` | Manager+ | Add staff pick |
+| `DELETE` | `/api/v1/movies/{id}/staff-pick` | Manager+ | Remove staff pick |
+| `POST` | `/api/v1/rentals/rent` | JWT | Rent (ticket or 💵) |
 | `POST` | `/api/v1/rentals/return` | JWT | Return (+🍿, deduct late fees from 💵) |
-| `POST` | `/api/v1/rentals/extend` | JWT | Extend due (30🍿, +1 min) |
+| `POST` | `/api/v1/rentals/extend` | JWT | Extend due (30🍿) |
 | `GET` | `/api/v1/rentals/history` | JWT | Rental history |
+| `POST` | `/api/v1/games/play/start` | JWT | Start in-store play session |
+| `POST` | `/api/v1/games/play/end` | JWT | End play session |
+| `GET` | `/api/v1/games/play/active` | GameManager+ | Active play sessions |
+| `GET` | `/api/v1/snackbar` | JWT | SnackBar menu |
+| `POST` | `/api/v1/snackbar/order` | JWT | Place order |
+| `GET` | `/api/v1/snackbar/orders` | JWT | Order history |
+| `POST` | `/api/v1/snackbar/items` | SnackBarManager+ | Add item |
+| `PUT` | `/api/v1/snackbar/items/{id}` | SnackBarManager+ | Update item |
+| `DELETE` | `/api/v1/snackbar/items/{id}` | SnackBarManager+ | Delete item |
+| `POST` | `/api/v1/snackbar/restock` | SnackBarManager+ | Restock |
 | `GET` | `/api/v1/tiers` | JWT | List subscription tiers |
 | `POST` | `/api/v1/tiers/purchase` | JWT | Buy/upgrade tier |
 | `GET`/`POST`/`DELETE` | `/api/v1/wishlist` | JWT | Wishlist CRUD |
@@ -323,38 +429,22 @@ Full lifecycle (rent → overdue → late fee → extend → return) demonstrabl
 | `POST` | `/api/v1/merch/redeem` | JWT | Redeem 🍿 |
 | `GET` | `/api/v1/inventory` | JWT | Collectibles |
 | `GET` | `/api/v1/users` | Supervisor+ | List users |
+| `POST` | `/api/v1/users` | Supervisor+ | Create user |
 | `PUT` | `/api/v1/users/{id}` | Supervisor+ | Update role/ban |
+| `DELETE` | `/api/v1/users/{id}` | Manager+ | Delete user |
+| `POST` | `/api/v1/users/{id}/totp` | Self/Manager+ | TOTP setup |
 | `GET` | `/api/v1/audit` | Supervisor+ | Audit entries |
-| `GET` | `/api/v1/audit/verify` | Supervisor+ | Verify hash chain integrity |
-
----
-
-## Recommended Upgrades (Beyond Current Scope)
-
-### To Strengthen Cybersecurity Demonstration
-- **🔑 TOTP enrollment flow** — Currently admins set it; add self-service setup/disable for all users with QR code display
-- **📊 Security dashboard** — Admin screen showing: login attempts (success/fail), active lockouts, TOTP failure count, rate-limit hits
-- **🔐 Session management** — Show active sessions in profile, allow users to revoke other sessions
-- **📝 Audit filters** — Filter audit log by action type, date range, or user; export as JSON
-
-### To Strengthen Data Structures Demonstration
-- **📊 Co-rental visualization** — ASCII graph showing movie relationships: "Users who rented X also rented Y"
-- **⏳ Waitlist demo** — Activate the min-heap waitlist so users queue for unavailable titles and get notified
-- **🔄 LRU cache metrics** — Show cache hit/miss ratio on admin dashboard
-
-### Quality of Life
-- **📧 Notification system** — Toast-style messages for "Movie X is now available" (from waitlist)
-- **🎨 Theme switcher** — Light/dark/VHS green phosphor themes
-- **📱 Responsive resize** — Better card grid adaptation on window resize
-- **📋 Bulk seed** — Seed multiple rental histories for demo (pre-populated rental data)
+| `GET` | `/api/v1/audit/verify` | Supervisor+ | Verify hash chain |
 
 ---
 
 ## Seed Data
 
-- **~147 movies** across 8 genres, 3 formats, spanning 1937–2022 with varied rental prices
-- **8 test users** with various subscriptions + RBAC roles
-- **7 merchandise items** (collectibles, free rentals, tier upgrade)
+- **~296 titles** across movies, series, and games — 8 movie genres, 9 series genres, 9 game genres, multiple platforms
+- **12 test users** with various subscriptions + RBAC roles (including SnackBar and Game attendants/managers)
+- **26 merchandise items** (collectibles, film-themed merch, free rentals, tier upgrade)
+- **15 snackbar items** across drinks, snacks, candy
+- **47 classic games** across NES, SNES, Genesis, PS1, N64, PC, Arcade
 - **All passwords**: `123`
 - **Starting balances**: $5–$100 + 250🍿
 

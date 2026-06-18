@@ -34,7 +34,7 @@ func (m *Model) View() string {
 		body = m.browse.View(m.w, ch)
 		if m.browse.Mode == pages.ModeAll {
 			tabsView := m.tabs.View(m.w)
-			if m.tabs.ActiveTab() == "🎬 Movies" {
+			if m.genreTabs != nil && len(m.genreTabs.ActiveTab()) > 0 && m.tabs.ActiveTab() != "🍿 SnackBar" {
 				tabsView = lipgloss.JoinVertical(lipgloss.Left, tabsView, m.genreTabs.View(m.w))
 			}
 			body = lipgloss.JoinVertical(lipgloss.Left, tabsView, "", body)
@@ -72,6 +72,10 @@ func (m *Model) View() string {
 		body = m.snackBarOrders.View(m.w, ch)
 	case scrSnackBarManage:
 		body = m.snackBarManage.View(m.w, ch)
+	case scrGameDetail:
+		body = m.gameDetail.View(m.w, ch)
+	case scrGameSessions:
+		body = m.gameSessions.View(m.w, ch)
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Top, m.headerView(), body, m.footerView())
@@ -107,7 +111,7 @@ func (m *Model) footerView() string {
 		if m.searching {
 			hints = "[↑↓] results  [ENTER] open  [ESC] cancel search  [Ctrl+C] quit"
 		} else {
-			hints = "[↑↓] navigate  [ENTER] details  [[/]] media  [,/.] genre  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [C] snack bar  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
+			hints = "[↑↓] navigate  [ENTER] details  [[/]] tab  [,/.] genre  [N/B] pages  [S] staff picks  [L] last chance  [A] all  [R] rentals  [P] profile  [C] snack bar  [V] wishlist  [/] search  [F5] refresh  [Ctrl+C] quit"
 		}
 	case scrDetail:
 		if m.detail != nil && !m.detail.Rented {
@@ -129,6 +133,10 @@ func (m *Model) footerView() string {
 		hints = "[Q] back to snack bar"
 	case scrSnackBarManage:
 		hints = "[↑↓] select  [R] restock  [Q] back to snack bar"
+	case scrGameDetail:
+		hints = "[R] rent  [P] play  [E] end play  [↑↓] related  [Q] back"
+	case scrGameSessions:
+		hints = "[Q] back"
 	case scrWishlist:
 		hints = "[↑↓] select  [ENTER] info  [D] remove  [Q] back"
 	case scrMerch:

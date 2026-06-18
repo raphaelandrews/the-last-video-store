@@ -27,6 +27,8 @@ var (
 	bucketSnackBarItems        = []byte("snackbar_items")
 	bucketSnackBarOrders       = []byte("snackbar_orders")
 	bucketSnackBarOrdersByUser = []byte("snackbar_orders_by_user")
+	bucketGameSessions         = []byte("game_sessions")
+	bucketGameSessionsByUser   = []byte("game_sessions_by_user")
 )
 
 type Store struct {
@@ -47,6 +49,7 @@ func Open(path string) (*Store, error) {
 			bucketBanned, bucketWishlists, bucketStaffPicks,
 			bucketTOTPSecrets, bucketLockouts, bucketMerch, bucketInventory,
 			bucketSnackBarItems, bucketSnackBarOrders, bucketSnackBarOrdersByUser,
+			bucketGameSessions, bucketGameSessionsByUser,
 		}
 		for _, b := range buckets {
 			if _, err := tx.CreateBucketIfNotExists(b); err != nil {

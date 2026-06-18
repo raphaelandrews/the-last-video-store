@@ -140,20 +140,23 @@ func (s *Store) ListMoviesFiltered(genre, mediaType string, offset, limit int) (
 			count := 0
 			skipped := 0
 			for k, v := c.Seek([]byte(prefix)); k != nil && strings.HasPrefix(string(k), prefix); k, v = c.Next() {
-				total++
-				if skipped < offset {
-					skipped++
-					continue
-				}
-				if count >= limit {
-					continue
-				}
 				movieData := tx.Bucket(bucketMovies).Get(v)
 				if movieData == nil {
 					continue
 				}
 				var movie models.Movie
 				if err := json.Unmarshal(movieData, &movie); err != nil {
+					continue
+				}
+				if mediaType != "" && movie.MediaType != mediaType {
+					continue
+				}
+				total++
+				if skipped < offset {
+					skipped++
+					continue
+				}
+				if count >= limit {
 					continue
 				}
 				movies = append(movies, &movie)
@@ -165,20 +168,19 @@ func (s *Store) ListMoviesFiltered(genre, mediaType string, offset, limit int) (
 			count := 0
 			skipped := 0
 			for k, v := c.First(); k != nil; k, v = c.Next() {
+				var movie models.Movie
+				if err := json.Unmarshal(v, &movie); err != nil {
+					continue
+				}
+				if mediaType != "" && movie.MediaType != mediaType {
+					continue
+				}
 				total++
 				if skipped < offset {
 					skipped++
 					continue
 				}
 				if count >= limit {
-					continue
-				}
-				var movie models.Movie
-				if err := json.Unmarshal(v, &movie); err != nil {
-					continue
-				}
-				if mediaType != "" && movie.MediaType != mediaType {
-					total--
 					continue
 				}
 				movies = append(movies, &movie)

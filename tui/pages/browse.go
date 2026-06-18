@@ -48,6 +48,8 @@ func (m *BrowseModel) SetMovies(movies []models.MovieResponse, total int, page i
 		label := "movies"
 		if m.MediaType == "series" {
 			label = "series"
+		} else if m.MediaType == "game" {
+			label = "games"
 		}
 		m.Status = fmt.Sprintf("page %d/%d · %d %s", page, m.TotalPages, total, label)
 	} else {
@@ -97,12 +99,14 @@ func (m *BrowseModel) View(w, h int) string {
 			styles.TextStyle.Render("Loading catalog..."))
 	}
 	if len(m.Movies) == 0 {
-		msg := "No movies found"
+		label := "movies"
 		if m.MediaType == "series" {
-			msg = "No series found"
+			label = "series"
+		} else if m.MediaType == "game" {
+			label = "games"
 		}
 		return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
-			styles.TextStyle.Render(msg))
+			styles.TextStyle.Render("No "+label+" found"))
 	}
 
 	cardW := 28
@@ -124,12 +128,16 @@ func (m *BrowseModel) View(w, h int) string {
 
 		title := trunc(mv.Title, cardW-6)
 		stars := styles.StarRating(mv.Rating)
-		fb := styles.FormatBadge(mv.Format)
 		status := "[RENT]"
 		sc := styles.SuccessGrn
+		fb := styles.FormatBadge(mv.Format)
 		if !mv.Available {
 			status = "[OUT]"
 			sc = styles.ErrorRed
+		} else if mv.MediaType == "game" {
+			status = "[PLAY]"
+			sc = styles.Purple
+			fb = lipgloss.NewStyle().Foreground(styles.Purple).Bold(true).Render("[" + mv.Platform + "]")
 		} else if mv.MediaType == "series" {
 			status = fmt.Sprintf("S%d", mv.SeasonNumber)
 			if mv.SeasonNumber <= 1 {

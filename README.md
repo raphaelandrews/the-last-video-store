@@ -12,11 +12,15 @@ Blockbuster. It features a rich terminal user interface powered by
 [Charmbracelet Bubble Tea](https://github.com/charmbracelet/bubbletea) and a REST API
 backend that runs on [Render](https://render.com).
 
-Users browse a ~135 movie catalog, rent VHS/DVD/Blu-ray tapes, earn 🍿 Popcorn Points on returns,
-redeem rewards (free rentals, collectibles, merch), and purchase **premium subscription tiers**
-(Wood → Bronze → Silver → Gold → Diamond) that grant monthly free rental allowances and perks.
+Users browse a ~296 title catalog (movies, series, games), rent VHS/DVD/Blu-ray tapes and games,
+earn 🍿 Popcorn Points on returns, redeem rewards (free rentals, collectibles, merch), and purchase
+**premium subscription tiers** (Wood → Bronze → Silver → Gold → Diamond) that grant monthly free
+rental allowances and perks.
 
-Staff access is gated by a **7-role Role-Based Access Control (RBAC)** system enforced through 6-bit bitmask operations, separate from the subscription tier system.
+Staff access is gated by a **10-role Role-Based Access Control (RBAC)** system enforced through
+10-bit bitmask operations, separate from the subscription tier system.
+
+---
 
 ## Quick Start
 
@@ -24,7 +28,7 @@ Staff access is gated by a **7-role Role-Based Access Control (RBAC)** system en
 # Clone and enter
 git clone https://github.com/anomalyco/the-last-video-store && cd the-last-video-store
 
-# Seed the database (~135 movies, 8 users, merchandise catalog)
+# Seed the database (~296 movies/series/games, 12 users, merchandise + snackbar + games)
 go run ./data/seed.go
 
 # Start the API server
@@ -35,26 +39,46 @@ go run ./cmd/client/
 # or: go run ./cmd/client/ --api-url http://localhost:8080
 ```
 
-All 8 test users share the password: `123`
+All 12 test users share the password: `123`
+
+---
 
 ## Features
 
 ### Catalog & Browsing
-- 🎞️ **~147 Movies** — VHS, DVD, Blu-ray spanning 1937–2022, 8 genres with custom rental prices
+- 🎬 **Movies · Series · Games** — Browse via tab bar: `🎬 Movies`, `📺 Series`, `🕹️ Games`, `🍿 SnackBar`
 - 🔍 **Live Search** — `/` opens search bar, type for instant prefix results
-- 📄 **Paginated Browse** — 40 movies per page, `N`/`B` navigation
-- 🏷️ **Genre Tabs** — `[`/`]` filter by Action, SciFi, Horror, Comedy, Drama, Thriller, Romance, Animation
+- 📄 **Paginated Browse** — 40 items per page, `N`/`B` navigation
+- 🏷️ **Dynamic Genre Subtabs** — `,`/`.` filter by genre; different genres per media type:
+  - Movies: Action, SciFi, Horror, Comedy, Drama, Thriller, Romance, Animation
+  - Series: Crime, Animation, Drama, SciFi, Comedy, Fantasy, Horror, Thriller, Documentary
+  - Games: Action, RPG, Racing, Platformer, FPS, Strategy, Fighting, Puzzle, Sports
 - ⭐ **Staff Picks & Last Chance** — `S`/`L` toggle curated + disappearing titles
 - 📊 **Movie Recommendations** — Same-genre suggestions + franchise chain (sequels/prequels)
 
 ### Rental System
 - 📼 **Format-Aware Rentals** — VHS: 2 min, DVD: 3 min, Blu-ray: 4 min (demo-friendly)
+- 🕹️ **Game Rentals** — Rent games to take home (`R`) or play in-store by the hour (`P`)
 - ⏱️ **Due Date Countdown** — "in N min", "due soon", "overdue N min ago"
 - 📅 **Extend Rentals** — `E` on rentals page, costs 30🍿 for +1 min
 - 💰 **Late & Rewind Fees** — Per-minute late fees; $1 VHS rewind fee (30% random chance)
 - 💵 **Paid Rentals** — Movie-specific prices ($2.99–$6.99); free from tier allowance first
 - 🎟️ **Free Rentals** — From reward coupons or tier allowance, waive all late fees
 - 🎛️ **Payment Choice** — `T` for ticket or `M` for money on ENTER
+
+### 🍿 SnackBar
+- 🥤🍕🌭 **Concession Stand** — Order drinks, snacks, candy from the in-store snackbar
+- 💵 **Paid with balance** — Orders deduct from your money balance
+- 📋 **Order History** — View past snackbar orders
+- 👔 **SnackBar Attendant/Manager roles** — Dedicated RBAC roles for bar management
+- 🧃 **Restock & Inventory** — Managers can restock items from the management screen
+
+### 🕹️ Game Arcade (Lan House)
+- 🎮 **In-Store Play** — Play games by the hour at the arcade station
+- ⏱️ **Play Sessions** — Start (`P`), track elapsed time, end (`E`) — costs hourly rate from balance
+- 💾 **Active Sessions** — Game managers can monitor who's playing what
+- 👾 **47 Classic Games** — NES, SNES, Genesis, PS1, N64, PC, Arcade titles from the 80s/90s/00s
+- 🛡️ **Game Attendant/Manager roles** — Dedicated RBAC roles for game floor management
 
 ### Premium Subscription Tiers
 | Tier | Price | Free Rentals/mo | Max Concurrent | New Releases | Late Fees |
@@ -66,22 +90,23 @@ All 8 test users share the password: `123`
 | Diamond | $49.99 | 10 | 50 | Yes | **Waived** |
 
 ### 💵 Money & 🍿 Popcorn Points (Dual Currency)
-- **Money ($)** — Used to pay for rentals beyond tier allowance and to buy premium tiers
+- **Money ($)** — Used to pay for rentals beyond tier allowance, buy premium tiers, order snackbar items
 - **Popcorn Points (🍿)** — Loyalty points earned on returns, spent on rewards
 - On-time return: +10🍿
 - Late return: -5🍿, late fees deducted from money balance
 - Popcorn Bucket collectible gives +5🍿 bonus on every return
 
 ### Rewards & Collectibles
-- 🎁 **Rewards Shop** — `M` from profile, 7 items
+- 🎁 **Rewards Shop** — `M` from profile, 26 film-themed items
 - 🎒 **Inventory** — `I` from profile, view owned collectibles
 - 🎟️ **Free Rental Coupon** (200🍿) — +1 free rental ticket
 - 🍿 **Popcorn Bucket** (50🍿) — +5 bonus points on every future return
 - ⬆️ **Tier Upgrade** (1000🍿) — Promote RBAC role one level (up to Gold)
 - 🎉 **Private Screening** (500🍿) — +5 free rental tickets
+- 🃏 **Pokemon TCG**, 💊 **Matrix Pills**, 🦄 **Blade Runner Origami** & more themed collectibles
 
 ### Admin & Security
-- 🏷️ **7 RBAC Roles** — Bronze → Silver → Gold → Employee → Supervisor → Manager → Owner
+- 🏷️ **10 RBAC Roles** — Bronze → Silver → Gold → Employee → Supervisor → Manager → Owner + SnackBar Attendant/Manager + Game Attendant/Manager
 - 🛡️ **RBAC Bitmask** — O(1) permission checks
 - 🔐 **JWT Auth** — Access (15min) + Refresh (7day) tokens with rotation
 - 🔒 **TOTP 2FA** — Optional time-based one-time passwords (Manager+)
@@ -90,6 +115,9 @@ All 8 test users share the password: `123`
 - 🚫 **Brute-force Lockout** — 5 failed attempts = 30min lock
 - 🔮 **Bloom Filter** — O(k) banned-user lookup
 - 🖥️ **Cross-Platform** — Linux + Windows binaries
+- 🌐 **Server-side authorization** — API is the single source of truth; all permission denials route through 403 → access denied screen
+
+---
 
 ## Project Structure
 
@@ -103,7 +131,7 @@ thelastvideostore/
 │   ├── config/                 # Environment configuration
 │   ├── crypto/                 # AES-256-GCM, hash chain
 │   ├── ds/
-│   │   ├── bitmask/            # 6-bit permission bitmask
+│   │   ├── bitmask/            # 10-bit permission bitmask
 │   │   ├── list/               # Doubly linked list
 │   │   ├── deque/              # Ring buffer deque
 │   │   ├── heap/               # Binary min-heap
@@ -111,11 +139,12 @@ thelastvideostore/
 │   │   ├── lru/                # LRU cache
 │   │   ├── bloom/              # Bloom filter
 │   │   └── graph/              # Undirected weighted graph
-│   ├── models/                 # User, Movie, Rental, Wishlist, Audit, Merch, Inventory, Tier
+│   ├── models/                 # User, Movie, Rental, GameSession, SnackBar, Wishlist, Audit, Merch, Inventory, Tier
 │   └── store/                  # BoltDB persistence layer
-├── api/                        # Chi REST API (handlers, middleware, DTOs)
+├── api/                        # Chi REST API (handlers, middleware, DTOs, snackbar, game endpoints)
 ├── tui/                        # Bubble Tea TUI (app, keys, commands, views, pages, components, styles)
-├── data/seed.go                # Database seed script (~135 movies, 8 users, merch)
+│   └── pages/                  # Browse, Detail, Profile, SnackBar, GameDetail, Admin, etc.
+├── data/seed.go                # Database seed script (~296 titles, 12 users, merch, snackbar, games)
 ├── tests/                      # Integration tests
 ├── Dockerfile.server           # Docker build for Render
 ├── render.yaml                 # Render Blueprint config
@@ -124,53 +153,105 @@ thelastvideostore/
 └── README.md
 ```
 
+---
+
 ## Test Users
 
-| Username   | Password | Subscription | 🍿 Points | 💵 Balance |
-|-----------|---------|-------------|:--------:|:--------:|
-| bronze    | 123     | Bronze      | 250      | $50.00   |
-| silver    | 123     | Silver      | 250      | $50.00   |
-| gold      | 123     | Gold        | 250      | $50.00   |
-| employee  | 123     | Gold        | 250      | $50.00   |
-| supervisor| 123     | Gold        | 250      | $50.00   |
-| manager   | 123     | Diamond     | 250      | $100.00  |
-| owner     | 123     | Diamond     | 250      | $100.00  |
-| banned    | 123     | Wood        | 250      | $5.00    |
+| Username | Password | Subscription | Tier | 💵 Balance |
+|---|---|---|---|---|
+| bronze | 123 | Bronze | Bronze | $50.00 |
+| silver | 123 | Silver | Silver | $50.00 |
+| gold | 123 | Gold | Gold | $50.00 |
+| employee | 123 | Gold | Employee | $50.00 |
+| supervisor | 123 | Gold | Supervisor | $50.00 |
+| manager | 123 | Diamond | Manager | $100.00 |
+| owner | 123 | Diamond | Owner | $100.00 |
+| banned | 123 | Wood | Bronze | $5.00 |
+| bar_attendant | 123 | Wood | SnackBar Attendant | $30.00 |
+| bar_manager | 123 | Wood | SnackBar Manager | $50.00 |
+| game_attendant | 123 | Wood | Game Attendant | $30.00 |
+| game_manager | 123 | Wood | Game Manager | $50.00 |
+
+All start with 250🍿 Popcorn Points.
+
+---
 
 ## API Endpoints
 
+### Auth
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| `POST` | `/api/v1/auth/register` | — | Register new member (Wood subscription) |
+| `POST` | `/api/v1/auth/register` | — | Register new member |
 | `POST` | `/api/v1/auth/login` | — | Login, get JWT (+ TOTP prompt if enabled) |
 | `POST` | `/api/v1/auth/login/totp` | Temp | TOTP 2FA step 2 |
 | `POST` | `/api/v1/auth/refresh` | JWT | Rotate refresh token |
-| `GET`  | `/api/v1/movies` | JWT | List movies (paginated, 40/page) |
-| `GET`  | `/api/v1/movies/search` | JWT | Prefix search by title |
-| `GET`  | `/api/v1/movies/staff-picks` | JWT | Curated picks |
-| `GET`  | `/api/v1/movies/last-chance` | JWT | Last copies available |
-| `GET`  | `/api/v1/movies/{id}` | JWT | Movie detail |
-| `POST` | `/api/v1/movies` | Manager+ | Create movie |
-| `PUT`  | `/api/v1/movies/{id}` | Manager+ | Update movie |
-| `DELETE`| `/api/v1/movies/{id}` | Manager+ | Delete movie |
-| `POST` | `/api/v1/rentals/rent` | JWT | Rent a movie (tier allowance or 💵) |
-| `POST` | `/api/v1/rentals/return` | JWT | Return a movie (+🍿, ±💵) |
-| `POST` | `/api/v1/rentals/extend` | JWT | Extend due date (30🍿, +2 days) |
-| `GET`  | `/api/v1/rentals/history` | JWT | Rental history |
-| `GET`  | `/api/v1/wishlist` | JWT | View wishlist |
-| `POST` | `/api/v1/wishlist` | JWT | Add to wishlist |
-| `DELETE`| `/api/v1/wishlist/{movieID}` | JWT | Remove from wishlist |
-| `GET`  | `/api/v1/tiers` | JWT | List subscription tiers |
-| `POST` | `/api/v1/tiers/purchase` | JWT | Buy/upgrade subscription tier |
-| `GET`  | `/api/v1/merch` | JWT | Popcorn Points rewards catalog |
-| `POST` | `/api/v1/merch/redeem` | JWT | Redeem 🍿 for a reward |
-| `GET`  | `/api/v1/inventory` | JWT | View your collectibles |
-| `GET`  | `/api/v1/users` | Supervisor+ | List all users |
+| `POST` | `/api/v1/auth/logout` | JWT | Revoke tokens |
+| `GET` | `/api/v1/auth/me` | JWT | Get current user state |
+
+### Movies / Series / Games
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/movies` | JWT | List items (paginated, genre & media_type filters) |
+| `GET` | `/api/v1/movies/search` | JWT | Prefix search by title |
+| `GET` | `/api/v1/movies/staff-picks` | JWT | Curated picks |
+| `GET` | `/api/v1/movies/last-chance` | JWT | Last copies available |
+| `GET` | `/api/v1/movies/{id}` | JWT | Detail |
+| `POST` | `/api/v1/movies` | Manager+ | Create |
+| `PUT` | `/api/v1/movies/{id}` | Manager+ | Update |
+| `DELETE` | `/api/v1/movies/{id}` | Manager+ | Delete |
+| `POST` | `/api/v1/movies/{id}/staff-pick` | Manager+ | Add staff pick |
+| `DELETE` | `/api/v1/movies/{id}/staff-pick` | Manager+ | Remove staff pick |
+
+### Rentals
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/rentals/rent` | JWT | Rent (tier allowance or 💵) |
+| `POST` | `/api/v1/rentals/return` | JWT | Return (+🍿, ±💵) |
+| `POST` | `/api/v1/rentals/extend` | JWT | Extend due date (30🍿) |
+| `GET` | `/api/v1/rentals/history` | JWT | History |
+
+### Games
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/games/play/start` | JWT | Start in-store play session |
+| `POST` | `/api/v1/games/play/end` | JWT | End play session |
+| `GET` | `/api/v1/games/play/active` | GameManager+ | List active play sessions |
+
+### SnackBar
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/snackbar` | JWT | List snackbar menu |
+| `POST` | `/api/v1/snackbar/order` | JWT | Place order (deducts 💵) |
+| `GET` | `/api/v1/snackbar/orders` | JWT | Order history |
+| `POST` | `/api/v1/snackbar/items` | SnackBarManager+ | Add item |
+| `PUT` | `/api/v1/snackbar/items/{id}` | SnackBarManager+ | Update item |
+| `DELETE` | `/api/v1/snackbar/items/{id}` | SnackBarManager+ | Delete item |
+| `POST` | `/api/v1/snackbar/restock` | SnackBarManager+ | Restock item |
+
+### Users & Admin
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/users` | Supervisor+ | List all users |
 | `POST` | `/api/v1/users` | Supervisor+ | Create user |
-| `PUT`  | `/api/v1/users/{id}` | Supervisor+ | Update user role/ban |
-| `DELETE`| `/api/v1/users/{id}` | Manager+ | Delete user |
-| `POST` | `/api/v1/users/{id}/totp` | Self/Manager+ | Enable/disable TOTP 2FA |
-| `GET`  | `/api/v1/audit` | Supervisor+ | View audit log |
+| `PUT` | `/api/v1/users/{id}` | Supervisor+ | Update role/ban |
+| `DELETE` | `/api/v1/users/{id}` | Manager+ | Delete user |
+| `POST` | `/api/v1/users/{id}/totp` | Self/Manager+ | TOTP 2FA setup |
+| `GET` | `/api/v1/audit` | Supervisor+ | Audit log |
+| `GET` | `/api/v1/audit/verify` | Supervisor+ | Verify hash chain |
+
+### Wishlist, Tiers, Merch, Inventory
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/wishlist` | JWT | View wishlist |
+| `POST` | `/api/v1/wishlist` | JWT | Add |
+| `DELETE` | `/api/v1/wishlist/{movieID}` | JWT | Remove |
+| `GET` | `/api/v1/tiers` | JWT | List subscription tiers |
+| `POST` | `/api/v1/tiers/purchase` | JWT | Buy/upgrade |
+| `GET` | `/api/v1/merch` | JWT | Rewards catalog |
+| `POST` | `/api/v1/merch/redeem` | JWT | Redeem 🍿 |
+| `GET` | `/api/v1/inventory` | JWT | Collectibles |
+
+---
 
 ## Data Structures (All From Scratch)
 
@@ -178,7 +259,7 @@ thelastvideostore/
 
 | Structure | Application | Complexity |
 |-----------|------------|:---:|
-| Bitmask (6-bit) | RBAC permissions | O(1) |
+| Bitmask (10-bit) | RBAC permissions | O(1) |
 | Doubly Linked List | Rental history, wishlist ordering | O(1) insert/remove |
 | Deque (Ring Buffer) | Express return queue | O(1) push/pop |
 | Min-Heap | New release waitlist | O(log n) |
@@ -187,6 +268,8 @@ thelastvideostore/
 | Bloom Filter | Banned user fast check | O(k) |
 | Hash Chain (SHA-256) | Immutable audit trail | O(1) append |
 | Undirected Weighted Graph | Co-rental recommendations | O(V+E) |
+
+---
 
 ## Tech Stack
 
@@ -200,6 +283,8 @@ thelastvideostore/
 | Encryption | AES-256-GCM |
 | Hash Chain | SHA-256 Merkle-style linking |
 | Deployment | Docker + Render |
+
+---
 
 ## Makefile Commands
 
@@ -216,6 +301,8 @@ make fmt              # Format code
 make docker-build     # Build Docker image
 make docker-run       # Run Docker container
 ```
+
+---
 
 ## Deployment
 
@@ -239,6 +326,8 @@ make docker-run
 # Server at http://localhost:8080
 ```
 
+---
+
 ## Cross-Compilation
 
 ```bash
@@ -249,6 +338,8 @@ make cross-compile
 ```
 
 Both binaries are statically linked — no runtime dependencies.
+
+---
 
 ## License
 

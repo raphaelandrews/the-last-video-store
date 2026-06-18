@@ -110,3 +110,11 @@ func (u *User) CanSnackBarOrder() bool {
 func (u *User) CanSnackBarManage() bool {
 	return bitmask.CanSnackBarManage(u.Tier) && !u.Banned
 }
+
+func (u *User) CanGameAccess() bool {
+	return bitmask.CanGameAccess(u.Tier) && !u.Banned
+}
+
+func (u *User) CanGameManage() bool {
+	return bitmask.CanGameManage(u.Tier) && !u.Banned
+}

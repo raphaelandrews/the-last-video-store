@@ -21,6 +21,8 @@ type Movie struct {
 	SeasonNumber    int      `json:"season_number"`
 	EpisodeCount    int      `json:"episode_count"`
 	CoverArt        string   `json:"cover_art"`
+	Platform        string   `json:"platform"`
+	PlayPrice       float64  `json:"play_price"`
 	CreatedAt       int64    `json:"created_at"`
 }
 
@@ -45,33 +47,24 @@ type MovieResponse struct {
 	SeasonNumber    int      `json:"season_number"`
 	EpisodeCount    int      `json:"episode_count"`
 	CoverArt        string   `json:"cover_art"`
+	Platform        string   `json:"platform"`
+	PlayPrice       float64  `json:"play_price"`
 	CreatedAt       int64    `json:"created_at"`
 	IsStaffPick     bool     `json:"is_staff_pick"`
 }
 
 func (m *Movie) ToResponse() MovieResponse {
 	return MovieResponse{
-		ID:              m.ID,
-		Title:           m.Title,
-		Year:            m.Year,
-		Genre:           m.Genre,
-		Format:          m.Format,
-		Director:        m.Director,
-		Cast:            m.Cast,
-		Synopsis:        m.Synopsis,
-		Rating:          m.Rating,
-		RatingCount:     m.RatingCount,
-		Available:       m.Available,
-		CopiesTotal:     m.CopiesTotal,
-		CopiesAvailable: m.CopiesAvailable,
-		IsNewRelease:    m.IsNewRelease,
-		RentalPrice:     m.RentalPrice,
-		SequelTo:        m.SequelTo,
-		MediaType:       m.MediaType,
-		SeasonNumber:    m.SeasonNumber,
-		EpisodeCount:    m.EpisodeCount,
-		CoverArt:        m.CoverArt,
-		CreatedAt:       m.CreatedAt,
+		ID: m.ID, Title: m.Title, Year: m.Year, Genre: m.Genre,
+		Format: m.Format, Director: m.Director, Cast: m.Cast,
+		Synopsis: m.Synopsis, Rating: m.Rating, RatingCount: m.RatingCount,
+		Available: m.Available, CopiesTotal: m.CopiesTotal,
+		CopiesAvailable: m.CopiesAvailable, IsNewRelease: m.IsNewRelease,
+		RentalPrice: m.RentalPrice, SequelTo: m.SequelTo,
+		MediaType: m.MediaType, SeasonNumber: m.SeasonNumber,
+		EpisodeCount: m.EpisodeCount, CoverArt: m.CoverArt,
+		Platform: m.Platform, PlayPrice: m.PlayPrice,
+		CreatedAt: m.CreatedAt,
 	}
 }
 
