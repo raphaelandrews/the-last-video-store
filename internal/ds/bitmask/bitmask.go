@@ -30,7 +30,19 @@ const (
 )
 
 var TierPromotionOrder = []Permission{
-	TierBronze, TierSilver, TierGold, TierEmployee, TierSupervisor, TierManager, TierOwner,
+	TierBronze, TierSilver, TierGold,
+}
+
+var StaffPromotionOrder = []Permission{
+	TierEmployee, TierSupervisor, TierManager, TierOwner,
+}
+
+var SnackBarPromotionOrder = []Permission{
+	TierSnackBarAttendant, TierSnackBarManager,
+}
+
+var GamePromotionOrder = []Permission{
+	TierGameAttendant, TierGameManager,
 }
 
 var TierLabels = map[Permission]string{
@@ -46,29 +58,12 @@ var TierLabels = map[Permission]string{
 	TierGameManager:       "Game Manager",
 }
 
-var TierNamesPT = map[Permission]string{
-	TierBronze:            "Cliente Bronze",
-	TierSilver:            "Cliente Prata",
-	TierGold:              "Cliente Ouro",
-	TierEmployee:          "Atendente",
-	TierSupervisor:        "Supervisor",
-	TierManager:           "Gerente",
-	TierSnackBarAttendant: "Atendente da Lanchonete",
-	TierSnackBarManager:   "Gerente da Lanchonete",
-	TierGameAttendant:     "Atendente de Games",
-	TierGameManager:       "Gerente de Games",
-}
-
 func IsOwner(p Permission) bool {
 	return p == TierOwner
 }
 
 func OwnerLabel() string {
 	return "Owner"
-}
-
-func OwnerLabelPT() string {
-	return "Dono"
 }
 
 func Has(p, flag Permission) bool {

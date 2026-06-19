@@ -12,9 +12,10 @@ import (
 
 func (m *Model) doSubmitTOTP(tempToken, code string) tea.Cmd {
 	return func() tea.Msg {
-		body, _ := json.Marshal(map[string]string{"temp_token": tempToken, "code": code})
+		body, _ := json.Marshal(map[string]string{"code": code})
 		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/auth/login/totp", strings.NewReader(string(body)))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+tempToken)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}

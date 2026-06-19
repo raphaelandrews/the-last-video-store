@@ -35,7 +35,7 @@ var (
 			Bold(true).Foreground(Green).Background(BG0)
 
 	HeadingStyle = lipgloss.NewStyle().
-			Bold(true).Foreground(Yellow).Background(BG0)
+			Bold(true).Foreground(Green).Background(BG0)
 
 	TextStyle = lipgloss.NewStyle().
 			Foreground(FG0).Background(BG0)
@@ -50,7 +50,7 @@ var (
 				Foreground(Green).Bold(true).Background(BG0)
 
 	HighlightStyle = lipgloss.NewStyle().
-			Foreground(BG0).Background(Yellow).Bold(true)
+			Foreground(BG0).Background(Green).Bold(true)
 
 	SelectedStyle = lipgloss.NewStyle().
 			Foreground(FG0).Background(BGVisual)
@@ -116,7 +116,7 @@ func FormatBadge(format string) string {
 	case "DVD":
 		return lipgloss.NewStyle().Foreground(Blue).Background(BG0).Render("📀 DVD")
 	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(Purple).Background(BG0).Render("💿 BD")
+		return lipgloss.NewStyle().Foreground(Aqua).Background(BG0).Render("💿 BD")
 	default:
 		return format
 	}
@@ -124,7 +124,7 @@ func FormatBadge(format string) string {
 
 var (
 	Cyan       = Blue
-	Magenta    = Purple
+	Magenta    = Orange
 	NeonGreen  = Green
 	Error      = Red
 	Success    = Green

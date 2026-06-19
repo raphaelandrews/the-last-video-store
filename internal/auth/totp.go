@@ -23,7 +23,7 @@ type TOTPVerifyResult struct {
 }
 
 func GenerateTOTPSecret() (string, error) {
-	buf := make([]byte, 20)
+	buf := make([]byte, 5)
 	if _, err := rand.Read(buf); err != nil {
 		return "", fmt.Errorf("generate totp secret: %w", err)
 	}

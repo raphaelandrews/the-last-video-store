@@ -92,7 +92,7 @@ func (m *MovieDetailModel) View(w, h int) string {
 	case !mv.Available:
 		badge = lipgloss.NewStyle().Foreground(styles.ErrorRed).Bold(true).Render("[RENTED OUT]")
 	default:
-		badge = lipgloss.NewStyle().Foreground(styles.SuccessGrn).Bold(true).Render("[AVAILABLE]")
+		badge = lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("[AVAILABLE]")
 	}
 
 	synopsis := styles.TextStyle.Width(w - 4).Render(wrap(mv.Synopsis, w-4))

@@ -68,7 +68,7 @@ func (m *GameDetailModel) View(w, h int) string {
 	stars := styles.StarRating(g.Rating)
 	rating := fmt.Sprintf("%s  %.1f/5 (%d ratings)", stars, g.Rating, g.RatingCount)
 
-	badge := lipgloss.NewStyle().Foreground(styles.Purple).Bold(true).Render("[" + g.Platform + "]")
+	badge := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("[" + g.Platform + "]")
 	if m.Playing {
 		elapsed := time.Now().Unix() - m.Session.StartedAt
 		mins := elapsed / 60

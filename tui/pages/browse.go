@@ -129,15 +129,15 @@ func (m *BrowseModel) View(w, h int) string {
 		title := trunc(mv.Title, cardW-6)
 		stars := styles.StarRating(mv.Rating)
 		status := "[RENT]"
-		sc := styles.SuccessGrn
+		sc := styles.Yellow
 		fb := styles.FormatBadge(mv.Format)
 		if !mv.Available {
 			status = "[OUT]"
 			sc = styles.ErrorRed
 		} else if mv.MediaType == "game" {
 			status = "[PLAY]"
-			sc = styles.Purple
-			fb = lipgloss.NewStyle().Foreground(styles.Purple).Bold(true).Render("[" + mv.Platform + "]")
+			sc = styles.Orange
+			fb = lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("[" + mv.Platform + "]")
 		} else if mv.MediaType == "series" {
 			status = fmt.Sprintf("S%d", mv.SeasonNumber)
 			if mv.SeasonNumber <= 1 {

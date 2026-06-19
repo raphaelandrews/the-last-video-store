@@ -9,8 +9,9 @@ import (
 )
 
 type ProfileModel struct {
-	User  *models.UserResponse
-	Stats *RentalStats
+	User      *models.UserResponse
+	Stats     *RentalStats
+	StatusMsg string
 }
 
 type RentalStats struct {
@@ -51,6 +52,10 @@ func (m *ProfileModel) View(w, h int) string {
 		stats,
 	))
 	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("MEMBER PROFILE")
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
+	result := lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Left, title, inner))
+	if m.StatusMsg != "" {
+		result += "\n" + styles.SuccessTextStyle.Render(m.StatusMsg)
+	}
+	return result
 }

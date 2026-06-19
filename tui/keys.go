@@ -268,6 +268,9 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			m.tierShop = pages.NewTierShopModel(sub, bal)
 			m.screen = scrTierShop
 		}
+		if k == "2" {
+			return m.doProfileTOTP()
+		}
 	case scrWishlist:
 		switch k {
 		case "down", "j":
@@ -339,6 +342,11 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			u := m.adminUsers.SelectedUser()
 			if u != nil {
 				return m.doUpdateUser(u.ID, "ban")
+			}
+		case "t":
+			u := m.adminUsers.SelectedUser()
+			if u != nil {
+				return m.doTOTPToggle(u.ID)
 			}
 		}
 	case scrAuditLog:

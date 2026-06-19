@@ -9,9 +9,10 @@ import (
 )
 
 type AdminUsersModel struct {
-	users    []models.UserResponse
-	selected int
-	ErrMsg   string
+	users     []models.UserResponse
+	selected  int
+	ErrMsg    string
+	StatusMsg string
 }
 
 type AdminUsersRefreshMsg struct{}
@@ -86,6 +87,9 @@ func (m *AdminUsersModel) View(width, height int) string {
 	result := lipgloss.JoinVertical(lipgloss.Left, title, content)
 	if m.ErrMsg != "" {
 		result += "\n" + styles.ErrorTextStyle.Render(m.ErrMsg)
+	}
+	if m.StatusMsg != "" {
+		result += "\n" + styles.SuccessTextStyle.Render(m.StatusMsg)
 	}
 	return result
 }

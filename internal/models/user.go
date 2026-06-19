@@ -27,7 +27,6 @@ type UserResponse struct {
 	Username      string             `json:"username"`
 	Tier          bitmask.Permission `json:"tier"`
 	TierName      string             `json:"tier_name"`
-	TierNamePT    string             `json:"tier_name_pt"`
 	MaxRentals    int                `json:"max_rentals"`
 	RentalCount   int                `json:"rental_count"`
 	Banned        bool               `json:"banned"`
@@ -46,7 +45,6 @@ func (u *User) ToResponse() UserResponse {
 		Username:      u.Username,
 		Tier:          u.Tier,
 		TierName:      bitmask.TierName(u.Tier),
-		TierNamePT:    bitmask.TierNamesPT[u.Tier],
 		MaxRentals:    u.MaxRentals,
 		RentalCount:   u.RentalCount,
 		Banned:        u.Banned,
@@ -60,9 +58,6 @@ func (u *User) ToResponse() UserResponse {
 	}
 	if resp.TierName == "" {
 		resp.TierName = bitmask.OwnerLabel()
-	}
-	if resp.TierNamePT == "" {
-		resp.TierNamePT = bitmask.OwnerLabelPT()
 	}
 	return resp
 }

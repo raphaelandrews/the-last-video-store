@@ -122,7 +122,7 @@ func (m *Model) footerView() string {
 	case scrRentals:
 		hints = "[↑↓] select  [ENTER] return  [E] extend (30🍿)  [Q] back"
 	case scrProfile:
-		hints = "[L] logout  [T] tiers  [B] snack bar  [M] rewards  [I] inventory  [Q] back"
+		hints = "[L] logout  [T] tiers  [2] TOTP  [B] snack bar  [M] rewards  [I] inventory  [Q] back"
 	case scrSnackBarMenu:
 		hints = "[↑↓] select  [ENTER] order  [O] orders"
 		if m.userResp != nil && bitmask.CanSnackBarManage(m.userResp.Tier) {
@@ -152,7 +152,7 @@ func (m *Model) footerView() string {
 	case scrAdminMovies:
 		hints = fmt.Sprintf("[A] Add  [ENTER] Edit  [D] Delete  [S] Staff Pick  [N/B] Page %d/%d  [Q] Back", m.adminMovies.Page, m.adminMovies.TotalPages)
 	case scrAdminUsers:
-		hints = "[P] Promote  [D] Demote  [B] Toggle Ban  [Q] Back"
+		hints = "[P] Promote  [D] Demote  [B] Toggle Ban  [T] Toggle TOTP  [Q] Back"
 	case scrAuditLog:
 		hints = "[↑↓] Navigate  [V] Verify Chain  [Q] Back"
 	default:

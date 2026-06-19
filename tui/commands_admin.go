@@ -278,3 +278,88 @@ func (m *Model) moveToAdminMovies() {
 	m.screen = scrAdminMovies
 	m.movieForm = nil
 }
+
+func (m *Model) doTOTPToggle(userID string) tea.Cmd {
+	return func() tea.Msg {
+		u := m.adminUsers.SelectedUser()
+		if u == nil {
+			return nil
+		}
+		enabled := !u.TOTPEnabled
+		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
+		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/users/"+userID+"/totp", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+m.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			m.adminUsers.ErrMsg = err.Error()
+			return nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			var e struct {
+				Error string `json:"error"`
+			}
+			json.NewDecoder(resp.Body).Decode(&e)
+			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
+				return pages.ErrorMsg{Message: e.Error}
+			}
+			m.adminUsers.ErrMsg = e.Error
+			return nil
+		}
+		if enabled {
+			var r struct {
+				Secret string `json:"secret"`
+				URL    string `json:"url"`
+			}
+			json.NewDecoder(resp.Body).Decode(&r)
+			m.adminUsers.StatusMsg = fmt.Sprintf("🔒 TOTP enabled — secret: %s", r.Secret)
+		} else {
+			m.adminUsers.StatusMsg = "🔓 TOTP disabled"
+		}
+		return m.loadAdminUsers()()
+	}
+}
+
+func (m *Model) doProfileTOTP() tea.Cmd {
+	return func() tea.Msg {
+		if m.userResp == nil {
+			return nil
+		}
+		enabled := !m.userResp.TOTPEnabled
+		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
+		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/users/"+m.userResp.ID+"/totp", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+m.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			m.profile.StatusMsg = err.Error()
+			return nil
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			var e struct {
+				Error string `json:"error"`
+			}
+			json.NewDecoder(resp.Body).Decode(&e)
+			m.profile.StatusMsg = e.Error
+			return nil
+		}
+		if enabled {
+			var r struct {
+				Secret string `json:"secret"`
+				URL    string `json:"url"`
+			}
+			json.NewDecoder(resp.Body).Decode(&r)
+			m.userResp.TOTPEnabled = true
+			m.profile.StatusMsg = fmt.Sprintf("🔒 TOTP enabled\nSecret: %s\nScan this into your authenticator app", r.Secret)
+		} else {
+			m.userResp.TOTPEnabled = false
+			m.profile.StatusMsg = "🔓 TOTP disabled"
+		}
+		return tea.Sequence(
+			func() tea.Msg { return wishlistResultMsg{} },
+			m.doRefreshMe(),
+		)
+	}
+}
