@@ -11,7 +11,7 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-func (s *Store) StartGameSession(userID, gameID, gameTitle string, hourlyRate float64) (*models.GameSession, error) {
+func (s *Store) StartGameSession(userID, gameID, gameTitle string, hourlyRate float64, durationMinutes int) (*models.GameSession, error) {
 	var session models.GameSession
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		ub := tx.Bucket(bucketUsers)
@@ -26,22 +26,27 @@ func (s *Store) StartGameSession(userID, gameID, gameTitle string, hourlyRate fl
 		if err := json.Unmarshal(userData, &user); err != nil {
 			return err
 		}
-		if user.Balance < hourlyRate {
-			return fmt.Errorf("insufficient balance: need $%.2f, have $%.2f", hourlyRate, user.Balance)
+		totalCost := hourlyRate * float64(durationMinutes) / 60.0
+		if user.Balance < totalCost {
+			return fmt.Errorf("insufficient balance: need $%.2f, have $%.2f", totalCost, user.Balance)
 		}
-		user.Balance -= hourlyRate
+		user.Balance -= totalCost
 		updatedUser, _ := json.Marshal(user)
 		if err := ub.Put([]byte(userID), updatedUser); err != nil {
 			return err
 		}
 
+		now := time.Now().Unix()
 		session = models.GameSession{
-			ID:        uuid.NewString(),
-			UserID:    userID,
-			GameID:    gameID,
-			GameTitle: gameTitle,
-			StartedAt: time.Now().Unix(),
-			Status:    "active",
+			ID:              uuid.NewString(),
+			UserID:          userID,
+			GameID:          gameID,
+			GameTitle:       gameTitle,
+			StartedAt:       now,
+			ExpiresAt:       now + int64(durationMinutes*60),
+			DurationMinutes: durationMinutes,
+			Cost:            totalCost,
+			Status:          "active",
 		}
 		sessionData, err := json.Marshal(session)
 		if err != nil {

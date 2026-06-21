@@ -45,7 +45,8 @@ type loadMoviesMsg struct {
 	reqID  int
 }
 type loadRentalsMsg struct {
-	rentals []models.RentalResponse
+	rentals  []models.RentalResponse
+	sessions []models.GameSession
 }
 type loadProfileMsg struct {
 	stats *pages.RentalStats
@@ -61,6 +62,9 @@ type refreshMeMsg struct {
 	user *models.UserResponse
 }
 type autoRefreshMsg struct{}
+type refreshDetailMsg struct {
+	movie *models.MovieResponse
+}
 type loadAdminMoviesMsg struct {
 	movies []models.MovieResponse
 	total  int
@@ -294,10 +298,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
+			if m.gameDetail != nil && m.gameDetail.Game != nil {
+				for i := range msg.movies {
+					if msg.movies[i].ID == m.gameDetail.Game.ID {
+						m.gameDetail.Game = &msg.movies[i]
+						break
+					}
+				}
+			}
 		case pages.BrowseReloadMsg:
 			return m, m.loadMovies(m.browse.Page, m.browse.Genre)
 		case loadRentalsMsg:
 			m.rentals.SetRentals(msg.rentals)
+			m.rentals.SetGameSessions(msg.sessions)
 		case loadProfileMsg:
 			m.profile.SetStats(msg.stats)
 		case loadWishlistMsg:
@@ -331,7 +344,20 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.screen == scrBrowse && !m.searching {
 				return m, tea.Batch(m.loadMovies(m.browse.Page, m.browse.Genre), autoRefreshCmd())
 			}
+			if m.screen == scrDetail && m.detail != nil && m.detail.Movie != nil {
+				return m, tea.Batch(m.doRefreshDetail(m.detail.Movie.ID), autoRefreshCmd())
+			}
+			if m.screen == scrGameDetail && m.gameDetail != nil && m.gameDetail.Game != nil {
+				return m, tea.Batch(m.doRefreshDetail(m.gameDetail.Game.ID), autoRefreshCmd())
+			}
 			return m, autoRefreshCmd()
+		case refreshDetailMsg:
+			if m.screen == scrDetail && m.detail != nil && msg.movie != nil {
+				m.detail.Movie = msg.movie
+			}
+			if m.screen == scrGameDetail && m.gameDetail != nil && msg.movie != nil {
+				m.gameDetail.Game = msg.movie
+			}
 		case loadInventoryMsg:
 			m.inventory.SetItems(msg.items)
 		case loadSnackBarMenuMsg:

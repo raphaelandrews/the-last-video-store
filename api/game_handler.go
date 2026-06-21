@@ -14,7 +14,8 @@ type GameHandler struct {
 func (h *GameHandler) PlayStart(w http.ResponseWriter, r *http.Request) {
 	user := GetUser(r)
 	var req struct {
-		GameID string `json:"game_id"`
+		GameID          string `json:"game_id"`
+		DurationMinutes int    `json:"duration_minutes"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteError(w, http.StatusBadRequest, "invalid request")
@@ -24,6 +25,9 @@ func (h *GameHandler) PlayStart(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, http.StatusBadRequest, "game_id is required")
 		return
 	}
+	if req.DurationMinutes <= 0 {
+		req.DurationMinutes = 5
+	}
 
 	game, err := h.Store.GetMovieByID(req.GameID)
 	if err != nil {
@@ -31,7 +35,7 @@ func (h *GameHandler) PlayStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.Store.StartGameSession(user.ID, game.ID, game.Title, game.PlayPrice)
+	session, err := h.Store.StartGameSession(user.ID, game.ID, game.Title, game.PlayPrice, req.DurationMinutes)
 	if err != nil {
 		WriteError(w, http.StatusBadRequest, err.Error())
 		return

@@ -136,7 +136,7 @@ func (m *BrowseModel) View(w, h int) string {
 			sc = styles.ErrorRed
 		} else if mv.MediaType == "game" {
 			status = "[PLAY]"
-			sc = styles.Orange
+			sc = styles.Yellow
 			fb = lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("[" + mv.Platform + "]")
 		} else if mv.MediaType == "series" {
 			status = fmt.Sprintf("S%d", mv.SeasonNumber)

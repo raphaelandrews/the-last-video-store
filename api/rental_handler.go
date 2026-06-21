@@ -166,12 +166,9 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 		} else if rental.LateFee > 0 {
 			rentalUser.PopcornPoints -= 5
 		}
-		tier := models.TierByName(rentalUser.Subscription)
-		if !tier.NoLateFees && !rental.IsFreeRental {
-			rentalUser.Balance -= rental.LateFee + rental.RewindFee
-			if rentalUser.Balance < 0 {
-				rentalUser.Balance = 0
-			}
+		rentalUser.Balance -= rental.LateFee + rental.RewindFee
+		if rentalUser.Balance < 0 {
+			rentalUser.Balance = 0
 		}
 		inventory, _ := h.store.ListInventory(rentalUser.ID)
 		for _, item := range inventory {

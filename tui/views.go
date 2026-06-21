@@ -134,7 +134,7 @@ func (m *Model) footerView() string {
 	case scrSnackBarManage:
 		hints = "[↑↓] select  [R] restock  [Q] back to snack bar"
 	case scrGameDetail:
-		hints = "[R] rent  [P] play  [E] end play  [↑↓] related  [Q] back"
+		hints = "[R] rent  [P] play  [1-5] duration  [E] end play  [↑↓] related  [Q] back"
 	case scrGameSessions:
 		hints = "[Q] back"
 	case scrWishlist:

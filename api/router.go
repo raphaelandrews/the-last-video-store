@@ -128,6 +128,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 			})
 
 			r.Route("/games", func(r chi.Router) {
+				r.Get("/my-sessions", gameHandler.MySessions)
 				r.Post("/play/start", gameHandler.PlayStart)
 				r.Post("/play/end", gameHandler.PlayEnd)
 

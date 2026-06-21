@@ -123,6 +123,17 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 		json.NewDecoder(resp.Body).Decode(&rental)
 		if m.detail != nil {
 			m.detail.SetRental(&rental)
+			m.detail.Movie.CopiesAvailable--
+			if m.detail.Movie.CopiesAvailable <= 0 {
+				m.detail.Movie.Available = false
+			}
+		}
+		if m.gameDetail != nil && m.gameDetail.Game != nil {
+			m.gameDetail.SetRental(&rental)
+			m.gameDetail.Game.CopiesAvailable--
+			if m.gameDetail.Game.CopiesAvailable <= 0 {
+				m.gameDetail.Game.Available = false
+			}
 		}
 		if m.userResp != nil {
 			if m.detail != nil && m.detail.UseTicket {
@@ -134,7 +145,9 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 				m.userResp.RentalCount++
 				m.browse.Status = fmt.Sprintf("Rented! %s (💵 $%.2f)", rental.MovieTitle, cost)
 			}
-			m.detail.UseTicket = false
+			if m.detail != nil {
+				m.detail.UseTicket = false
+			}
 		}
 		return m.loadMovies(m.browse.Page, m.browse.Genre)()
 	}
@@ -180,5 +193,20 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 			m.browse.Status = "Added to waitlist ✓"
 		}
 		return wishlistResultMsg{}
+	}
+}
+
+func (m *Model) doRefreshDetail(movieID string) tea.Cmd {
+	return func() tea.Msg {
+		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/"+movieID, nil)
+		req.Header.Set("Authorization", "Bearer "+m.token)
+		resp, _ := http.DefaultClient.Do(req)
+		if resp == nil {
+			return nil
+		}
+		defer resp.Body.Close()
+		var movie models.MovieResponse
+		json.NewDecoder(resp.Body).Decode(&movie)
+		return refreshDetailMsg{movie: &movie}
 	}
 }

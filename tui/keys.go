@@ -428,16 +428,26 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	case scrGameDetail:
 		switch k {
 		case "r":
-			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && m.gameDetail.Game.Available && m.gameDetail.Game.RentalPrice > 0 {
+			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && !m.gameDetail.ChoosingTime && m.gameDetail.Game.Available && m.gameDetail.Game.RentalPrice > 0 {
 				return func() tea.Msg { return pages.RentRequestMsg{MovieID: m.gameDetail.Game.ID} }
 			}
 		case "p":
-			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && m.gameDetail.Game.Available && m.gameDetail.Game.PlayPrice > 0 {
-				return m.doGamePlayStart(m.gameDetail.Game.ID, m.gameDetail.Game.Title)
+			if m.gameDetail != nil && m.gameDetail.Game != nil && !m.gameDetail.Playing && !m.gameDetail.ChoosingTime && m.gameDetail.Game.Available && m.gameDetail.Game.PlayPrice > 0 {
+				m.gameDetail.ChoosingTime = true
+			}
+		case "esc":
+			if m.gameDetail != nil && m.gameDetail.ChoosingTime {
+				m.gameDetail.ChoosingTime = false
 			}
 		case "e":
 			if m.gameDetail != nil && m.gameDetail.Playing && m.gameDetail.Session != nil {
 				return m.doGamePlayEnd(m.gameDetail.Session.ID)
+			}
+		case "1", "2", "3", "4", "5":
+			if m.gameDetail != nil && m.gameDetail.ChoosingTime {
+				duration := int(k[0] - '0')
+				m.gameDetail.ChoosingTime = false
+				return m.doGamePlayStart(m.gameDetail.Game.ID, m.gameDetail.Game.Title, duration)
 			}
 		case "down", "j":
 			m.gameDetail.MoveRelatedDown()

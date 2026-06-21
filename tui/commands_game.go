@@ -11,9 +11,9 @@ import (
 	"github.com/thelastvideostore/tui/pages"
 )
 
-func (m *Model) doGamePlayStart(gameID string, gameTitle string) tea.Cmd {
+func (m *Model) doGamePlayStart(gameID string, gameTitle string, durationMinutes int) tea.Cmd {
 	return func() tea.Msg {
-		body := fmt.Sprintf(`{"game_id":"%s"}`, gameID)
+		body := fmt.Sprintf(`{"game_id":"%s","duration_minutes":%d}`, gameID, durationMinutes)
 		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/games/play/start", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+m.token)
@@ -33,10 +33,13 @@ func (m *Model) doGamePlayStart(gameID string, gameTitle string) tea.Cmd {
 			return pages.ErrorMsg{Message: r.Error}
 		}
 		m.gameDetail.SetSession(&r.Session)
-		if m.userResp != nil && r.Rate > 0 {
-			m.userResp.Balance -= r.Rate
+		if m.userResp != nil {
+			m.userResp.Balance -= r.Session.Cost
 		}
-		return gameRefreshMsg{}
+		return tea.Sequence(
+			func() tea.Msg { return gameRefreshMsg{} },
+			m.doRefreshMe(),
+		)
 	}
 }
 

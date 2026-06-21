@@ -104,7 +104,7 @@ func (m *MovieDetailModel) View(w, h int) string {
 		if title == "" {
 			title = mv.SequelTo
 		}
-		sequelInfo = styles.DimTextStyle.Render("📎 Sequel to: " + title)
+		sequelInfo = styles.DimTextStyle.Render("📽️ Sequel to: " + title)
 	}
 
 	costInfo := ""
@@ -138,7 +138,7 @@ func (m *MovieDetailModel) View(w, h int) string {
 	}
 	lines = append(lines, "", synopsis, "", copies, styles.DimTextStyle.Render(cast))
 	if len(m.Franchise) > 0 {
-		lines = append(lines, "", styles.TextStyle.Bold(true).Render("📎 Franchise:"))
+		lines = append(lines, "", styles.TextStyle.Bold(true).Render("📽️ Franchise:"))
 		for i, f := range m.Franchise {
 			prefix := "  "
 			if i == m.RelatedSelected {

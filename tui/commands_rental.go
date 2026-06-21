@@ -46,7 +46,26 @@ func (m *Model) loadRentals() tea.Cmd {
 		defer resp.Body.Close()
 		var rentals []models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rentals)
-		return loadRentalsMsg{rentals: rentals}
+
+		var sessions []models.GameSession
+		if m.userResp != nil {
+			sessReq, _ := http.NewRequest("GET", m.baseURL+"/api/v1/games/my-sessions", nil)
+			sessReq.Header.Set("Authorization", "Bearer "+m.token)
+			sessResp, _ := http.DefaultClient.Do(sessReq)
+			if sessResp != nil {
+				defer sessResp.Body.Close()
+				var r struct {
+					Sessions []models.GameSession `json:"sessions"`
+				}
+				json.NewDecoder(sessResp.Body).Decode(&r)
+				for i := range r.Sessions {
+					if r.Sessions[i].Status == "active" {
+						sessions = append(sessions, r.Sessions[i])
+					}
+				}
+			}
+		}
+		return loadRentalsMsg{rentals: rentals, sessions: sessions}
 	}
 }
 
