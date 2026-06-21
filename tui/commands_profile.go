@@ -2,8 +2,6 @@ package tui
 
 import (
 	"encoding/json"
-	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -12,9 +10,7 @@ import (
 
 func (m *Model) loadProfile() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/rentals/history", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/rentals/history")
 		if resp == nil {
 			return loadProfileMsg{}
 		}
@@ -32,9 +28,7 @@ func (m *Model) loadProfile() tea.Cmd {
 
 func (m *Model) loadMerch() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/merch", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/merch")
 		if resp == nil {
 			return loadMerchMsg{}
 		}
@@ -50,10 +44,7 @@ func (m *Model) loadMerch() tea.Cmd {
 func (m *Model) doRedeemMerch(itemID string) tea.Cmd {
 	return func() tea.Msg {
 		body := `{"item_id":"` + itemID + `"}`
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/merch/redeem", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/merch/redeem", body)
 		if err != nil {
 			m.merch.Error = err.Error()
 			return nil
@@ -85,10 +76,7 @@ func (m *Model) doRedeemMerch(itemID string) tea.Cmd {
 func (m *Model) doPurchaseTier(tierName string) tea.Cmd {
 	return func() tea.Msg {
 		body := `{"tier_name":"` + tierName + `"}`
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/tiers/purchase", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/tiers/purchase", body)
 		if err != nil {
 			m.tierShop.Error = err.Error()
 			return nil
@@ -125,9 +113,7 @@ func (m *Model) doPurchaseTier(tierName string) tea.Cmd {
 
 func (m *Model) loadInventory() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/inventory", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/inventory")
 		if resp == nil {
 			return loadInventoryMsg{}
 		}

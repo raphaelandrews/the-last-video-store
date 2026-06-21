@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/ds/bitmask"
@@ -22,9 +21,7 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 			return pages.ErrorMsg{Message: "⛔ ACCESS DENIED — Manager or Owner required"}
 		}
 		url := fmt.Sprintf("%s/api/v1/movies?page_size=%d&page=%d", m.baseURL, ps, page)
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGetURL(url)
 		if resp == nil {
 			return loadAdminMoviesMsg{}
 		}
@@ -40,22 +37,13 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 
 func (m *Model) loadAdminUsers() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/users", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/users")
 		if resp == nil {
 			return loadAdminUsersMsg{}
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var e struct {
-				Error string `json:"error"`
-			}
-			json.NewDecoder(resp.Body).Decode(&e)
-			if e.Error == "" {
-				e.Error = "ACCESS DENIED — Insufficient clearance"
-			}
-			return pages.ErrorMsg{Message: e.Error}
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		var users []models.UserResponse
 		json.NewDecoder(resp.Body).Decode(&users)
@@ -65,9 +53,7 @@ func (m *Model) loadAdminUsers() tea.Cmd {
 
 func (m *Model) doVerifyAuditChain() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/audit/verify", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiGet("/api/v1/audit/verify")
 		if err != nil {
 			m.auditLog.VerifyMsg = "⚠️ Verification failed: " + err.Error()
 			return nil
@@ -85,22 +71,13 @@ func (m *Model) doVerifyAuditChain() tea.Cmd {
 
 func (m *Model) loadAuditLog() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/audit", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/audit")
 		if resp == nil {
 			return loadAuditLogMsg{}
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var e struct {
-				Error string `json:"error"`
-			}
-			json.NewDecoder(resp.Body).Decode(&e)
-			if e.Error == "" {
-				e.Error = "ACCESS DENIED — Insufficient clearance"
-			}
-			return pages.ErrorMsg{Message: e.Error}
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		var entries []map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&entries)
@@ -112,33 +89,26 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 	return func() tea.Msg {
 		cast := parseCast(msg.Cast)
 		body, _ := json.Marshal(map[string]interface{}{
-			"title":        msg.Title,
-			"year":         msg.Year,
-			"genre":        msg.Genre,
-			"format":       msg.Format,
 			"director":     msg.Director,
 			"cast":         cast,
 			"synopsis":     msg.Synopsis,
 			"copies_total": msg.Copies,
 			"rental_price": msg.Price,
 		})
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/movies", strings.NewReader(string(body)))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/movies", string(body))
 		if err != nil {
 			m.movieForm.ErrMsg = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
+		}
 		if resp.StatusCode >= 400 {
 			var e struct {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-				return pages.ErrorMsg{Message: e.Error}
-			}
 			m.movieForm.ErrMsg = e.Error
 			return nil
 		}
@@ -161,23 +131,20 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			"copies_total": msg.Copies,
 			"rental_price": msg.Price,
 		})
-		req, _ := http.NewRequest("PUT", m.baseURL+"/api/v1/movies/"+msg.MovieID, strings.NewReader(string(body)))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPut("/api/v1/movies/"+msg.MovieID, string(body))
 		if err != nil {
 			m.movieForm.ErrMsg = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
+		}
 		if resp.StatusCode >= 400 {
 			var e struct {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-				return pages.ErrorMsg{Message: e.Error}
-			}
 			m.movieForm.ErrMsg = e.Error
 			return nil
 		}
@@ -203,23 +170,20 @@ func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
 				body = `{"banned":true}`
 			}
 		}
-		req, _ := http.NewRequest("PUT", m.baseURL+"/api/v1/users/"+userID, strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPut("/api/v1/users/"+userID, body)
 		if err != nil {
 			m.adminUsers.ErrMsg = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
+		}
 		if resp.StatusCode >= 400 {
 			var e struct {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-				return pages.ErrorMsg{Message: e.Error}
-			}
 			m.adminUsers.ErrMsg = e.Error
 			return nil
 		}
@@ -229,16 +193,18 @@ func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
 }
 
 func (m *Model) doToggleStaffPick(movieID string, current bool) tea.Cmd {
-	method := "POST"
-	if current {
-		method = "DELETE"
-	}
 	return func() tea.Msg {
-		req, _ := http.NewRequest(method, m.baseURL+"/api/v1/movies/"+movieID+"/staff-pick", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		var resp *http.Response
+		if current {
+			resp, _ = m.apiDelete("/api/v1/movies/" + movieID + "/staff-pick")
+		} else {
+			resp, _ = m.apiPostEmpty("/api/v1/movies/" + movieID + "/staff-pick")
+		}
 		if resp != nil {
 			defer resp.Body.Close()
+			if errMsg := handleAPIErr(resp); errMsg != nil {
+				return errMsg
+			}
 			if resp.StatusCode >= 400 {
 				var e struct {
 					Error string `json:"error"`
@@ -255,11 +221,12 @@ func (m *Model) doToggleStaffPick(movieID string, current bool) tea.Cmd {
 
 func (m *Model) doDeleteMovie(movieID string) tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("DELETE", m.baseURL+"/api/v1/movies/"+movieID, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiDelete("/api/v1/movies/" + movieID)
 		if resp != nil {
 			defer resp.Body.Close()
+			if errMsg := handleAPIErr(resp); errMsg != nil {
+				return errMsg
+			}
 			if resp.StatusCode >= 400 {
 				var e struct {
 					Error string `json:"error"`
@@ -287,25 +254,14 @@ func (m *Model) doTOTPToggle(userID string) tea.Cmd {
 		}
 		enabled := !u.TOTPEnabled
 		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/users/"+userID+"/totp", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/users/"+userID+"/totp", body)
 		if err != nil {
 			m.adminUsers.ErrMsg = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var e struct {
-				Error string `json:"error"`
-			}
-			json.NewDecoder(resp.Body).Decode(&e)
-			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-				return pages.ErrorMsg{Message: e.Error}
-			}
-			m.adminUsers.ErrMsg = e.Error
-			return nil
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		if enabled {
 			var r struct {
@@ -328,22 +284,14 @@ func (m *Model) doProfileTOTP() tea.Cmd {
 		}
 		enabled := !m.userResp.TOTPEnabled
 		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/users/"+m.userResp.ID+"/totp", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/users/"+m.userResp.ID+"/totp", body)
 		if err != nil {
 			m.profile.StatusMsg = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var e struct {
-				Error string `json:"error"`
-			}
-			json.NewDecoder(resp.Body).Decode(&e)
-			m.profile.StatusMsg = e.Error
-			return nil
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		if enabled {
 			var r struct {

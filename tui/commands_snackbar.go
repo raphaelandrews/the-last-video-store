@@ -3,8 +3,6 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/ds/bitmask"
@@ -14,9 +12,7 @@ import (
 
 func (m *Model) loadSnackBarMenu() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/snackbar", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/snackbar")
 		if resp == nil {
 			return loadSnackBarMenuMsg{}
 		}
@@ -32,10 +28,7 @@ func (m *Model) loadSnackBarMenu() tea.Cmd {
 func (m *Model) doSnackBarOrder(itemID string) tea.Cmd {
 	return func() tea.Msg {
 		body := `{"item_id":"` + itemID + `","quantity":1}`
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/snackbar/order", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/snackbar/order", body)
 		if err != nil {
 			m.snackBarMenu.Error = err.Error()
 			return nil
@@ -66,9 +59,7 @@ func (m *Model) doSnackBarOrder(itemID string) tea.Cmd {
 
 func (m *Model) loadSnackBarOrders() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/snackbar/orders", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/snackbar/orders")
 		if resp == nil {
 			return loadSnackBarOrdersMsg{}
 		}
@@ -86,9 +77,7 @@ func (m *Model) loadSnackBarManage() tea.Cmd {
 		if m.userResp == nil || !bitmask.CanSnackBarManage(m.userResp.Tier) {
 			return pages.ErrorMsg{Message: "⛔ ACCESS DENIED — SnackBar Manager or Owner required"}
 		}
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/snackbar", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/snackbar")
 		if resp == nil {
 			return loadSnackBarManageMsg{}
 		}
@@ -104,32 +93,24 @@ func (m *Model) loadSnackBarManage() tea.Cmd {
 func (m *Model) doSnackBarRestock(itemID string) tea.Cmd {
 	return func() tea.Msg {
 		body := `{"item_id":"` + itemID + `","amount":5}`
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/snackbar/restock", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/snackbar/restock", body)
 		if err != nil {
 			m.snackBarManage.Error = err.Error()
 			return nil
 		}
 		defer resp.Body.Close()
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
+		}
 		if resp.StatusCode >= 400 {
 			var e struct {
 				Error   string `json:"error"`
 				Message string `json:"message"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			if resp.StatusCode == http.StatusForbidden || strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-				return pages.ErrorMsg{Message: e.Error}
-			}
 			m.snackBarManage.Error = e.Error
 			return nil
 		}
-		var r struct {
-			Error   string `json:"error"`
-			Message string `json:"message"`
-		}
-		json.NewDecoder(resp.Body).Decode(&r)
 		m.snackBarManage.Status = "Restocked +5 ✓"
 		return m.loadSnackBarManage()()
 	}

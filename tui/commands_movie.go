@@ -3,8 +3,6 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -16,10 +14,8 @@ func (m *Model) doSearch(query string) tea.Cmd {
 		return nil
 	}
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/search?q="+query, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
+		resp, _ := m.apiGetURL(m.baseURL + "/api/v1/movies/search?q=" + query)
+		if resp == nil {
 			return searchResultsMsg{}
 		}
 		defer resp.Body.Close()
@@ -44,9 +40,7 @@ func (m *Model) loadMovies(page int, genre string) tea.Cmd {
 		if m.browse.MediaType != "" {
 			url += "&media_type=" + m.browse.MediaType
 		}
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGetURL(url)
 		if resp == nil {
 			return loadMoviesMsg{}
 		}
@@ -68,9 +62,7 @@ func (m *Model) loadStaffPicks() tea.Cmd {
 		if m.browse.MediaType != "" {
 			url += "?media_type=" + m.browse.MediaType
 		}
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGetURL(url)
 		if resp == nil {
 			return loadMoviesMsg{}
 		}
@@ -89,9 +81,7 @@ func (m *Model) loadLastChance() tea.Cmd {
 		if m.browse.MediaType != "" {
 			url += "?media_type=" + m.browse.MediaType
 		}
-		req, _ := http.NewRequest("GET", url, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGetURL(url)
 		if resp == nil {
 			return loadMoviesMsg{}
 		}
@@ -106,18 +96,13 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 	return func() tea.Msg {
 		useTicket := m.detail != nil && m.detail.UseTicket
 		body := fmt.Sprintf(`{"movie_id":"%s","use_ticket":%v}`, movieID, useTicket)
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/rentals/rent", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/rentals/rent", body)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			var e struct{ Error string }
-			json.NewDecoder(resp.Body).Decode(&e)
-			return pages.ErrorMsg{Message: e.Error}
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		var rental models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rental)
@@ -156,10 +141,7 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 	return func() tea.Msg {
 		body := `{"movie_id":"` + movieID + `"}`
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/wishlist", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/wishlist", body)
 		if err != nil {
 			if fromDetail {
 				m.detail.ErrMsg = err.Error()
@@ -176,6 +158,9 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 				m.browse.Status = "Already in waitlist"
 			}
 			return wishlistResultMsg{}
+		}
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
 		}
 		if resp.StatusCode >= 400 {
 			var e struct{ Error string }
@@ -198,9 +183,7 @@ func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 
 func (m *Model) doRefreshDetail(movieID string) tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/movies/"+movieID, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/movies/" + movieID)
 		if resp == nil {
 			return nil
 		}

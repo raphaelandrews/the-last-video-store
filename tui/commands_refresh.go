@@ -2,7 +2,6 @@ package tui
 
 import (
 	"encoding/json"
-	"net/http"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -10,9 +9,7 @@ import (
 
 func (m *Model) doRefreshMe() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/auth/me", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/auth/me")
 		if resp == nil {
 			return nil
 		}

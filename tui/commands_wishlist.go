@@ -2,7 +2,6 @@ package tui
 
 import (
 	"encoding/json"
-	"net/http"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/tui/pages"
@@ -10,11 +9,9 @@ import (
 
 func (m *Model) loadWishlist() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/wishlist", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return pages.ErrorMsg{Message: err.Error()}
+		resp, _ := m.apiGet("/api/v1/wishlist")
+		if resp == nil {
+			return pages.ErrorMsg{Message: "failed to load wishlist"}
 		}
 		defer resp.Body.Close()
 		var items []pages.WishlistItem
@@ -25,9 +22,7 @@ func (m *Model) loadWishlist() tea.Cmd {
 
 func (m *Model) doRemoveFromWishlist(movieID string) tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("DELETE", m.baseURL+"/api/v1/wishlist/"+movieID, nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiDelete("/api/v1/wishlist/" + movieID)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}

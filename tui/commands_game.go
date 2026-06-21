@@ -3,8 +3,6 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -14,10 +12,7 @@ import (
 func (m *Model) doGamePlayStart(gameID string, gameTitle string, durationMinutes int) tea.Cmd {
 	return func() tea.Msg {
 		body := fmt.Sprintf(`{"game_id":"%s","duration_minutes":%d}`, gameID, durationMinutes)
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/games/play/start", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/games/play/start", body)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
@@ -46,10 +41,7 @@ func (m *Model) doGamePlayStart(gameID string, gameTitle string, durationMinutes
 func (m *Model) doGamePlayEnd(sessionID string) tea.Cmd {
 	return func() tea.Msg {
 		body := fmt.Sprintf(`{"session_id":"%s"}`, sessionID)
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/games/play/end", strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPost("/api/v1/games/play/end", body)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
@@ -74,9 +66,7 @@ func (m *Model) doGamePlayEnd(sessionID string) tea.Cmd {
 
 func (m *Model) loadGameSessions() tea.Cmd {
 	return func() tea.Msg {
-		req, _ := http.NewRequest("GET", m.baseURL+"/api/v1/games/play/active", nil)
-		req.Header.Set("Authorization", "Bearer "+m.token)
-		resp, _ := http.DefaultClient.Do(req)
+		resp, _ := m.apiGet("/api/v1/games/play/active")
 		if resp == nil {
 			return loadGameSessionsMsg{}
 		}
