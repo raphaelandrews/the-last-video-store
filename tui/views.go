@@ -122,7 +122,7 @@ func (m *Model) footerView() string {
 	case scrRentals:
 		hints = "[↑↓] select  [ENTER] return  [E] extend (30🍿)  [Q] back"
 	case scrProfile:
-		hints = "[L] logout  [T] tiers  [2] TOTP  [B] snack bar  [M] rewards  [I] inventory  [Q] back"
+		hints = "[L] logout  [T] tiers  [2] TOTP  [$] top-up  [B] snack bar  [M] rewards  [I] inventory  [Q] back"
 	case scrSnackBarMenu:
 		hints = "[↑↓] select  [ENTER] order  [O] orders"
 		if m.userResp != nil && bitmask.CanSnackBarManage(m.userResp.Tier) {

@@ -167,9 +167,6 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 			rentalUser.PopcornPoints -= 5
 		}
 		rentalUser.Balance -= rental.LateFee + rental.RewindFee
-		if rentalUser.Balance < 0 {
-			rentalUser.Balance = 0
-		}
 		inventory, _ := h.store.ListInventory(rentalUser.ID)
 		for _, item := range inventory {
 			if item.MerchID == "merch-popcorn-bucket" {

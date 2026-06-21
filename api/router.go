@@ -91,6 +91,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 				})
 
 				r.Post("/{id}/totp", userHandler.TOTPSetup)
+				r.Post("/me/topup", userHandler.TopUp)
 			})
 
 			r.Route("/audit", func(r chi.Router) {

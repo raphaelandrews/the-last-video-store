@@ -271,6 +271,9 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 		if k == "2" {
 			return m.doProfileTOTP()
 		}
+		if k == "$" {
+			return m.doTopUp()
+		}
 	case scrWishlist:
 		switch k {
 		case "down", "j":

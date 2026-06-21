@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -123,5 +124,38 @@ func (m *Model) loadInventory() tea.Cmd {
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
 		return loadInventoryMsg{items: r.Items}
+	}
+}
+
+func (m *Model) doTopUp() tea.Cmd {
+	return func() tea.Msg {
+		resp, err := m.apiPostEmpty("/api/v1/users/me/topup")
+		if err != nil {
+			m.profile.StatusMsg = err.Error()
+			return nil
+		}
+		defer resp.Body.Close()
+		var r struct {
+			Error      string  `json:"error"`
+			Message    string  `json:"message"`
+			Amount     float64 `json:"amount"`
+			NewBalance float64 `json:"new_balance"`
+			TopUpCount int     `json:"topup_count"`
+			Remaining  int     `json:"remaining"`
+		}
+		json.NewDecoder(resp.Body).Decode(&r)
+		if resp.StatusCode >= 400 || r.Error != "" {
+			m.profile.StatusMsg = r.Error
+			return nil
+		}
+		if m.userResp != nil {
+			m.userResp.Balance = r.NewBalance
+			m.userResp.TopUpCount = r.TopUpCount
+		}
+		m.profile.StatusMsg = fmt.Sprintf("💰 %s — new balance: $%.2f", r.Message, r.NewBalance)
+		return tea.Sequence(
+			func() tea.Msg { return wishlistResultMsg{} },
+			m.doRefreshMe(),
+		)
 	}
 }

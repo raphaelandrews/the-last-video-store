@@ -2,6 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
+	"math/rand"
 	"net/http"
 	"time"
 
@@ -72,6 +75,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: hash,
 		Tier:         tier,
 		MaxRentals:   bitmask.MaxRentalsForTier(tier),
+		Balance:      100,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -214,6 +218,41 @@ func (h *UserHandler) TOTPSetup(w http.ResponseWriter, r *http.Request) {
 
 		WriteJSON(w, http.StatusOK, SuccessResponse{Message: "totp disabled"})
 	}
+}
+
+func (h *UserHandler) TopUp(w http.ResponseWriter, r *http.Request) {
+	user := GetUser(r)
+
+	if user.TopUpCount >= 1 {
+		WriteError(w, http.StatusTooManyRequests, "top-up already used")
+		return
+	}
+
+	now := time.Now().Unix()
+	if user.LastTopUpAt > 0 && now-user.LastTopUpAt < 30 {
+		remaining := 30 - int(now-user.LastTopUpAt)
+		WriteError(w, http.StatusTooManyRequests, "cooldown: "+fmt.Sprintf("%ds remaining", remaining))
+		return
+	}
+
+	amount := math.Round(rand.Float64()*10000) / 100
+	user.Balance += amount
+	user.TopUpCount++
+	user.LastTopUpAt = now
+	user.UpdatedAt = now
+
+	if err := h.store.UpdateUser(user); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to update user")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message":     fmt.Sprintf("Topped up $%.2f", amount),
+		"amount":      amount,
+		"new_balance": user.Balance,
+		"topup_count": user.TopUpCount,
+		"remaining":   1 - user.TopUpCount,
+	})
 }
 
 func parseTier(s string) bitmask.Permission {

@@ -18,6 +18,8 @@ type User struct {
 	FreeRentals   int                `json:"free_rentals"`
 	Balance       float64            `json:"balance"`
 	Subscription  string             `json:"subscription"`
+	TopUpCount    int                `json:"topup_count"`
+	LastTopUpAt   int64              `json:"last_topup_at"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -35,6 +37,8 @@ type UserResponse struct {
 	FreeRentals   int                `json:"free_rentals"`
 	Balance       float64            `json:"balance"`
 	Subscription  string             `json:"subscription"`
+	TopUpCount    int                `json:"topup_count"`
+	LastTopUpAt   int64              `json:"last_topup_at"`
 	CreatedAt     int64              `json:"created_at"`
 	UpdatedAt     int64              `json:"updated_at"`
 }
@@ -53,6 +57,8 @@ func (u *User) ToResponse() UserResponse {
 		FreeRentals:   u.FreeRentals,
 		Balance:       u.Balance,
 		Subscription:  u.Subscription,
+		TopUpCount:    u.TopUpCount,
+		LastTopUpAt:   u.LastTopUpAt,
 		CreatedAt:     u.CreatedAt,
 		UpdatedAt:     u.UpdatedAt,
 	}

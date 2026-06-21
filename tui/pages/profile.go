@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
@@ -51,6 +52,23 @@ func (m *ProfileModel) View(w, h int) string {
 		"Member since: "+fmt.Sprintf("%d", m.User.CreatedAt),
 		stats,
 	))
+
+	topUpInfo := ""
+	if m.User.TopUpCount > 0 || m.User.LastTopUpAt > 0 {
+		if m.User.TopUpCount == 0 {
+			cooldown := ""
+			elapsed := time.Now().Unix() - m.User.LastTopUpAt
+			if elapsed < 30 {
+				cooldown = fmt.Sprintf(" (cooldown: %ds)", 30-int(elapsed))
+			}
+			topUpInfo = fmt.Sprintf("\n💰 Top-up available in%s — press [$]", cooldown)
+		} else {
+			topUpInfo = fmt.Sprintf("\n💰 Top-up already used")
+		}
+	}
+	if topUpInfo != "" {
+		inner += styles.DimTextStyle.Render(topUpInfo)
+	}
 	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("MEMBER PROFILE")
 	result := lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Left, title, inner))

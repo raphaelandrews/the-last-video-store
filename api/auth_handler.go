@@ -68,6 +68,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: hash,
 		Tier:         tier,
 		MaxRentals:   maxRentals,
+		Balance:      100,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
