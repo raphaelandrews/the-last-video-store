@@ -82,13 +82,12 @@ func (m *GameDetailModel) View(w, h int) string {
 	}
 	g := m.Game
 
-	titleBar := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Orange).
+	titleStyle := lipgloss.NewStyle().
+		Foreground(styles.Orange).
 		Bold(true).
 		Width(w).
-		Align(lipgloss.Center).
-		Render(" 🕹️ " + g.Title + " ")
+		Align(lipgloss.Center)
+	title := titleStyle.Render("─── 🕹️ " + g.Title + " ───")
 
 	meta := fmt.Sprintf("%d · %s · %s · %s", g.Year, g.Genre, g.Platform, g.Director)
 	stars := styles.StarRating(g.Rating)
@@ -131,7 +130,7 @@ func (m *GameDetailModel) View(w, h int) string {
 
 	divider := lipgloss.NewStyle().Foreground(styles.BG5).Render("────────────────────────────────────────")
 
-	lines := []string{titleBar, "", meta, rating, badge}
+	lines := []string{title, "", meta, rating, badge}
 	if actionLine != "" {
 		lines = append(lines, styles.TextStyle.Render(actionLine))
 	}

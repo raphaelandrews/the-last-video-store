@@ -34,19 +34,17 @@ func (m *ProfileModel) View(w, h int) string {
 	}
 
 	headerBlock := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Green).
+		Foreground(styles.Green).
 		Bold(true).
 		Width(46).
 		Align(lipgloss.Center).
-		Render("  THE LAST VIDEO STORE  ")
+		Render("─── THE LAST VIDEO STORE ───")
 
 	subHeader := lipgloss.NewStyle().
 		Foreground(styles.Grey1).
-		Background(styles.BG1).
 		Width(46).
 		Align(lipgloss.Center).
-		Render("── MEMBERSHIP CARD ──")
+		Render("MEMBERSHIP CARD")
 
 	badge := styles.TierBadgeStyle(m.User.TierName).Render(" ★ " + m.User.TierName + " ★ ")
 	stats := ""
@@ -59,12 +57,11 @@ func (m *ProfileModel) View(w, h int) string {
 	card := lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
 		BorderForeground(bd).
-		Background(styles.BG1).
 		Padding(1, 4).
 		Width(46).
 		Align(lipgloss.Center)
 
-	inner := card.Render(lipgloss.JoinVertical(lipgloss.Center,
+	cardBody := lipgloss.JoinVertical(lipgloss.Center,
 		headerBlock,
 		subHeader,
 		"",
@@ -72,27 +69,39 @@ func (m *ProfileModel) View(w, h int) string {
 		styles.TextStyle.Render("  Plan: "+badge),
 		styles.DimTextStyle.Render("  Member since: "+fmt.Sprintf("%d", m.User.CreatedAt)),
 		stats,
-	))
+	)
+
+	title := styles.HeadingStyle.
+		Width(w).
+		Align(lipgloss.Left).
+		Padding(0, 1).
+		Render("MEMBER PROFILE")
+
+	// Build the column: title at the top-left, card below it. The whole
+	// column is left-aligned (placed horizontally at the left edge) but
+	// the card content is centered within its 46-char border.
+	result := lipgloss.JoinVertical(lipgloss.Left,
+		title,
+		"",
+		card.Render(cardBody),
+	)
 
 	topUpInfo := ""
 	if m.User.LastTopUpAt > 0 {
 		elapsed := time.Now().Unix() - m.User.LastTopUpAt
 		if elapsed < 30 {
 			cooldown := 30 - int(elapsed)
-			topUpInfo = fmt.Sprintf("\n💰 Top-up cooldown: %ds — press [$]", cooldown)
+			topUpInfo = fmt.Sprintf("💰 Top-up cooldown: %ds — press [$]", cooldown)
 		} else {
-			topUpInfo = "\n💰 Top-up available — press [$]"
+			topUpInfo = "💰 Top-up available — press [$]"
 		}
 	} else {
-		topUpInfo = "\n💰 Top-up available — press [$]"
+		topUpInfo = "💰 Top-up available — press [$]"
 	}
 	if topUpInfo != "" {
-		inner += styles.DimTextStyle.Render(topUpInfo)
+		result += "\n" + styles.DimTextStyle.Render(topUpInfo)
 	}
 
-	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("MEMBER PROFILE")
-	result := lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
-		lipgloss.JoinVertical(lipgloss.Left, title, "", inner))
 	if m.StatusMsg != "" {
 		result += "\n" + styles.SuccessTextStyle.Render(m.StatusMsg)
 	}

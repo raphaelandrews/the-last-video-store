@@ -28,7 +28,7 @@ func ModalView(title, message string, width, height int) string {
 		"",
 		msgStyle.Render(message),
 		"",
-		styles.DimTextStyle.Render("[ENTER] Confirm  [ESC] Cancel"),
+		styles.DimTextStyle.Background(styles.BG1).Render("[ENTER] Confirm  [ESC] Cancel"),
 	)
 
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,
@@ -52,9 +52,9 @@ func ModalErrorView(title, message string, width, height int) string {
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		titleStyle.Render(title),
 		"",
-		styles.TextStyle.Render(message),
+		styles.TextStyle.Background(styles.BG1).Render(message),
 		"",
-		styles.DimTextStyle.Render("[ESC] Dismiss"),
+		styles.DimTextStyle.Background(styles.BG1).Render("[ESC] Dismiss"),
 	)
 
 	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center,

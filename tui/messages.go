@@ -12,7 +12,9 @@ type loadMoviesMsg struct {
 	reqID  int
 }
 type loadRentalsMsg struct {
-	rentals  []models.RentalResponse
+	rentals []models.RentalResponse
+}
+type loadMyPlaySessionsMsg struct {
 	sessions []models.GameSession
 }
 type loadProfileMsg struct {

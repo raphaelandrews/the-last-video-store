@@ -76,20 +76,49 @@ func (hc *HashChain) computeHash(entry HashChainEntry) []byte {
 	return hash[:]
 }
 
-func VerifyChain(entries []HashChainEntry) bool {
+// ChainError describes where the chain broke. A non-nil error means the
+// chain is invalid; the int field is the index of the first entry whose
+// hash did not match (or whose PrevHash did not match the previous
+// entry's Hash). Index 0 is the first entry after GENESIS.
+type ChainError struct {
+	BrokenAt int // 0-based index of first broken entry; -1 if chain is empty
+	Reason   string
+}
+
+func (e *ChainError) Error() string {
+	if e == nil {
+		return ""
+	}
+	if e.BrokenAt >= 0 {
+		return fmt.Sprintf("chain broken at entry %d: %s", e.BrokenAt, e.Reason)
+	}
+	return "chain broken: " + e.Reason
+}
+
+// VerifyChain returns nil on success, or a *ChainError describing the
+// first entry whose hash did not match. It returns true as a convenience
+// for callers that only want the boolean; callers that need the broken
+// index should check for a non-nil error.
+func VerifyChain(entries []HashChainEntry) (bool, *ChainError) {
 	prev := []byte("GENESIS")
-	for _, entry := range entries {
+	for i, entry := range entries {
 		if hex.EncodeToString(entry.PrevHash) != hex.EncodeToString(prev) {
-			return false
+			return false, &ChainError{
+				BrokenAt: i,
+				Reason:   "PrevHash does not match the previous entry's Hash",
+			}
 		}
 		input := fmt.Sprintf("%x|%d|%s|%s|%s|%s",
 			entry.PrevHash, entry.Timestamp, entry.Action,
 			entry.ActorID, entry.TargetID, entry.Data)
 		hash := sha256.Sum256([]byte(input))
 		if hex.EncodeToString(hash[:]) != hex.EncodeToString(entry.Hash) {
-			return false
+			return false, &ChainError{
+				BrokenAt: i,
+				Reason:   "Hash does not match recomputed value (data was modified)",
+			}
 		}
 		prev = entry.Hash
 	}
-	return true
+	return true, nil
 }

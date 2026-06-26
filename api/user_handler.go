@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -106,15 +107,29 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Reject empty updates early — a no-op PUT would still bump
+	// UpdatedAt and return 200, which is misleading.
+	if req.Tier == nil && req.Banned == nil {
+		WriteError(w, http.StatusBadRequest, "no fields to update (tier and/or banned required)")
+		return
+	}
+
+	// Authorisation: only users with PermAdmin may update other users'
+	// tier or ban status. Self-service is not exposed here.
+	if !admin.CanAdmin() {
+		WriteError(w, http.StatusForbidden, "⛔ ACCESS DENIED — admin permission required")
+		return
+	}
+
 	if req.Tier != nil {
-		oldTier := bitmask.TierName(target.Tier)
+		oldTier := target.Tier
 		newTier := parseTier(*req.Tier)
 		if newTier == 0 {
 			WriteError(w, http.StatusBadRequest, "invalid tier")
 			return
 		}
 
-		if !admin.CanAdmin() && newTier > admin.Tier {
+		if newTier > admin.Tier {
 			WriteError(w, http.StatusForbidden, "cannot promote beyond your own tier")
 			return
 		}
@@ -122,12 +137,15 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		target.Tier = newTier
 		target.MaxRentals = bitmask.MaxRentalsForTier(newTier)
 
+		// Compare against the *original* tier, not the just-set one.
+		// target.Tier is now equal to newTier, so we keep `oldTier`
+		// in a local variable for the comparison.
 		action := models.ActionPromote
-		if newTier < target.Tier {
+		if newTier < oldTier {
 			action = models.ActionDemote
 		}
 		auth.AppendAuditEntry(h.store, h.hc, action, admin.ID, target.ID,
-			oldTier+" → "+bitmask.TierName(newTier))
+			bitmask.TierName(oldTier)+" → "+bitmask.TierName(newTier))
 	}
 
 	if req.Banned != nil {
@@ -248,7 +266,7 @@ func (h *UserHandler) TopUp(w http.ResponseWriter, r *http.Request) {
 }
 
 func parseTier(s string) bitmask.Permission {
-	switch s {
+	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "bronze":
 		return bitmask.TierBronze
 	case "silver":

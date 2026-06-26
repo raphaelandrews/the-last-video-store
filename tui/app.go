@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/components"
 	"github.com/thelastvideostore/tui/pages"
@@ -41,6 +42,9 @@ type Model struct {
 	snackBarManage *pages.SnackBarManageModel
 	gameDetail     *pages.GameDetailModel
 	gameSessions   *pages.GameSessionModel
+	myPlaySessions *pages.MyPlaySessionsModel
+
+	help help.Model
 
 	searchBar   *components.SearchbarModel
 	searching   bool
@@ -59,6 +63,7 @@ func NewModel(baseURL string) *Model {
 		login:     pages.NewLoginModel(),
 		header:    components.NewHeaderModel(),
 		searchBar: components.NewSearchbarModel(),
+		help:      newHelpModel(),
 		tabs:      components.NewTabsModel([]string{"🎬 Movies", "📺 Series", "🕹️ Games", "🍿 SnackBar"}),
 		genreTabs: components.NewTabsModel([]string{"ALL", "Action", "SciFi", "Horror", "Comedy", "Drama", "Thriller", "Romance", "Animation"}),
 	}
@@ -109,6 +114,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
+		m.help.Width = msg.Width
 		m.ready = true
 		return m, nil
 
@@ -116,6 +122,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		k := msg.String()
 		if k == "ctrl+c" || k == "ctrl+d" {
 			return m, tea.Quit
+		}
+		if helpKeyMatches(msg) {
+			m.help.ShowAll = !m.help.ShowAll
+			return m, nil
 		}
 		if m.searching {
 			return m, m.searchKey(msg)
@@ -134,6 +144,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.screen == scrGameDetail || m.screen == scrGameSessions {
 				m.screen = scrBrowse
+				return m, nil
+			}
+			if m.screen == scrMyPlaySessions {
+				m.screen = scrRentals
 				return m, nil
 			}
 			if m.screen == scrDetail || m.screen == scrRentals || m.screen == scrProfile || m.screen == scrWishlist || m.screen == scrAdminMovies || m.screen == scrAdminUsers || m.screen == scrAuditLog {
@@ -187,6 +201,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.rentals = pages.NewMyRentalsModel()
 				m.screen = scrRentals
 				return m, m.loadRentals()
+			case "play_sessions":
+				if m.myPlaySessions == nil {
+					m.myPlaySessions = pages.NewMyPlaySessionsModel()
+				}
+				m.screen = scrMyPlaySessions
+				return m, tea.Batch(m.loadMyPlaySessions(), m.myPlaySessions.Init())
 			case "profile":
 				m.profile = pages.NewProfileModel(m.userResp)
 				m.screen = scrProfile
@@ -225,7 +245,22 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.loadMovies(m.browse.Page, m.browse.Genre)
 		case loadRentalsMsg:
 			m.rentals.SetRentals(msg.rentals)
-			m.rentals.SetGameSessions(msg.sessions)
+		case loadMyPlaySessionsMsg:
+			if m.myPlaySessions == nil {
+				m.myPlaySessions = pages.NewMyPlaySessionsModel()
+			}
+			m.myPlaySessions.SetSessions(msg.sessions)
+		case pages.PlayTickMsg:
+			if m.screen == scrMyPlaySessions {
+				// The page itself handles rendering the per-second
+				// countdown; we just refetch whenever a session
+				// crosses its expiry so the server's "ended"
+				// state replaces our locally-rendered EXPIRED row.
+				if m.myPlaySessions != nil && m.myPlaySessions.HasExpired() {
+					return m, m.loadMyPlaySessions()
+				}
+			}
+			return m, nil
 		case loadProfileMsg:
 			m.profile.SetStats(msg.stats)
 		case loadWishlistMsg:
@@ -264,6 +299,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if m.screen == scrGameDetail && m.gameDetail != nil && m.gameDetail.Game != nil {
 				return m, tea.Batch(m.doRefreshDetail(m.gameDetail.Game.ID), autoRefreshCmd())
+			}
+			if m.screen == scrMyPlaySessions {
+				return m, tea.Batch(m.loadMyPlaySessions(), autoRefreshCmd())
 			}
 			return m, autoRefreshCmd()
 		case refreshDetailMsg:
@@ -321,6 +359,70 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_, pageCmd = m.register.Update(msg)
 	case scrMovieForm:
 		pageCmd, _ = m.movieForm.Update(msg)
+	}
+
+	// Audit log uses a table component (not a list) so it has its own
+	// dedicated keypath. Route all messages to it.
+	if m.screen == scrAuditLog && m.auditLog != nil {
+		_, pc := m.auditLog.Update(msg)
+		pageCmd = tea.Batch(pageCmd, pc)
+	}
+
+	// Play-sessions screen also receives non-key messages (the per-second
+	// tick that drives the live countdown). Route the original message
+	// through the page's Update so the tick can self-perpetuate.
+	if m.screen == scrMyPlaySessions && m.myPlaySessions != nil {
+		_, pc := m.myPlaySessions.Update(msg)
+		pageCmd = tea.Batch(pageCmd, pc)
+	}
+
+	// Route messages to list-based pages so their built-in filtering,
+	// selection and navigation work. Skip if the user is in a filter
+	// input (list is handling all keys) or if the list already accepted
+	// a navigation key.
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch m.screen {
+		case scrRentals:
+			if m.rentals != nil {
+				_, pc := m.rentals.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrMerch:
+			if m.merch != nil {
+				_, pc := m.merch.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrTierShop:
+			if m.tierShop != nil {
+				_, pc := m.tierShop.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrAdminMovies:
+			if m.adminMovies != nil {
+				_, pc := m.adminMovies.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrAdminUsers:
+			if m.adminUsers != nil {
+				_, pc := m.adminUsers.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrSnackBarMenu:
+			if m.snackBarMenu != nil {
+				_, pc := m.snackBarMenu.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrSnackBarOrders:
+			if m.snackBarOrders != nil {
+				_, pc := m.snackBarOrders.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		case scrSnackBarManage:
+			if m.snackBarManage != nil {
+				_, pc := m.snackBarManage.Update(km)
+				pageCmd = tea.Batch(pageCmd, pc)
+			}
+		}
 	}
 
 	return m, pageCmd

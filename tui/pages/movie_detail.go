@@ -75,13 +75,12 @@ func (m *MovieDetailModel) View(w, h int) string {
 	}
 	mv := m.Movie
 
-	titleBar := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Green).
+	titleStyle := lipgloss.NewStyle().
+		Foreground(styles.Green).
 		Bold(true).
 		Width(w).
-		Align(lipgloss.Center).
-		Render(" " + mv.Title + " ")
+		Align(lipgloss.Center)
+	title := titleStyle.Render("─── " + mv.Title + " ───")
 
 	meta := fmt.Sprintf("%d · %s · %s · Dir: %s", mv.Year, mv.Genre, styles.FormatBadge(mv.Format), mv.Director)
 	stars := styles.StarRating(mv.Rating)
@@ -135,7 +134,7 @@ func (m *MovieDetailModel) View(w, h int) string {
 
 	divider := lipgloss.NewStyle().Foreground(styles.BG5).Render("────────────────────────────────────────")
 
-	lines := []string{titleBar, "", meta, rating, badge}
+	lines := []string{title, "", meta, rating, badge}
 	if sequelInfo != "" {
 		lines = append(lines, sequelInfo)
 	}

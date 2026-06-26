@@ -15,12 +15,11 @@ func NewAccessDeniedModel(message string) *AccessDeniedModel {
 
 func (m *AccessDeniedModel) View(w, h int) string {
 	banner := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Red).
+		Foreground(styles.Red).
 		Bold(true).
 		Width(50).
 		Align(lipgloss.Center).
-		Render("  ⛔ ACCESS DENIED  ")
+		Render("⛔  ACCESS DENIED  ⛔")
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		banner,

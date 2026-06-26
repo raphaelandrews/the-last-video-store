@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/google/uuid"
@@ -27,10 +26,10 @@ func AppendAuditEntry(s *store.Store, hc *crypto.HashChain, action, actorID, tar
 	return s.AppendAuditEntry(auditEntry)
 }
 
-func VerifyAuditChain(s *store.Store) (bool, error) {
+func VerifyAuditChain(s *store.Store) (bool, *crypto.ChainError) {
 	entries, err := s.GetAllAuditEntries()
 	if err != nil {
-		return false, fmt.Errorf("verify audit chain: %w", err)
+		return false, &crypto.ChainError{BrokenAt: -1, Reason: "verify audit chain: " + err.Error()}
 	}
 
 	if len(entries) == 0 {
@@ -52,5 +51,5 @@ func VerifyAuditChain(s *store.Store) (bool, error) {
 		}
 	}
 
-	return crypto.VerifyChain(chainEntries), nil
+	return crypto.VerifyChain(chainEntries)
 }

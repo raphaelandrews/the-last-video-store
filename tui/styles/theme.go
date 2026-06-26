@@ -28,43 +28,41 @@ var (
 )
 
 var (
-	AppStyle = lipgloss.NewStyle().
-			Foreground(FG0).Background(BG0)
+	AppStyle = lipgloss.NewStyle()
 
 	TitleStyle = lipgloss.NewStyle().
-			Bold(true).Foreground(Green).Background(BG0)
+			Bold(true).Foreground(Green)
 
 	HeadingStyle = lipgloss.NewStyle().
-			Bold(true).Foreground(Green).Background(BG0)
+			Bold(true).Foreground(Green)
 
 	TextStyle = lipgloss.NewStyle().
-			Foreground(FG0).Background(BG0)
+			Foreground(FG0)
 
 	DimTextStyle = lipgloss.NewStyle().
-			Foreground(Grey1).Background(BG0)
+			Foreground(Grey1)
 
 	ErrorTextStyle = lipgloss.NewStyle().
-			Foreground(Red).Bold(true).Background(BG0)
+			Foreground(Red).Bold(true)
 
 	SuccessTextStyle = lipgloss.NewStyle().
-				Foreground(Green).Bold(true).Background(BG0)
+				Foreground(Green).Bold(true)
 
 	HighlightStyle = lipgloss.NewStyle().
 			Foreground(BG0).Background(Yellow).Bold(true)
 
 	SelectedStyle = lipgloss.NewStyle().
-			Foreground(FG0).Background(BGVisual)
+			Foreground(Yellow).Bold(true)
 
 	FooterStyle = lipgloss.NewStyle().
-			Background(BG1).Foreground(Grey1).Padding(0, 1)
+			Foreground(Grey1)
 
 	HeaderStyle = lipgloss.NewStyle().
-			Foreground(Green).Background(BG0)
+			Foreground(Green)
 
 	CardStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(BG4).
-			Background(BG1).
 			Padding(1, 2)
 
 	ModalStyle = lipgloss.NewStyle().
@@ -91,20 +89,18 @@ func TierBadgeStyle(name string) lipgloss.Style {
 		c = Blue
 	}
 	return lipgloss.NewStyle().
-		Background(c).
-		Foreground(BG0).
-		Bold(true).
-		Padding(0, 1)
+		Foreground(c).
+		Bold(true)
 }
 
 func StatusStyle(status string) lipgloss.Style {
 	switch status {
 	case "active":
-		return lipgloss.NewStyle().Foreground(Green).Bold(true).Background(BG0)
+		return lipgloss.NewStyle().Foreground(Green).Bold(true)
 	case "overdue":
-		return lipgloss.NewStyle().Foreground(Red).Bold(true).Background(BG0)
+		return lipgloss.NewStyle().Foreground(Red).Bold(true)
 	case "returned":
-		return lipgloss.NewStyle().Foreground(Grey1).Background(BG0)
+		return lipgloss.NewStyle().Foreground(Grey1)
 	default:
 		return TextStyle
 	}
@@ -113,11 +109,11 @@ func StatusStyle(status string) lipgloss.Style {
 func FormatBadge(format string) string {
 	switch format {
 	case "VHS":
-		return lipgloss.NewStyle().Foreground(Orange).Background(BG0).Render("📼 VHS")
+		return lipgloss.NewStyle().Foreground(Orange).Render("📼 VHS")
 	case "DVD":
-		return lipgloss.NewStyle().Foreground(Aqua).Background(BG0).Render("📀 DVD")
+		return lipgloss.NewStyle().Foreground(Aqua).Render("📀 DVD")
 	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(Blue).Background(BG0).Render("💿 BD")
+		return lipgloss.NewStyle().Foreground(Blue).Render("💿 BD")
 	default:
 		return format
 	}
@@ -129,8 +125,8 @@ var (
 	NeonGreen  = Green
 	Error      = Red
 	Success    = Green
-	Background = BG0
-	Surface    = BG1
+	Background = lipgloss.Color("")
+	Surface    = lipgloss.Color("")
 	BorderDim  = BG5
 	Warning    = Yellow
 	WarningAmb = Orange
@@ -141,9 +137,9 @@ var (
 	Coral      = Orange
 	Gold       = Yellow
 	GlassBlue  = BG4
-	BgWhite    = BG1
-	BgBlue     = BG0
-	BgLight    = BG0
+	BgWhite    = lipgloss.Color("")
+	BgBlue     = lipgloss.Color("")
+	BgLight    = lipgloss.Color("")
 	TextDark   = FG0
 	TextMedium = Grey1
 	TextLight  = Grey0

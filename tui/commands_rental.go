@@ -2,6 +2,7 @@ package tui
 
 import (
 	"encoding/json"
+	"sort"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -44,30 +45,33 @@ func (m *Model) loadRentals() tea.Cmd {
 		defer resp.Body.Close()
 		var rentals []models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rentals)
-		for i, j := 0, len(rentals)-1; i < j; i, j = i+1, j-1 {
-			rentals[i], rentals[j] = rentals[j], rentals[i]
-		}
+		// Sort most-recent-first. The backend does not guarantee a
+		// stable order, and reversing the slice would only be correct
+		// if the backend already returned oldest-first. Sorting
+		// explicitly on RentedAt makes the order robust to backend
+		// changes.
+		sort.SliceStable(rentals, func(i, j int) bool {
+			return rentals[i].RentedAt > rentals[j].RentedAt
+		})
+		return loadRentalsMsg{rentals: rentals}
+	}
+}
 
-		var sessions []models.GameSession
-		if m.userResp != nil {
-			sessResp, _ := m.apiGet("/api/v1/games/my-sessions")
-			if sessResp != nil {
-				defer sessResp.Body.Close()
-				var r struct {
-					Sessions []models.GameSession `json:"sessions"`
-				}
-				json.NewDecoder(sessResp.Body).Decode(&r)
-				for i := range r.Sessions {
-					if r.Sessions[i].Status == "active" {
-						sessions = append(sessions, r.Sessions[i])
-					}
-				}
-				for i, j := 0, len(sessions)-1; i < j; i, j = i+1, j-1 {
-					sessions[i], sessions[j] = sessions[j], sessions[i]
-				}
-			}
+// loadMyPlaySessions fetches the current user's active in-store game
+// play sessions. Called on navigation to the play-sessions screen and as
+// part of the auto-refresh loop while the screen is visible.
+func (m *Model) loadMyPlaySessions() tea.Cmd {
+	return func() tea.Msg {
+		resp, _ := m.apiGet("/api/v1/games/my-sessions")
+		if resp == nil {
+			return loadMyPlaySessionsMsg{}
 		}
-		return loadRentalsMsg{rentals: rentals, sessions: sessions}
+		defer resp.Body.Close()
+		var r struct {
+			Sessions []models.GameSession `json:"sessions"`
+		}
+		json.NewDecoder(resp.Body).Decode(&r)
+		return loadMyPlaySessionsMsg{sessions: r.Sessions}
 	}
 }
 

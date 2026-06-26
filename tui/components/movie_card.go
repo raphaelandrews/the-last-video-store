@@ -13,10 +13,8 @@ var cardHeight = 8
 
 func MovieCardView(movie models.MovieResponse, selected bool) string {
 	borderColor := styles.BG5
-	bgColor := styles.BG1
 	if selected {
-		borderColor = styles.Yellow
-		bgColor = styles.BG3
+		borderColor = styles.Green
 	}
 
 	border := lipgloss.NormalBorder()
@@ -29,7 +27,6 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 		Height(cardHeight).
 		Border(border).
 		BorderForeground(borderColor).
-		Background(bgColor).
 		Padding(0, 1)
 
 	title := truncate(movie.Title, 18)
@@ -37,16 +34,19 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 		title = title[:len(title)-1] + "…"
 	}
 
+	titleColor := styles.FG1
+	if selected {
+		titleColor = styles.Green
+	}
+
 	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.FG1).
-		Background(bgColor).
+		Foreground(titleColor).
 		Bold(true).
 		Width(cardWidth - 4).
 		Align(lipgloss.Center)
 
 	yearStyle := lipgloss.NewStyle().
-		Foreground(styles.Grey1).
-		Background(bgColor)
+		Foreground(styles.Grey1)
 
 	stars := RatingStars(movie.Rating)
 
@@ -65,7 +65,6 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 
 	statusStyle := lipgloss.NewStyle().
 		Foreground(statusColor).
-		Background(bgColor).
 		Bold(true)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,

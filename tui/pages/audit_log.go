@@ -2,112 +2,271 @@ package pages
 
 import (
 	"fmt"
+	"sort"
 	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/paginator"
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/tui/styles"
 )
 
-type AuditLogModel struct {
-	entries   []map[string]interface{}
-	selected  int
-	scroll    int
-	errMsg    string
-	VerifyMsg string
-}
-
 type AuditLogRefreshMsg struct{}
 
+// pageSize is how many audit rows fit on a single page of the table.
+// The page owns this so pagination is local; the full entry slice is
+// kept in the model so we can flip pages instantly.
+const auditPageSize = 20
+
+// AuditLogModel renders the hash-chain audit log as a fixed-column table
+// with client-side pagination. Each row is one audit event: timestamp ·
+// action · actor · target · hash. The verify action highlights the
+// first broken entry (if any) and jumps to it.
+type AuditLogModel struct {
+	table     table.Model
+	entries   []map[string]interface{}
+	errMsg    string
+	VerifyMsg string
+	// BrokenAt is the 0-based index of the first entry whose hash did
+	// not match, set by the verify response. -1 means the chain is
+	// intact (or hasn't been verified yet).
+	BrokenAt int
+
+	paginator paginator.Model
+	page      int
+	pageSize  int
+}
+
 func NewAuditLogModel() *AuditLogModel {
-	return &AuditLogModel{selected: -1}
+	cols := []table.Column{
+		{Title: "TIME", Width: 8},
+		{Title: "ACTION", Width: 14},
+		{Title: "ACTOR", Width: 14},
+		{Title: "TARGET", Width: 14},
+		{Title: "HASH", Width: 12},
+	}
+	t := table.New(
+		table.WithColumns(cols),
+		table.WithFocused(true),
+		table.WithHeight(auditPageSize),
+	)
+	t.SetStyles(gruvboxTableStyles())
+
+	p := paginator.New()
+	p.PerPage = auditPageSize
+	p.Type = paginator.Dots
+	p.ActiveDot = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("●")
+	p.InactiveDot = lipgloss.NewStyle().Foreground(styles.Grey0).Render("○")
+	p.ArabicFormat = "%d / %d"
+
+	return &AuditLogModel{
+		table:     t,
+		paginator: p,
+		pageSize:  auditPageSize,
+		page:      0,
+		BrokenAt:  -1,
+	}
 }
 
 func (m *AuditLogModel) SetEntries(entries []map[string]interface{}) {
+	// Sort by timestamp descending so the most recent event is at the
+	// top of page 0. The server iterates a BoltDB cursor in key
+	// (UUID) order, not timestamp order, so we sort client-side.
+	sort.SliceStable(entries, func(i, j int) bool {
+		ti, _ := entries[i]["timestamp"].(float64)
+		tj, _ := entries[j]["timestamp"].(float64)
+		return ti > tj
+	})
 	m.entries = entries
+	m.page = 0
+	m.refreshPage()
 }
 
-func (m *AuditLogModel) MoveUp() {
-	if m.selected > 0 {
-		m.selected--
+func (m *AuditLogModel) refreshPage() {
+	all := m.buildAllRows(m.entries)
+	totalPages := (len(all) + m.pageSize - 1) / m.pageSize
+	if totalPages < 1 {
+		totalPages = 1
 	}
-	if m.selected < m.scroll {
-		m.scroll = m.selected
+	m.paginator.SetTotalPages(totalPages)
+	if m.page >= totalPages {
+		m.page = totalPages - 1
 	}
+	if m.page < 0 {
+		m.page = 0
+	}
+	m.paginator.Page = m.page
+
+	start := m.page * m.pageSize
+	end := start + m.pageSize
+	if end > len(all) {
+		end = len(all)
+	}
+	if start > len(all) {
+		start = len(all)
+	}
+	m.table.SetRows(all[start:end])
 }
 
-func (m *AuditLogModel) MoveDown() {
-	if m.selected < len(m.entries)-1 {
-		m.selected++
+func (m *AuditLogModel) Update(msg tea.Msg) (*AuditLogModel, tea.Cmd) {
+	var cmd tea.Cmd
+	// Handle our own page keys before delegating to the table, otherwise
+	// the table will swallow them.
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch km.String() {
+		case "n", "pgdown", "right":
+			if m.page < m.paginator.TotalPages-1 {
+				m.page++
+				m.refreshPage()
+			}
+			return m, nil
+		case "b", "pgup", "left":
+			if m.page > 0 {
+				m.page--
+				m.refreshPage()
+			}
+			return m, nil
+		case "g":
+			// Jump to the page containing the broken entry, if any.
+			// BrokenAt is an index into the ASCENDING list (oldest
+			// first, matching chain order). Our display is sorted
+			// DESCENDING, so we flip the index to find the right
+			// position in the visible (newest-first) list.
+			if m.BrokenAt >= 0 {
+				last := len(m.entries) - 1
+				flipped := last - m.BrokenAt
+				if flipped < 0 {
+					flipped = 0
+				}
+				m.page = flipped / m.pageSize
+				m.refreshPage()
+			}
+			return m, nil
+		case "home":
+			m.page = 0
+			m.refreshPage()
+			return m, nil
+		case "end":
+			m.page = m.paginator.TotalPages - 1
+			m.refreshPage()
+			return m, nil
+		}
 	}
-	if m.selected >= m.scroll+20 {
-		m.scroll = m.selected - 20 + 1
-	}
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
 }
 
-func (m *AuditLogModel) PageUp() {
-	m.scroll -= 10
-	if m.scroll < 0 {
-		m.scroll = 0
+func (m *AuditLogModel) View(w, h int) string {
+	// Reserve 4 lines: title, paginator, verify status, optional hint.
+	m.table.SetWidth(w)
+	m.table.SetHeight(h - 4)
+	if m.table.Focused() {
+		m.table.Focus()
+	} else {
+		m.table.Blur()
 	}
-	m.selected = m.scroll
-}
 
-func (m *AuditLogModel) PageDown() {
-	m.scroll += 10
-	maxScroll := len(m.entries) - 20
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if m.scroll > maxScroll {
-		m.scroll = maxScroll
-	}
-	m.selected = m.scroll
-}
+	header := styles.HeadingStyle.
+		Width(w).
+		Align(lipgloss.Left).
+		Padding(0, 1).
+		Render("🔗 AUDIT LOG — Hash Chain Viewer")
 
-func (m *AuditLogModel) View(width, height int) string {
-	title := styles.HeadingStyle.Width(width).Align(lipgloss.Center).Render("🔗 AUDIT LOG — Hash Chain Viewer")
-
-	status := styles.DimTextStyle.Render("Press [V] to verify chain integrity")
+	statusLine := styles.DimTextStyle.Render(
+		fmt.Sprintf("Press [V] to verify  ·  [N/B] page  ·  %d entries", len(m.entries)),
+	)
 	if m.VerifyMsg != "" {
 		if strings.HasPrefix(m.VerifyMsg, "✅") {
-			status = styles.SuccessTextStyle.Render(m.VerifyMsg)
+			statusLine = styles.SuccessTextStyle.Render(m.VerifyMsg)
 		} else {
-			status = styles.ErrorTextStyle.Render(m.VerifyMsg)
+			statusLine = styles.ErrorTextStyle.Render(m.VerifyMsg)
 		}
 	}
-	status += styles.DimTextStyle.Render(" (" + itoaStr(len(m.entries)) + " entries)")
-
-	var rows []string
-	rows = append(rows, status)
-
-	end := m.scroll + 20
-	if end > len(m.entries) {
-		end = len(m.entries)
+	if m.BrokenAt >= 0 {
+		statusLine += styles.ErrorTextStyle.Render("  Press [G] to jump to broken entry")
+	}
+	if m.errMsg != "" {
+		statusLine = styles.ErrorTextStyle.Render(m.errMsg)
 	}
 
-	for i := m.scroll; i < end; i++ {
-		e := m.entries[i]
-		prefix := "  "
-		style := styles.TextStyle
-		if i == m.selected {
-			prefix = styles.HighlightStyle.Render("▸ ")
-			style = styles.HighlightStyle
-		}
+	if len(m.entries) == 0 {
+		empty := styles.DimTextStyle.
+			Width(w).
+			Align(lipgloss.Center).
+			Padding(2, 0).
+			Render("No audit entries yet")
+		return lipgloss.JoinVertical(lipgloss.Left, header, empty)
+	}
 
+	paginatorView := lipgloss.NewStyle().
+		Width(w).
+		Align(lipgloss.Center).
+		Render(m.paginator.View())
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		header,
+		paginatorView,
+		m.table.View(),
+		statusLine,
+	)
+}
+
+func (m *AuditLogModel) buildAllRows(entries []map[string]interface{}) []table.Row {
+	rows := make([]table.Row, 0, len(entries))
+	for i, e := range entries {
 		action, _ := e["action"].(string)
 		actor, _ := e["actor_id"].(string)
 		target, _ := e["target_id"].(string)
 		ts, _ := e["timestamp"].(float64)
+		hash, _ := e["hash"].(string)
 
-		line := prefix + formatAction(action) + " | " + truncateStr(actor, 12) + " → " + truncateStr(target, 12)
+		timeStr := ""
 		if ts > 0 {
-			line += styles.DimTextStyle.Render("  " + formatTimestamp(int64(ts)))
+			t := time.Unix(int64(ts), 0)
+			timeStr = t.Format("15:04:05")
 		}
-		rows = append(rows, style.Render(line))
+		actionStr := formatAction(action)
+		// Mark the broken row inline so it's visible even when the
+		// user is on a different page.
+		if m.BrokenAt == i {
+			actionStr = "💥 " + actionStr
+			timeStr = timeStr + " ⚠"
+		}
+		rows = append(rows, table.Row{
+			timeStr,
+			actionStr,
+			shortID(actor),
+			shortID(target),
+			shortHash(hash),
+		})
 	}
+	return rows
+}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, rows...)
-	return lipgloss.JoinVertical(lipgloss.Left, title, content)
+func gruvboxTableStyles() table.Styles {
+	s := table.DefaultStyles()
+
+	s.Header = lipgloss.NewStyle().
+		BorderStyle(lipgloss.NormalBorder()).
+		BorderForeground(styles.BG5).
+		BorderBottom(true).
+		Bold(true).
+		Foreground(styles.Green).
+		Padding(0, 1)
+
+	s.Cell = lipgloss.NewStyle().
+		Padding(0, 1).
+		Foreground(styles.FG0)
+
+	s.Selected = lipgloss.NewStyle().
+		Padding(0, 1).
+		Foreground(styles.BG0).
+		Background(styles.Yellow).
+		Bold(true)
+
+	return s
 }
 
 func formatAction(a string) string {
@@ -128,15 +287,51 @@ func formatAction(a string) string {
 		return "⬇ DEMOTE"
 	case "ban":
 		return "🚫 BAN"
+	case "unban":
+		return "✅ UNBAN"
+	case "totp_enable":
+		return "🔒 TOTP+"
+	case "totp_disable":
+		return "🔓 TOTP-"
+	case "create_movie":
+		return "➕ MOVIE+"
+	case "update_movie":
+		return "✎ MOVIE~"
+	case "delete_movie":
+		return "🗑 MOVIE-"
+	case "staff_pick":
+		return "★ STAFF"
+	case "topup":
+		return "💰 TOPUP"
+	case "extend_rental":
+		return "⏰ EXTEND"
+	case "play_start":
+		return "▶ PLAY"
+	case "play_end":
+		return "⏹ PLAY-END"
+	case "purchase_tier":
+		return "🏷️ TIER"
+	case "redeem_merch":
+		return "🎁 REDEEM"
+	case "order_snackbar":
+		return "🍿 SNACK"
+	case "restock":
+		return "📦 RESTOCK"
 	default:
 		return a
 	}
 }
 
-func formatTimestamp(ts int64) string {
-	return fmt.Sprintf("%d", ts)
+func shortID(s string) string {
+	if len(s) > 12 {
+		return s[:12]
+	}
+	return s
 }
 
-func itoaStr(n int) string {
-	return fmt.Sprintf("%d", n)
+func shortHash(s string) string {
+	if len(s) > 12 {
+		return s[:6] + "…" + s[len(s)-4:]
+	}
+	return s
 }

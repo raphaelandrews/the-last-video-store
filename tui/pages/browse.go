@@ -118,15 +118,12 @@ func (m *BrowseModel) View(w, h int) string {
 	var cards []string
 	for i, mv := range m.Movies {
 		bd := styles.BG5
-		bg := styles.BG1
 		if i == m.Selected {
-			bd = styles.Yellow
-			bg = styles.BG3
+			bd = styles.Green
 		}
 		card := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(bd).
-			Background(bg).
 			Width(cardW).Height(7).Padding(0, 1)
 
 		title := trunc(mv.Title, cardW-6)
@@ -139,7 +136,7 @@ func (m *BrowseModel) View(w, h int) string {
 			sc = styles.Red
 		} else if mv.MediaType == "game" {
 			status = "[PLAY]"
-			sc = styles.Yellow
+			sc = styles.Orange
 			fb = lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("[" + mv.Platform + "]")
 		} else if mv.MediaType == "series" {
 			status = fmt.Sprintf("S%d", mv.SeasonNumber)
@@ -157,7 +154,7 @@ func (m *BrowseModel) View(w, h int) string {
 		}
 		titleColor := styles.FG1
 		if i == m.Selected {
-			titleColor = styles.Yellow
+			titleColor = styles.Green
 		}
 		inner := lipgloss.JoinVertical(lipgloss.Center,
 			lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(title),
@@ -181,7 +178,6 @@ func (m *BrowseModel) View(w, h int) string {
 	if m.Status != "" {
 		statusBar := lipgloss.NewStyle().
 			Foreground(styles.Grey1).
-			Background(styles.BG1).
 			Padding(0, 1).
 			Render(m.Status)
 		v = statusBar + "\n" + v

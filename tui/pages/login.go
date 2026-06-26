@@ -1,129 +1,126 @@
 package pages
 
 import (
-	"strings"
-
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/styles"
 )
 
-type NavigateMsg struct{ Page string }
-type ErrorMsg struct{ Message string }
-type LoginSuccessMsg struct {
-	AccessToken  string
-	RefreshToken string
-	User         *models.UserResponse
-}
-type LoginRequestMsg struct {
-	Username string
-	Password string
-}
-
 type LoginModel struct {
-	username textinput.Model
-	password textinput.Model
-	focus    int
+	form     *huh.Form
+	username string
+	password string
 	errMsg   string
-	loading  bool
 }
 
 func NewLoginModel() *LoginModel {
-	un := textinput.New()
-	un.Placeholder = "Username"
-	un.Width = 30
-	un.Prompt = "▸ "
-	un.Focus()
-	pw := textinput.New()
-	pw.Placeholder = "Password"
-	pw.EchoMode = textinput.EchoPassword
-	pw.Width = 30
-	pw.Prompt = "▸ "
-	return &LoginModel{username: un, password: pw}
+	m := &LoginModel{}
+
+	theme := gruvboxHuhTheme()
+
+	m.form = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Key("username").
+				Title("Username").
+				Placeholder("e.g. bronze").
+				Prompt("▸ ").
+				CharLimit(20).
+				Validate(func(s string) error {
+					if s == "" {
+						return errorMsg("username is required")
+					}
+					return nil
+				}).
+				Value(&m.username),
+
+			huh.NewInput().
+				Key("password").
+				Title("Password").
+				Placeholder("your secret").
+				Prompt("▸ ").
+				CharLimit(64).
+				EchoMode(huh.EchoModePassword).
+				Validate(func(s string) error {
+					if s == "" {
+						return errorMsg("password is required")
+					}
+					return nil
+				}).
+				Value(&m.password),
+		),
+	).
+		WithShowHelp(false).
+		WithShowErrors(true).
+		WithTheme(theme)
+
+	return m
 }
 
-func (m *LoginModel) Init() tea.Cmd { return textinput.Blink }
+func (m *LoginModel) Init() tea.Cmd {
+	return m.form.Init()
+}
+
+func (m *LoginModel) SetError(s string) { m.errMsg = s }
 
 func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "tab":
-			m.focus = 1 - m.focus
-			m.updateFocus()
-			return m, nil
-		case "enter":
-			u := strings.TrimSpace(m.username.Value())
-			p := m.password.Value()
-			if u == "" {
-				m.errMsg = "Username is required"
-				return m, nil
-			}
-			if p == "" {
-				m.errMsg = "Password is required"
-				return m, nil
-			}
-			m.loading = true
-			m.errMsg = ""
-			return m, func() tea.Msg { return LoginRequestMsg{Username: u, Password: p} }
-		}
+	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+c" {
+		return m, tea.Quit
 	}
-	var cmd tea.Cmd
-	if m.focus == 0 {
-		m.username, cmd = m.username.Update(msg)
-	} else {
-		m.password, cmd = m.password.Update(msg)
+
+	form, cmd := m.form.Update(msg)
+	if f, ok := form.(*huh.Form); ok {
+		m.form = f
 	}
+
+	if m.form.State == huh.StateCompleted {
+		username := m.username
+		password := m.password
+		m.username = ""
+		m.password = ""
+		m.form = NewLoginModel().form
+		return m, func() tea.Msg { return LoginRequestMsg{Username: username, Password: password} }
+	}
+
 	return m, cmd
 }
 
-func (m *LoginModel) SetError(s string) { m.errMsg = s; m.loading = false }
-
-func (m *LoginModel) updateFocus() {
-	if m.focus == 0 {
-		m.username.Focus()
-		m.password.Blur()
-	} else {
-		m.username.Blur()
-		m.password.Focus()
-	}
-}
-
 func (m *LoginModel) View(w, h int) string {
-	headerBlock := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Green).
-		Bold(true).
-		Width(42).
+	title := styles.TitleStyle.
+		Width(54).
 		Align(lipgloss.Center).
-		Render("🎬 MEMBER LOGIN")
+		Render("─── MEMBER LOGIN ───")
+
+	subtitle := styles.DimTextStyle.
+		Width(54).
+		Align(lipgloss.Center).
+		Render("Welcome back. Sign in to your account.")
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Yellow).
-		Background(styles.BG1).
-		Padding(2, 4).
-		Width(42).
-		Align(lipgloss.Center)
+		BorderForeground(styles.Green).
+		Padding(1, 3).
+		Width(54)
 
-	inner := lipgloss.JoinVertical(lipgloss.Left,
-		headerBlock,
+	body := m.form.View()
+
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		title,
+		subtitle,
 		"",
-		styles.DimTextStyle.Render("Username:"),
-		m.username.View(),
-		"",
-		styles.DimTextStyle.Render("Password:"),
-		m.password.View(),
+		box.Render(body),
 	)
 
 	if m.errMsg != "" {
-		inner += "\n" + styles.ErrorTextStyle.Render(m.errMsg)
-	}
-	if m.loading {
-		inner += "\n" + styles.DimTextStyle.Render("Authenticating...")
+		content += "\n" + styles.ErrorTextStyle.Render("⛔ "+m.errMsg)
 	}
 
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box.Render(inner))
+	help := styles.DimTextStyle.
+		Width(54).
+		Align(lipgloss.Center).
+		Render("tab/↑↓ navigate · enter submit · ctrl+r sign up · ctrl+c quit")
+
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center, content, "", help))
 }

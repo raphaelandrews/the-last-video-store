@@ -42,12 +42,11 @@ func (m *WishlistSidebarModel) View(width int) string {
 	}
 
 	title := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Green).
+		Foreground(styles.Green).
 		Bold(true).
 		Width(sidebarW).
 		Align(lipgloss.Center).
-		Render("📋 WISHLIST")
+		Render("─ 📋 WISHLIST ─")
 
 	var lines []string
 	lines = append(lines, title)
@@ -73,7 +72,6 @@ func (m *WishlistSidebarModel) View(width int) string {
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
 		BorderForeground(styles.BG5).
-		Background(styles.BG1).
 		Width(sidebarW).
 		Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }

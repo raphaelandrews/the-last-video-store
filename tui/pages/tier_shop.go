@@ -2,114 +2,180 @@ package pages
 
 import (
 	"fmt"
+	"io"
+	"strings"
 
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/styles"
 )
 
+// ─── Item ──────────────────────────────────────────────────────────────────
+
+type tierItem struct {
+	tier models.TierInfo
+}
+
+func (t tierItem) Title() string       { return t.tier.Label }
+func (t tierItem) Description() string { return t.summary() }
+func (t tierItem) FilterValue() string { return t.tier.Label + " " + t.tier.Name }
+
+func (t tierItem) summary() string {
+	perks := ""
+	if t.tier.NewReleasesOK {
+		perks += "✓ new releases "
+	}
+	if t.tier.NoLateFees {
+		perks += "✓ no late fees"
+	}
+	if perks == "" {
+		perks = "—"
+	}
+	return perks
+}
+
+// ─── Delegate ──────────────────────────────────────────────────────────────
+
+type tierDelegate struct {
+	balance float64
+	current string
+}
+
+func newTierDelegate(balance float64, current string) tierDelegate {
+	return tierDelegate{balance: balance, current: current}
+}
+
+func (d tierDelegate) Height() int                             { return 2 }
+func (d tierDelegate) Spacing() int                            { return 2 }
+func (d tierDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	ti, ok := item.(tierItem)
+	if !ok {
+		return
+	}
+	t := ti.tier
+
+	selected := index == m.Index()
+
+	marker := "  "
+	nameStyle := lipgloss.NewStyle().Foreground(styles.FG1).Bold(true)
+	if selected {
+		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
+		marker = styles.HighlightStyle.Render("▸ ")
+	}
+
+	// Line 1: name + price
+	priceStr := "FREE"
+	priceColor := styles.Green
+	if t.Price > 0 {
+		priceColor = styles.Yellow
+		priceStr = fmt.Sprintf("$%.2f/mo", t.Price)
+		if d.balance < t.Price && t.Name != d.current {
+			priceColor = styles.Red
+		}
+	}
+	priceRender := lipgloss.NewStyle().Foreground(priceColor).Bold(true).Render(priceStr)
+
+	currentMarker := ""
+	if t.Name == d.current {
+		currentMarker = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("  ← current")
+	}
+
+	line1 := lipgloss.JoinHorizontal(lipgloss.Left,
+		marker,
+		nameStyle.Render(truncateStr(t.Label, 16)),
+		"   ",
+		priceRender,
+		currentMarker,
+	)
+
+	// Line 2: free rentals, max concurrent, perks
+	meta := []string{
+		fmt.Sprintf("%d free/mo", t.FreeRentals),
+		fmt.Sprintf("max %d concurrent", t.MaxConcurrent),
+		ti.summary(),
+	}
+	metaLine := styles.DimTextStyle.Render("  " + strings.Join(meta, "  ·  "))
+
+	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
+}
+
+// ─── Model ─────────────────────────────────────────────────────────────────
+
 type TierShopModel struct {
-	Tiers    []models.TierInfo
-	Selected int
-	Current  string
-	Balance  float64
-	Status   string
-	Error    string
+	list    list.Model
+	tiers   []models.TierInfo
+	Balance float64
+	Current string
+	Status  string
+	Error   string
 }
 
 func NewTierShopModel(currentTier string, balance float64) *TierShopModel {
-	m := &TierShopModel{
-		Tiers:    models.Tiers,
-		Selected: -1,
-		Current:  currentTier,
-		Balance:  balance,
+	tiers := models.Tiers
+	delegate := newTierDelegate(balance, currentTier)
+	l := list.New([]list.Item{}, delegate, 0, 0)
+	l.Title = "🏷️ PREMIUM TIERS"
+	l.Styles = gruvboxListStyles()
+	l.SetShowStatusBar(false)
+	l.SetShowHelp(false)
+	enableListPagination(&l)
+	l.SetFilteringEnabled(false)
+	l.DisableQuitKeybindings()
+
+	items := make([]list.Item, len(tiers))
+	for i, t := range tiers {
+		items[i] = tierItem{tier: t}
 	}
-	for i, t := range m.Tiers {
+	l.SetItems(items)
+
+	// Pre-select current tier.
+	m := &TierShopModel{
+		list:    l,
+		tiers:   tiers,
+		Balance: balance,
+		Current: currentTier,
+	}
+	for i, t := range tiers {
 		if t.Name == currentTier {
-			m.Selected = i
+			m.list.Select(i)
 			break
 		}
-	}
-	if m.Selected < 0 {
-		m.Selected = 0
 	}
 	return m
 }
 
-func (m *TierShopModel) MoveUp() {
-	m.Selected--
-	if m.Selected < 0 {
-		m.Selected = len(m.Tiers) - 1
-	}
-}
-
-func (m *TierShopModel) MoveDown() {
-	m.Selected++
-	if m.Selected >= len(m.Tiers) {
-		m.Selected = 0
-	}
-}
+func (m *TierShopModel) MoveUp()   { m.list.CursorUp() }
+func (m *TierShopModel) MoveDown() { m.list.CursorDown() }
 
 func (m *TierShopModel) SelectedTier() *models.TierInfo {
-	if m.Selected >= 0 && m.Selected < len(m.Tiers) {
-		return &m.Tiers[m.Selected]
+	if ti, ok := m.list.SelectedItem().(tierItem); ok {
+		return &ti.tier
 	}
 	return nil
 }
 
+func (m *TierShopModel) Update(msg tea.Msg) (*TierShopModel, tea.Cmd) {
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
 func (m *TierShopModel) View(w, h int) string {
-	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("🏷️ PREMIUM TIERS")
-	balance := fmt.Sprintf("💵 Balance: $%.2f", m.Balance)
-	subtitle := styles.DimTextStyle.Render("Each tier grants a monthly free rental allowance and perks")
-
-	var rows []string
-	rows = append(rows, styles.TextStyle.Render(balance), subtitle, "")
-
-	for i, t := range m.Tiers {
-		prefix := "  "
-		st := styles.TextStyle
-		if i == m.Selected {
-			prefix = styles.HighlightStyle.Render("▸ ")
-			st = styles.HighlightStyle
-		}
-
-		current := ""
-		if t.Name == m.Current {
-			current = styles.SuccessTextStyle.Render(" ← current")
-		}
-
-		price := "FREE"
-		if t.Price > 0 {
-			price = fmt.Sprintf("$%.2f", t.Price)
-			if m.Balance < t.Price && t.Name != m.Current {
-				price = styles.ErrorTextStyle.Render(price + " (insufficient)")
-			}
-		}
-
-		line := fmt.Sprintf("%s%-12s %10s  %d free/mo  max %d rentals%s",
-			prefix, t.Label, price, t.FreeRentals, t.MaxConcurrent, current)
-		rows = append(rows, st.Render(line))
-
-		perks := ""
-		if t.NewReleasesOK {
-			perks += "✓ new releases "
-		}
-		if t.NoLateFees {
-			perks += "✓ no late fees "
-		}
-		if perks != "" {
-			rows = append(rows, styles.DimTextStyle.Render("      "+perks))
-		}
-	}
-
-	content := lipgloss.JoinVertical(lipgloss.Left, append([]string{title}, rows...)...)
+	m.list.SetSize(w, h-2)
+	balanceStr := lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render(
+		fmt.Sprintf("💵 Balance: $%.2f", m.Balance),
+	)
+	body := balanceStr + "\n" + m.list.View()
 
 	if m.Status != "" {
-		content += "\n" + styles.SuccessTextStyle.Render(m.Status)
+		body += "\n" + styles.SuccessTextStyle.Render(m.Status)
 	}
 	if m.Error != "" {
-		content += "\n" + styles.ErrorTextStyle.Render(m.Error)
+		body += "\n" + styles.ErrorTextStyle.Render(m.Error)
 	}
-
-	return content
+	return body
 }

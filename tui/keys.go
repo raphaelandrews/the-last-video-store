@@ -31,10 +31,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 
 	case scrRentals:
 		switch k {
-		case "down", "j":
-			m.rentals.MoveDown()
-		case "up", "k":
-			m.rentals.MoveUp()
 		case "enter":
 			r := m.rentals.SelectedRental()
 			if r != nil && r.Status != "returned" {
@@ -45,6 +41,8 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 			if r != nil && r.Status != "returned" && r.Status != "overdue" {
 				return func() tea.Msg { return pages.ExtendRentalMsg{RentalID: r.ID} }
 			}
+		case "p":
+			return func() tea.Msg { return pages.NavigateMsg{Page: "play_sessions"} }
 		}
 
 	case scrProfile:
@@ -70,10 +68,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 
 	case scrMerch:
 		switch k {
-		case "down", "j":
-			m.merch.MoveDown()
-		case "up", "k":
-			m.merch.MoveUp()
 		case "enter":
 			item := m.merch.SelectedItem()
 			if item != nil && item.Stock > 0 && m.userResp.PopcornPoints >= item.PointsCost {
@@ -83,10 +77,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 
 	case scrTierShop:
 		switch k {
-		case "down", "j":
-			m.tierShop.MoveDown()
-		case "up", "k":
-			m.tierShop.MoveUp()
 		case "enter":
 			tier := m.tierShop.SelectedTier()
 			if tier != nil && tier.Name != m.tierShop.Current && (tier.Price == 0 || m.userResp.Balance >= tier.Price) {

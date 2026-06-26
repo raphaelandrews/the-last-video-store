@@ -1,152 +1,141 @@
 package pages
 
 import (
-	"strings"
-
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/tui/styles"
 )
 
-type RegisterRequestMsg struct {
-	Username string
-	Password string
-}
-
 type RegisterModel struct {
-	username        textinput.Model
-	password        textinput.Model
-	confirmPassword textinput.Model
-	focus           int
-	errMsg          string
-	loading         bool
+	form        *huh.Form
+	username    string
+	password    string
+	confirmPass string
+	errMsg      string
 }
 
 func NewRegisterModel() *RegisterModel {
-	un := textinput.New()
-	un.Placeholder = "Username (3-20 chars)"
-	un.Width = 30
-	un.CharLimit = 20
-	un.Prompt = "▸ "
-	un.Focus()
+	m := &RegisterModel{}
 
-	pw := textinput.New()
-	pw.Placeholder = "Password (min 6 chars)"
-	pw.EchoMode = textinput.EchoPassword
-	pw.Width = 30
-	pw.CharLimit = 64
-	pw.Prompt = "▸ "
+	m.form = huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Key("username").
+				Title("Choose a username").
+				Placeholder("3-20 characters").
+				Prompt("▸ ").
+				CharLimit(20).
+				Validate(func(s string) error {
+					if len(s) < 3 {
+						return errorMsg("username must be at least 3 characters")
+					}
+					return nil
+				}).
+				Value(&m.username),
 
-	cp := textinput.New()
-	cp.Placeholder = "Confirm password"
-	cp.EchoMode = textinput.EchoPassword
-	cp.Width = 30
-	cp.CharLimit = 64
-	cp.Prompt = "▸ "
+			huh.NewInput().
+				Key("password").
+				Title("Create a password").
+				Placeholder("at least 6 characters").
+				Prompt("▸ ").
+				CharLimit(64).
+				EchoMode(huh.EchoModePassword).
+				Validate(func(s string) error {
+					if len(s) < 6 {
+						return errorMsg("password must be at least 6 characters")
+					}
+					return nil
+				}).
+				Value(&m.password),
 
-	return &RegisterModel{
-		username:        un,
-		password:        pw,
-		confirmPassword: cp,
-	}
+			huh.NewInput().
+				Key("confirm").
+				Title("Confirm your password").
+				Placeholder("retype your password").
+				Prompt("▸ ").
+				CharLimit(64).
+				EchoMode(huh.EchoModePassword).
+				Validate(func(s string) error {
+					if s != m.password {
+						return errorMsg("passwords do not match")
+					}
+					return nil
+				}).
+				Value(&m.confirmPass),
+		),
+	).
+		WithShowHelp(false).
+		WithShowErrors(true).
+		WithTheme(gruvboxHuhTheme())
+
+	return m
 }
 
-func (m *RegisterModel) Init() tea.Cmd { return textinput.Blink }
+func (m *RegisterModel) Init() tea.Cmd {
+	return m.form.Init()
+}
 
-func (m *RegisterModel) SetError(s string) { m.errMsg = s; m.loading = false }
+func (m *RegisterModel) SetError(s string) { m.errMsg = s }
 
 func (m *RegisterModel) Update(msg tea.Msg) (*RegisterModel, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyTab:
-			m.focus = (m.focus + 1) % 3
-			m.updateFocus()
-			return m, nil
-		case tea.KeyEnter:
-			u := strings.TrimSpace(m.username.Value())
-			p := m.password.Value()
-			cp := m.confirmPassword.Value()
-			if len(u) < 3 {
-				m.errMsg = "Username must be at least 3 characters"
-				return m, nil
-			}
-			if len(p) < 6 {
-				m.errMsg = "Password must be at least 6 characters"
-				return m, nil
-			}
-			if p != cp {
-				m.errMsg = "Passwords do not match"
-				return m, nil
-			}
-			m.loading = true
-			m.errMsg = ""
-			return m, func() tea.Msg { return RegisterRequestMsg{Username: u, Password: p} }
-		}
+	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+c" {
+		return m, tea.Quit
 	}
 
-	var cmd tea.Cmd
-	switch m.focus {
-	case 0:
-		m.username, cmd = m.username.Update(msg)
-	case 1:
-		m.password, cmd = m.password.Update(msg)
-	case 2:
-		m.confirmPassword, cmd = m.confirmPassword.Update(msg)
+	form, cmd := m.form.Update(msg)
+	if f, ok := form.(*huh.Form); ok {
+		m.form = f
 	}
+
+	if m.form.State == huh.StateCompleted {
+		username := m.username
+		password := m.password
+		m.username = ""
+		m.password = ""
+		m.confirmPass = ""
+		m.form = NewRegisterModel().form
+		return m, func() tea.Msg { return RegisterRequestMsg{Username: username, Password: password} }
+	}
+
 	return m, cmd
 }
 
-func (m *RegisterModel) updateFocus() {
-	m.username.Blur()
-	m.password.Blur()
-	m.confirmPassword.Blur()
-	switch m.focus {
-	case 0:
-		m.username.Focus()
-	case 1:
-		m.password.Focus()
-	case 2:
-		m.confirmPassword.Focus()
-	}
-}
-
 func (m *RegisterModel) View(w, h int) string {
-	headerBlock := lipgloss.NewStyle().
-		Foreground(styles.BG0).
-		Background(styles.Green).
-		Bold(true).
-		Width(42).
+	title := styles.TitleStyle.
+		Width(54).
 		Align(lipgloss.Center).
-		Render("🎬 NEW MEMBERSHIP")
+		Render("─── NEW MEMBERSHIP ───")
+
+	subtitle := styles.DimTextStyle.
+		Width(54).
+		Align(lipgloss.Center).
+		Render("Create your account to start renting.")
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Yellow).
-		Background(styles.BG1).
-		Padding(2, 4).
-		Width(42)
+		BorderForeground(styles.Green).
+		Padding(1, 3).
+		Width(54)
 
-	inner := lipgloss.JoinVertical(lipgloss.Left,
-		headerBlock,
+	body := m.form.View()
+
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		title,
+		subtitle,
 		"",
-		styles.DimTextStyle.Render("Username:"),
-		m.username.View(),
-		"",
-		styles.DimTextStyle.Render("Password:"),
-		m.password.View(),
-		"",
-		styles.DimTextStyle.Render("Confirm:"),
-		m.confirmPassword.View(),
+		box.Render(body),
 	)
 
 	if m.errMsg != "" {
-		inner += "\n" + styles.ErrorTextStyle.Render(m.errMsg)
-	}
-	if m.loading {
-		inner += "\n" + styles.DimTextStyle.Render("Creating account...")
+		content += "\n" + styles.ErrorTextStyle.Render("⛔ "+m.errMsg)
 	}
 
-	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, box.Render(inner))
+	help := styles.DimTextStyle.
+		Width(54).
+		Align(lipgloss.Center).
+		Render("tab/↑↓ navigate · enter submit · ctrl+l back to login · ctrl+c quit")
+
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Center, content, "", help))
 }

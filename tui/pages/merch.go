@@ -2,105 +2,168 @@ package pages
 
 import (
 	"fmt"
+	"io"
 
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/styles"
 )
 
+// ─── Item ──────────────────────────────────────────────────────────────────
+
+type merchItem struct {
+	item models.MerchItem
+}
+
+func (m merchItem) Title() string       { return m.item.Name }
+func (m merchItem) Description() string { return m.item.Description }
+func (m merchItem) FilterValue() string { return m.item.Name + " " + m.item.Description }
+
+// ─── Delegate ──────────────────────────────────────────────────────────────
+
+type merchDelegate struct{}
+
+func newMerchDelegate() merchDelegate { return merchDelegate{} }
+
+func (d merchDelegate) Height() int                             { return 2 }
+func (d merchDelegate) Spacing() int                            { return 2 }
+func (d merchDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+
+func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
+	mi, ok := item.(merchItem)
+	if !ok {
+		return
+	}
+	it := mi.item
+
+	selected := index == m.Index()
+
+	marker := "  "
+	nameStyle := lipgloss.NewStyle().Foreground(styles.FG1).Bold(true)
+	if selected {
+		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
+		marker = styles.HighlightStyle.Render("▸ ")
+	}
+
+	// Line 1: name + popcorn cost
+	costStr := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render(
+		fmt.Sprintf("%d 🍿", it.PointsCost),
+	)
+
+	line1 := lipgloss.JoinHorizontal(lipgloss.Left,
+		marker,
+		nameStyle.Render(truncateStr(it.Name, 40)),
+		"   ",
+		costStr,
+	)
+
+	// Line 2: stock + description preview
+	var stockGlyph, stockColor lipgloss.Color
+	var stockText string
+	switch {
+	case it.Stock <= 0:
+		stockGlyph = "🔴"
+		stockColor = styles.Red
+		stockText = "out of stock"
+	case it.Stock < 3:
+		stockGlyph = "🟡"
+		stockColor = styles.Yellow
+		stockText = fmt.Sprintf("%d left", it.Stock)
+	default:
+		stockGlyph = "🟢"
+		stockColor = styles.Green
+		stockText = fmt.Sprintf("%d in stock", it.Stock)
+	}
+	stockStr := lipgloss.NewStyle().Foreground(stockColor).Render(
+		fmt.Sprintf("%s %s", stockGlyph, stockText),
+	)
+
+	desc := styles.DimTextStyle.Render("  " + truncateStr(it.Description, 60))
+
+	meta := stockStr + "    " + desc
+	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
+}
+
+// ─── Model ─────────────────────────────────────────────────────────────────
+
 type MerchRedeemMsg struct{ ItemID string }
 type MerchReloadMsg struct{}
 
 type MerchModel struct {
-	Items    []models.MerchItem
-	Selected int
-	Points   int
-	Status   string
-	Error    string
+	list   list.Model
+	items  []models.MerchItem
+	Points int
+	Status string
+	Error  string
 }
 
 func NewMerchModel(points int) *MerchModel {
-	return &MerchModel{Selected: -1, Points: points}
+	delegate := newMerchDelegate()
+	l := list.New([]list.Item{}, delegate, 0, 0)
+	l.Title = "🍿 POPCORN REWARDS"
+	l.Styles = gruvboxListStyles()
+	l.SetShowStatusBar(true)
+	l.SetShowHelp(false)
+	enableListPagination(&l)
+	l.SetFilteringEnabled(true)
+	l.DisableQuitKeybindings()
+	return &MerchModel{list: l, Points: points}
 }
 
 func (m *MerchModel) SetItems(items []models.MerchItem) {
-	m.Items = items
-	if len(items) > 0 && m.Selected < 0 {
-		m.Selected = 0
+	m.items = items
+	listItems := make([]list.Item, len(items))
+	for i, it := range items {
+		listItems[i] = merchItem{item: it}
 	}
-	if len(items) == 0 {
-		m.Selected = -1
-	}
-}
-
-func (m *MerchModel) MoveUp() {
-	if len(m.Items) == 0 {
-		return
-	}
-	m.Selected--
-	if m.Selected < 0 {
-		m.Selected = len(m.Items) - 1
+	m.list.SetItems(listItems)
+	if len(items) > 0 {
+		m.list.Select(0)
 	}
 }
 
-func (m *MerchModel) MoveDown() {
-	if len(m.Items) == 0 {
-		return
-	}
-	m.Selected++
-	if m.Selected >= len(m.Items) {
-		m.Selected = 0
-	}
-}
+func (m *MerchModel) MoveUp()   { m.list.CursorUp() }
+func (m *MerchModel) MoveDown() { m.list.CursorDown() }
 
 func (m *MerchModel) SelectedItem() *models.MerchItem {
-	if m.Selected >= 0 && m.Selected < len(m.Items) {
-		return &m.Items[m.Selected]
+	if mi, ok := m.list.SelectedItem().(merchItem); ok {
+		return &mi.item
 	}
 	return nil
 }
 
+func (m *MerchModel) Update(msg tea.Msg) (*MerchModel, tea.Cmd) {
+	var cmd tea.Cmd
+	m.list, cmd = m.list.Update(msg)
+	return m, cmd
+}
+
 func (m *MerchModel) View(w, h int) string {
-	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("🍿 POPCORN REWARDS")
-	balance := fmt.Sprintf("Balance: %d 🍿", m.Points)
-
-	var rows []string
-	rows = append(rows, styles.TextStyle.Render(balance), "")
-
-	if len(m.Items) == 0 {
-		rows = append(rows, styles.DimTextStyle.Render("Loading rewards catalog..."))
+	if len(m.items) == 0 {
+		balanceStr := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render(
+			fmt.Sprintf("🍿 Balance: %d points", m.Points),
+		)
+		empty := lipgloss.JoinVertical(lipgloss.Center,
+			balanceStr,
+			"",
+			styles.DimTextStyle.Render("Loading rewards catalog..."),
+		)
+		return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, empty)
 	}
 
-	for i, item := range m.Items {
-		prefix := "  "
-		st := styles.TextStyle
-		if i == m.Selected {
-			prefix = styles.HighlightStyle.Render("▸ ")
-			st = styles.HighlightStyle
-		}
+	m.list.SetSize(w, h-2)
+	balanceStr := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render(
+		fmt.Sprintf("🍿 Balance: %d points", m.Points),
+	)
+	body := balanceStr + "\n" + m.list.View()
 
-		stock := styles.SuccessTextStyle.Render(fmt.Sprintf("%d in stock", item.Stock))
-		if item.Stock <= 0 {
-			stock = styles.ErrorTextStyle.Render("out of stock")
-		}
-
-		affordable := ""
-		if m.Points < item.PointsCost {
-			affordable = styles.ErrorTextStyle.Render(" (need " + fmt.Sprintf("%d", item.PointsCost-m.Points) + " more)")
-		}
-
-		line := fmt.Sprintf("%s%-30s %4d 🍿  %s%s", prefix, item.Name, item.PointsCost, stock, affordable)
-		rows = append(rows, st.Render(line))
-		rows = append(rows, styles.DimTextStyle.Render("    "+item.Description))
-	}
-
-	content := lipgloss.JoinVertical(lipgloss.Left, append([]string{title}, rows...)...)
 	if m.Status != "" {
-		content += "\n" + styles.SuccessTextStyle.Render(m.Status)
+		body += "\n" + styles.SuccessTextStyle.Render(m.Status)
 	}
 	if m.Error != "" {
-		content += "\n" + styles.ErrorTextStyle.Render(m.Error)
+		body += "\n" + styles.ErrorTextStyle.Render(m.Error)
 	}
-
-	return content
+	return body
 }

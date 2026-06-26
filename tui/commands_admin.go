@@ -16,11 +16,15 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 	if ps <= 0 {
 		ps = 30
 	}
+	mediaType := m.adminMovies.ActiveTab()
 	return func() tea.Msg {
 		if m.userResp == nil || !bitmask.CanAdmin(m.userResp.Tier) {
 			return pages.ErrorMsg{Message: "⛔ ACCESS DENIED — Manager or Owner required"}
 		}
 		url := fmt.Sprintf("%s/api/v1/movies?page_size=%d&page=%d", m.baseURL, ps, page)
+		if mediaType != "" {
+			url += "&media_type=" + string(mediaType)
+		}
 		resp, _ := m.apiGetURL(url)
 		if resp == nil {
 			return loadAdminMoviesMsg{}
@@ -62,8 +66,15 @@ func (m *Model) doVerifyAuditChain() tea.Cmd {
 		var r struct {
 			ChainIntact bool   `json:"chain_intact"`
 			Message     string `json:"message"`
+			BrokenAt    int    `json:"broken_at"`
+			Reason      string `json:"reason"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
+		if r.ChainIntact {
+			m.auditLog.BrokenAt = -1
+		} else {
+			m.auditLog.BrokenAt = r.BrokenAt
+		}
 		m.auditLog.VerifyMsg = r.Message
 		return nil
 	}
@@ -89,6 +100,14 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 	return func() tea.Msg {
 		cast := parseCast(msg.Cast)
 		body, _ := json.Marshal(map[string]interface{}{
+			"media_type":   msg.MediaType,
+			"title":        msg.Title,
+			"year":         msg.Year,
+			"genre":        msg.Genre,
+			"format":       msg.Format,
+			"platform":     msg.Platform,
+			"season":       msg.Season,
+			"episodes":     msg.Episodes,
 			"director":     msg.Director,
 			"cast":         cast,
 			"synopsis":     msg.Synopsis,
@@ -113,7 +132,7 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		return m.loadAdminMovies(m.adminMovies.Page)()
+		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab()))()
 	}
 }
 
@@ -121,10 +140,14 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 	return func() tea.Msg {
 		cast := parseCast(msg.Cast)
 		body, _ := json.Marshal(map[string]interface{}{
+			"media_type":   msg.MediaType,
 			"title":        msg.Title,
 			"year":         msg.Year,
 			"genre":        msg.Genre,
 			"format":       msg.Format,
+			"platform":     msg.Platform,
+			"season":       msg.Season,
+			"episodes":     msg.Episodes,
 			"director":     msg.Director,
 			"cast":         cast,
 			"synopsis":     msg.Synopsis,
@@ -149,26 +172,40 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		return m.loadAdminMovies(m.adminMovies.Page)()
+		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab()))()
 	}
 }
 
 func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
 	return func() tea.Msg {
-		var body string
 		u := m.adminUsers.SelectedUser()
-		if action == "promote" {
-			next := nextTier(u.TierName)
+		if u == nil {
+			return nil
+		}
+		var body string
+		switch action {
+		case "promote":
+			next, ok := canPromote(u.TierName)
+			if !ok {
+				m.adminUsers.StatusMsg = fmt.Sprintf("⛔ %s is already at the highest tier", u.TierName)
+				return nil
+			}
 			body = `{"tier":"` + next + `"}`
-		} else if action == "demote" {
-			prev := prevTier(u.TierName)
+		case "demote":
+			prev, ok := canDemote(u.TierName)
+			if !ok {
+				m.adminUsers.StatusMsg = fmt.Sprintf("⛔ %s is already at the lowest tier", u.TierName)
+				return nil
+			}
 			body = `{"tier":"` + prev + `"}`
-		} else if action == "ban" {
+		case "ban":
 			if u.Banned {
 				body = `{"banned":false}`
 			} else {
 				body = `{"banned":true}`
 			}
+		default:
+			return nil
 		}
 		resp, err := m.apiPut("/api/v1/users/"+userID, body)
 		if err != nil {
@@ -176,18 +213,35 @@ func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
 			return nil
 		}
 		defer resp.Body.Close()
-		if errMsg := handleAPIErr(resp); errMsg != nil {
-			return errMsg
+		if apiErr, ok := decodeAPIErr(resp); ok {
+			m.adminUsers.ErrMsg = apiErr
+			return nil
 		}
 		if resp.StatusCode >= 400 {
 			var e struct {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			m.adminUsers.ErrMsg = e.Error
+			if e.Error != "" {
+				m.adminUsers.ErrMsg = e.Error
+			} else {
+				m.adminUsers.ErrMsg = fmt.Sprintf("server returned %d", resp.StatusCode)
+			}
 			return nil
 		}
 		m.adminUsers.ErrMsg = ""
+		switch action {
+		case "promote":
+			m.adminUsers.StatusMsg = fmt.Sprintf("✅ Promoted %s", u.TierName)
+		case "demote":
+			m.adminUsers.StatusMsg = fmt.Sprintf("✅ Demoted %s", u.TierName)
+		case "ban":
+			if u.Banned {
+				m.adminUsers.StatusMsg = fmt.Sprintf("✅ Unbanned %s", u.Username)
+			} else {
+				m.adminUsers.StatusMsg = fmt.Sprintf("🚫 Banned %s", u.Username)
+			}
+		}
 		return m.loadAdminUsers()()
 	}
 }

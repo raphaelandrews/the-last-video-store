@@ -82,7 +82,7 @@ func (m *SearchbarModel) MoveSelection(delta int) {
 func (m *SearchbarModel) View() string {
 	bar := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Yellow).
+		BorderForeground(styles.Green).
 		Width(42).
 		Render(m.input.View())
 
@@ -102,8 +102,7 @@ func (m *SearchbarModel) View() string {
 
 	dropdown := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Yellow).
-		Background(styles.BG1).
+		BorderForeground(styles.Green).
 		Width(42).
 		Render(lipgloss.JoinVertical(lipgloss.Left, items...))
 

@@ -34,20 +34,40 @@ func (m *Model) adminKey(k string) tea.Cmd {
 		if m.adminMovies.HasPrevPage() {
 			return m.loadAdminMovies(m.adminMovies.Page - 1)
 		}
-	case "down", "j":
-		m.adminMovies.MoveDown()
-	case "up", "k":
-		m.adminMovies.MoveUp()
+	case "tab":
+		// Cycle forward through the three media types.
+		all := pages.AllMediaTypes
+		idx := 0
+		for i, t := range all {
+			if t == m.adminMovies.ActiveTab() {
+				idx = i
+				break
+			}
+		}
+		next := all[(idx+1)%len(all)]
+		m.adminMovies.SetActiveTab(next)
+		m.adminMovies.MarkLoading(next)
+		// Restart pagination for the new tab.
+		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(next))
+	case "shift+tab":
+		all := pages.AllMediaTypes
+		idx := 0
+		for i, t := range all {
+			if t == m.adminMovies.ActiveTab() {
+				idx = i
+				break
+			}
+		}
+		prev := all[(idx-1+len(all))%len(all)]
+		m.adminMovies.SetActiveTab(prev)
+		m.adminMovies.MarkLoading(prev)
+		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(prev))
 	}
 	return nil
 }
 
 func (m *Model) adminUsersKey(k string) tea.Cmd {
 	switch k {
-	case "down", "j":
-		m.adminUsers.MoveDown()
-	case "up", "k":
-		m.adminUsers.MoveUp()
 	case "p":
 		u := m.adminUsers.SelectedUser()
 		if u != nil {
@@ -73,12 +93,7 @@ func (m *Model) adminUsersKey(k string) tea.Cmd {
 }
 
 func (m *Model) auditLogKey(k string) tea.Cmd {
-	switch k {
-	case "down", "j":
-		m.auditLog.MoveDown()
-	case "up", "k":
-		m.auditLog.MoveUp()
-	case "v":
+	if k == "v" {
 		return m.doVerifyAuditChain()
 	}
 	return nil
@@ -86,10 +101,6 @@ func (m *Model) auditLogKey(k string) tea.Cmd {
 
 func (m *Model) snackbarMenuKey(k string) tea.Cmd {
 	switch k {
-	case "down", "j":
-		m.snackBarMenu.MoveDown()
-	case "up", "k":
-		m.snackBarMenu.MoveUp()
 	case "enter":
 		item := m.snackBarMenu.SelectedItem()
 		if item != nil && item.Stock > 0 && m.userResp != nil && m.userResp.Balance >= item.Price {
@@ -109,10 +120,6 @@ func (m *Model) snackbarMenuKey(k string) tea.Cmd {
 
 func (m *Model) snackbarManageKey(k string) tea.Cmd {
 	switch k {
-	case "down", "j":
-		m.snackBarManage.MoveDown()
-	case "up", "k":
-		m.snackBarManage.MoveUp()
 	case "r":
 		item := m.snackBarManage.SelectedItem()
 		if item != nil {

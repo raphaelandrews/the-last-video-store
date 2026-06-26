@@ -13,26 +13,55 @@ var promotionChains = [][]bitmask.Permission{
 	bitmask.GamePromotionOrder,
 }
 
-func nextTier(current string) string {
-	for _, order := range promotionChains {
-		for i, t := range order {
-			if bitmask.TierLabels[t] == current && i+1 < len(order) {
-				return strings.ToLower(bitmask.TierLabels[order[i+1]])
-			}
+// findInChain locates a tier by label within a single promotion chain
+// and returns its index and the chain. Returns -1, nil when not found.
+func findInChain(current string, order []bitmask.Permission) (int, bool) {
+	for i, t := range order {
+		if strings.EqualFold(bitmask.TierLabels[t], current) {
+			return i, true
 		}
 	}
-	return strings.ToLower(current)
+	return -1, false
+}
+
+// canPromote reports whether a tier has a higher tier to move to in
+// any of the four promotion chains.
+func canPromote(current string) (string, bool) {
+	for _, order := range promotionChains {
+		i, ok := findInChain(current, order)
+		if ok && i+1 < len(order) {
+			return strings.ToLower(bitmask.TierLabels[order[i+1]]), true
+		}
+	}
+	return "", false
+}
+
+// canDemote reports whether a tier has a lower tier to move to in
+// any of the four promotion chains.
+func canDemote(current string) (string, bool) {
+	for _, order := range promotionChains {
+		i, ok := findInChain(current, order)
+		if ok && i > 0 {
+			return strings.ToLower(bitmask.TierLabels[order[i-1]]), true
+		}
+	}
+	return "", false
+}
+
+func nextTier(current string) string {
+	next, _ := canPromote(current)
+	if next == "" {
+		return strings.ToLower(current)
+	}
+	return next
 }
 
 func prevTier(current string) string {
-	for _, order := range promotionChains {
-		for i, t := range order {
-			if bitmask.TierLabels[t] == current && i > 0 {
-				return strings.ToLower(bitmask.TierLabels[order[i-1]])
-			}
-		}
+	prev, _ := canDemote(current)
+	if prev == "" {
+		return strings.ToLower(current)
 	}
-	return strings.ToLower(current)
+	return prev
 }
 
 func parseCast(s string) []string {

@@ -38,20 +38,20 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuditHandler) Verify(w http.ResponseWriter, r *http.Request) {
-	valid, err := auth.VerifyAuditChain(h.store)
-	if err != nil {
-		WriteError(w, http.StatusInternalServerError, err.Error())
+	valid, chainErr := auth.VerifyAuditChain(h.store)
+	if chainErr != nil && !valid {
+		// chainErr can only be non-nil when valid is false here, but we
+		// guard with the check for clarity.
+		WriteJSON(w, http.StatusOK, map[string]interface{}{
+			"chain_intact": false,
+			"message":      "⚠️ " + chainErr.Error(),
+			"broken_at":    chainErr.BrokenAt,
+			"reason":       chainErr.Reason,
+		})
 		return
 	}
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"chain_intact": valid,
-		"message":      chainMessage(valid),
+		"chain_intact": true,
+		"message":      "✅ Chain intact — no tampering detected",
 	})
-}
-
-func chainMessage(valid bool) string {
-	if valid {
-		return "✅ Chain intact — no tampering detected"
-	}
-	return "⚠️ Chain broken — possible tampering detected"
 }
