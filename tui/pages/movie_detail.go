@@ -75,7 +75,14 @@ func (m *MovieDetailModel) View(w, h int) string {
 	}
 	mv := m.Movie
 
-	title := lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Width(w).Align(lipgloss.Center).Render(mv.Title)
+	titleBar := lipgloss.NewStyle().
+		Foreground(styles.BG0).
+		Background(styles.Green).
+		Bold(true).
+		Width(w).
+		Align(lipgloss.Center).
+		Render(" " + mv.Title + " ")
+
 	meta := fmt.Sprintf("%d · %s · %s · Dir: %s", mv.Year, mv.Genre, styles.FormatBadge(mv.Format), mv.Director)
 	stars := styles.StarRating(mv.Rating)
 	rating := fmt.Sprintf("%s  %.1f/5 (%d ratings)", stars, mv.Rating, mv.RatingCount)
@@ -83,16 +90,16 @@ func (m *MovieDetailModel) View(w, h int) string {
 	badge := ""
 	switch {
 	case m.Rented:
-		badge = lipgloss.NewStyle().Foreground(styles.SuccessGrn).Bold(true).Render("[RENTED ✓]")
+		badge = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("[RENTED ✓]")
 		if m.Rental != nil {
 			badge += "  Due: " + styles.TextStyle.Render(fmt.Sprintf("%d", m.Rental.DueDate))
 		}
 	case mv.IsNewRelease:
-		badge = lipgloss.NewStyle().Foreground(styles.WarningAmb).Bold(true).Render("[NEW RELEASE]")
+		badge = lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("[NEW RELEASE]")
 	case !mv.Available:
-		badge = lipgloss.NewStyle().Foreground(styles.ErrorRed).Bold(true).Render("[RENTED OUT]")
+		badge = lipgloss.NewStyle().Foreground(styles.Red).Bold(true).Render("[RENTED OUT]")
 	default:
-		badge = lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("[AVAILABLE]")
+		badge = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("[AVAILABLE]")
 	}
 
 	synopsis := styles.TextStyle.Width(w - 4).Render(wrap(mv.Synopsis, w-4))
@@ -126,7 +133,9 @@ func (m *MovieDetailModel) View(w, h int) string {
 		cast += c
 	}
 
-	lines := []string{title, "", meta, rating, badge}
+	divider := lipgloss.NewStyle().Foreground(styles.BG5).Render("────────────────────────────────────────")
+
+	lines := []string{titleBar, "", meta, rating, badge}
 	if sequelInfo != "" {
 		lines = append(lines, sequelInfo)
 	}
@@ -136,7 +145,7 @@ func (m *MovieDetailModel) View(w, h int) string {
 	if costInfo != "" {
 		lines = append(lines, styles.TextStyle.Render(costInfo))
 	}
-	lines = append(lines, "", synopsis, "", copies, styles.DimTextStyle.Render(cast))
+	lines = append(lines, "", divider, "", synopsis, "", copies, styles.DimTextStyle.Render(cast))
 	if len(m.Franchise) > 0 {
 		lines = append(lines, "", styles.TextStyle.Bold(true).Render("📽️ Franchise:"))
 		for i, f := range m.Franchise {

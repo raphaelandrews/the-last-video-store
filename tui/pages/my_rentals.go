@@ -60,7 +60,7 @@ func (m *MyRentalsModel) View(w, h int) string {
 			styles.TextStyle.Render("No rental history"))
 	}
 
-	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("MY RENTALS")
+	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("📼 MY RENTALS")
 	var rows []string
 	for i, r := range m.Rentals {
 		prefix := "  "

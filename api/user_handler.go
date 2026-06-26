@@ -223,11 +223,6 @@ func (h *UserHandler) TOTPSetup(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) TopUp(w http.ResponseWriter, r *http.Request) {
 	user := GetUser(r)
 
-	if user.TopUpCount >= 1 {
-		WriteError(w, http.StatusTooManyRequests, "top-up already used")
-		return
-	}
-
 	now := time.Now().Unix()
 	if user.LastTopUpAt > 0 && now-user.LastTopUpAt < 30 {
 		remaining := 30 - int(now-user.LastTopUpAt)
@@ -237,7 +232,6 @@ func (h *UserHandler) TopUp(w http.ResponseWriter, r *http.Request) {
 
 	amount := math.Round(rand.Float64()*10000) / 100
 	user.Balance += amount
-	user.TopUpCount++
 	user.LastTopUpAt = now
 	user.UpdatedAt = now
 
@@ -250,8 +244,6 @@ func (h *UserHandler) TopUp(w http.ResponseWriter, r *http.Request) {
 		"message":     fmt.Sprintf("Topped up $%.2f", amount),
 		"amount":      amount,
 		"new_balance": user.Balance,
-		"topup_count": user.TopUpCount,
-		"remaining":   1 - user.TopUpCount,
 	})
 }
 

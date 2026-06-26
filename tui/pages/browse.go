@@ -32,7 +32,7 @@ type BrowseModel struct {
 	TotalPages int
 	Mode       BrowseMode
 	Genre      string
-	MediaType  string // "movie" or "series"
+	MediaType  string
 }
 
 func NewBrowseModel() *BrowseModel {
@@ -117,23 +117,26 @@ func (m *BrowseModel) View(w, h int) string {
 
 	var cards []string
 	for i, mv := range m.Movies {
-		bd := styles.GlassBlue
+		bd := styles.BG5
+		bg := styles.BG1
 		if i == m.Selected {
 			bd = styles.Yellow
+			bg = styles.BG3
 		}
 		card := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(bd).
+			Background(bg).
 			Width(cardW).Height(7).Padding(0, 1)
 
 		title := trunc(mv.Title, cardW-6)
 		stars := styles.StarRating(mv.Rating)
 		status := "[RENT]"
-		sc := styles.Yellow
+		sc := styles.Green
 		fb := styles.FormatBadge(mv.Format)
 		if !mv.Available {
 			status = "[OUT]"
-			sc = styles.ErrorRed
+			sc = styles.Red
 		} else if mv.MediaType == "game" {
 			status = "[PLAY]"
 			sc = styles.Yellow
@@ -143,17 +146,21 @@ func (m *BrowseModel) View(w, h int) string {
 			if mv.SeasonNumber <= 1 {
 				status = "[TV]"
 			}
-			sc = styles.Coral
+			sc = styles.Purple
 		} else if mv.IsNewRelease {
 			status = "[NEW]"
-			sc = styles.WarningAmb
+			sc = styles.Yellow
 		}
 		info := fmt.Sprintf("(%d)", mv.Year)
 		if mv.EpisodeCount > 0 {
 			info += fmt.Sprintf(" · %d eps", mv.EpisodeCount)
 		}
+		titleColor := styles.FG1
+		if i == m.Selected {
+			titleColor = styles.Yellow
+		}
 		inner := lipgloss.JoinVertical(lipgloss.Center,
-			lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Render(title),
+			lipgloss.NewStyle().Foreground(titleColor).Bold(true).Render(title),
 			styles.DimTextStyle.Render(info),
 			stars,
 			fb+"  "+lipgloss.NewStyle().Foreground(sc).Bold(true).Render(status),
@@ -172,7 +179,12 @@ func (m *BrowseModel) View(w, h int) string {
 
 	v := lipgloss.JoinVertical(lipgloss.Left, rows...)
 	if m.Status != "" {
-		v = styles.DimTextStyle.Render(m.Status) + "\n" + v
+		statusBar := lipgloss.NewStyle().
+			Foreground(styles.Grey1).
+			Background(styles.BG1).
+			Padding(0, 1).
+			Render(m.Status)
+		v = statusBar + "\n" + v
 	}
 	return v
 }

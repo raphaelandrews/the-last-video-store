@@ -1,0 +1,3 @@
+build:
+  env:
+    GOFLAGS: -mod=mod

@@ -68,6 +68,9 @@ func (m *Model) loadSnackBarOrders() tea.Cmd {
 			Orders []models.SnackBarOrder `json:"orders"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
+		for i, j := 0, len(r.Orders)-1; i < j; i, j = i+1, j-1 {
+			r.Orders[i], r.Orders[j] = r.Orders[j], r.Orders[i]
+		}
 		return loadSnackBarOrdersMsg{orders: r.Orders}
 	}
 }

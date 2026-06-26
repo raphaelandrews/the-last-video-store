@@ -148,10 +148,11 @@ func (m *MovieFormModel) submitCmd() tea.Cmd {
 }
 
 func (m *MovieFormModel) View(w, h int) string {
-	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("🎬 ADD MOVIE")
+	formTitle := "🎬 ADD MOVIE"
 	if m.mode == FormEdit {
-		title = styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render("🎬 EDIT MOVIE")
+		formTitle = "🎬 EDIT MOVIE"
 	}
+	title := styles.HeadingStyle.Width(w).Align(lipgloss.Center).Render(formTitle)
 
 	labels := []string{"Title", "Year", "Genre", "Format", "Director", "Cast (comma-separated)", "Synopsis", "Copies", "Price"}
 	var rows []string

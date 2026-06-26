@@ -92,21 +92,29 @@ func (m *LoginModel) updateFocus() {
 }
 
 func (m *LoginModel) View(w, h int) string {
+	headerBlock := lipgloss.NewStyle().
+		Foreground(styles.BG0).
+		Background(styles.Green).
+		Bold(true).
+		Width(42).
+		Align(lipgloss.Center).
+		Render("🎬 MEMBER LOGIN")
+
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.SkyBlue).
-		Background(styles.BgWhite).
+		BorderForeground(styles.Yellow).
+		Background(styles.BG1).
 		Padding(2, 4).
 		Width(42).
 		Align(lipgloss.Center)
 
 	inner := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Render("MEMBER LOGIN"),
+		headerBlock,
 		"",
-		styles.TextStyle.Render("Username:"),
+		styles.DimTextStyle.Render("Username:"),
 		m.username.View(),
 		"",
-		styles.TextStyle.Render("Password:"),
+		styles.DimTextStyle.Render("Password:"),
 		m.password.View(),
 	)
 

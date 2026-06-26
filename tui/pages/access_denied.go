@@ -14,12 +14,22 @@ func NewAccessDeniedModel(message string) *AccessDeniedModel {
 }
 
 func (m *AccessDeniedModel) View(w, h int) string {
+	banner := lipgloss.NewStyle().
+		Foreground(styles.BG0).
+		Background(styles.Red).
+		Bold(true).
+		Width(50).
+		Align(lipgloss.Center).
+		Render("  ⛔ ACCESS DENIED  ")
+
 	content := lipgloss.JoinVertical(lipgloss.Center,
-		styles.ErrorTextStyle.Bold(true).Render("⛔ ACCESS DENIED"),
+		banner,
 		"",
 		styles.TextStyle.Render(m.Message),
 		"",
 		styles.DimTextStyle.Render("Your current role does not have permission to access this area."),
+		"",
+		styles.DimTextStyle.Render("Press [Q] to go back"),
 	)
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, content)
 }

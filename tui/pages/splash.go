@@ -75,18 +75,31 @@ func (m *SplashModel) View(w, h int) string {
 	}
 	var lines []string
 	for i, l := range banner {
-		c := styles.SkyBlue
+		c := styles.Green
 		if i > prog {
-			c = styles.TextLight
+			c = styles.Grey0
 		}
 		lines = append(lines, lipgloss.NewStyle().Foreground(c).Bold(true).Render(l))
 	}
 	lines = append(lines, "", "")
+
+	tagline := lipgloss.NewStyle().
+		Foreground(styles.Grey2).
+		Italic(true).
+		Render("Friday night. Pick your movie. Grab some snacks. Enjoy the show.")
+	lines = append(lines, tagline)
+	lines = append(lines, "", "")
+
 	blink := "░"
 	if m.frame%4 < 2 {
 		blink = "█"
 	}
-	lines = append(lines, styles.TextStyle.Render("INSERT MEMBERSHIP CARD "+blink))
+	insertLine := lipgloss.NewStyle().
+		Foreground(styles.Green).
+		Bold(true).
+		Render("  INSERT MEMBERSHIP CARD  " + blink + "  ")
+	lines = append(lines, insertLine)
+
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center, lines...))
 }

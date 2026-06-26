@@ -12,7 +12,7 @@ func ModalView(title, msg string, w, h int) string {
 		Align(lipgloss.Center)
 
 	inner := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.NewStyle().Foreground(Red).Bold(true).Background(BG1).Render(title),
+		lipgloss.NewStyle().Foreground(Yellow).Bold(true).Background(BG1).Render(title),
 		"",
 		TextStyle.Background(BG1).Render(msg),
 		"",

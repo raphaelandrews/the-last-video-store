@@ -8,20 +8,20 @@ import (
 func ModalView(title, message string, width, height int) string {
 	box := lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
-		BorderForeground(styles.Cyan).
-		Background(styles.Surface).
+		BorderForeground(styles.Yellow).
+		Background(styles.BG1).
 		Padding(2, 4).
 		Width(50).
 		Align(lipgloss.Center)
 
 	titleStyle := lipgloss.NewStyle().
 		Foreground(styles.Yellow).
-		Background(styles.Surface).
+		Background(styles.BG1).
 		Bold(true)
 
 	msgStyle := lipgloss.NewStyle().
-		Foreground(styles.TextStyle.GetForeground()).
-		Background(styles.Surface)
+		Foreground(styles.FG0).
+		Background(styles.BG1)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		titleStyle.Render(title),
@@ -38,15 +38,15 @@ func ModalView(title, message string, width, height int) string {
 func ModalErrorView(title, message string, width, height int) string {
 	box := lipgloss.NewStyle().
 		Border(lipgloss.DoubleBorder()).
-		BorderForeground(styles.Error).
-		Background(styles.Surface).
+		BorderForeground(styles.Red).
+		Background(styles.BG1).
 		Padding(2, 4).
 		Width(50).
 		Align(lipgloss.Center)
 
 	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.Error).
-		Background(styles.Surface).
+		Foreground(styles.Red).
+		Background(styles.BG1).
 		Bold(true)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,

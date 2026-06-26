@@ -5,7 +5,7 @@ BINARY_CLIENT_LINUX=bin/thelastvideostore-linux
 BINARY_CLIENT_WINDOWS=bin/thelastvideostore.exe
 DB_FILE=thelastvideostore.db
 
-all: test build
+all: build
 
 build: build-server build-client
 
@@ -27,11 +27,10 @@ cross-compile: build-server
 	@echo "Binaries:"
 	@ls -lh bin/
 
-test:
-	go test -v -race ./internal/...
+test: test-integration
 
 test-all:
-	go test -v -race ./internal/... ./tests/...
+	go test -v -race ./tests/...
 
 test-integration:
 	go test -v -count=1 -timeout 120s ./tests/

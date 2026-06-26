@@ -10,12 +10,12 @@ var spinnerFrames = []string{"▌", "▌ ", " ▌", " ▌", "▌ ", "▌", " ▌
 func SpinnerView(frame int) string {
 	idx := frame % len(spinnerFrames)
 	return lipgloss.NewStyle().
-		Foreground(styles.Cyan).
+		Foreground(styles.Yellow).
 		Render(spinnerFrames[idx])
 }
 
 func SpinnerWithText(frame int, text string) string {
 	return lipgloss.NewStyle().
-		Foreground(styles.NeonGreen).
+		Foreground(styles.Yellow).
 		Render(SpinnerView(frame) + " " + text)
 }

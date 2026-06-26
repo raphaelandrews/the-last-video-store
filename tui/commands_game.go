@@ -75,6 +75,9 @@ func (m *Model) loadGameSessions() tea.Cmd {
 			Sessions []models.GameSession `json:"sessions"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
+		for i, j := 0, len(r.Sessions)-1; i < j; i, j = i+1, j-1 {
+			r.Sessions[i], r.Sessions[j] = r.Sessions[j], r.Sessions[i]
+		}
 		return loadGameSessionsMsg{sessions: r.Sessions}
 	}
 }

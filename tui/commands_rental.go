@@ -44,6 +44,9 @@ func (m *Model) loadRentals() tea.Cmd {
 		defer resp.Body.Close()
 		var rentals []models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rentals)
+		for i, j := 0, len(rentals)-1; i < j; i, j = i+1, j-1 {
+			rentals[i], rentals[j] = rentals[j], rentals[i]
+		}
 
 		var sessions []models.GameSession
 		if m.userResp != nil {
@@ -58,6 +61,9 @@ func (m *Model) loadRentals() tea.Cmd {
 					if r.Sessions[i].Status == "active" {
 						sessions = append(sessions, r.Sessions[i])
 					}
+				}
+				for i, j := 0, len(sessions)-1; i < j; i, j = i+1, j-1 {
+					sessions[i], sessions[j] = sessions[j], sessions[i]
 				}
 			}
 		}

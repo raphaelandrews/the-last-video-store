@@ -82,7 +82,14 @@ func (m *GameDetailModel) View(w, h int) string {
 	}
 	g := m.Game
 
-	title := lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Width(w).Align(lipgloss.Center).Render(g.Title)
+	titleBar := lipgloss.NewStyle().
+		Foreground(styles.BG0).
+		Background(styles.Orange).
+		Bold(true).
+		Width(w).
+		Align(lipgloss.Center).
+		Render(" 🕹️ " + g.Title + " ")
+
 	meta := fmt.Sprintf("%d · %s · %s · %s", g.Year, g.Genre, g.Platform, g.Director)
 	stars := styles.StarRating(g.Rating)
 	rating := fmt.Sprintf("%s  %.1f/5 (%d ratings)", stars, g.Rating, g.RatingCount)
@@ -90,7 +97,7 @@ func (m *GameDetailModel) View(w, h int) string {
 	m.CheckExpired()
 	badge := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("[" + g.Platform + "]")
 	if m.Rental != nil {
-		badge = lipgloss.NewStyle().Foreground(styles.SuccessGrn).Bold(true).Render("[RENTED ✓]")
+		badge = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("[RENTED ✓]")
 		badge += "  Due: " + styles.TextStyle.Render(fmt.Sprintf("%d", m.Rental.DueDate))
 	} else if m.Playing && m.Session != nil {
 		remaining := m.Session.ExpiresAt - time.Now().Unix()
@@ -99,11 +106,11 @@ func (m *GameDetailModel) View(w, h int) string {
 		}
 		mins := remaining / 60
 		secs := remaining % 60
-		badge = lipgloss.NewStyle().Foreground(styles.SuccessGrn).Bold(true).Render(fmt.Sprintf("[PLAYING · %dm%02ds]", mins, secs))
+		badge = lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render(fmt.Sprintf("[PLAYING · %dm%02ds]", mins, secs))
 	} else if m.ChoosingTime {
 		badge = lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("[SELECT TIME]")
 	} else if !g.Available {
-		badge = lipgloss.NewStyle().Foreground(styles.ErrorRed).Bold(true).Render("[RENTED OUT]")
+		badge = lipgloss.NewStyle().Foreground(styles.Red).Bold(true).Render("[RENTED OUT]")
 	} else if g.PlayPrice > 0 {
 		badge += "  " + lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render(fmt.Sprintf("$%.2f/hr", g.PlayPrice))
 	}
@@ -122,11 +129,13 @@ func (m *GameDetailModel) View(w, h int) string {
 		actionLine = fmt.Sprintf("🕹️ Play $%.2f/hr — Press [P] (balance: $%.2f)", g.PlayPrice, m.Balance)
 	}
 
-	lines := []string{title, "", meta, rating, badge}
+	divider := lipgloss.NewStyle().Foreground(styles.BG5).Render("────────────────────────────────────────")
+
+	lines := []string{titleBar, "", meta, rating, badge}
 	if actionLine != "" {
 		lines = append(lines, styles.TextStyle.Render(actionLine))
 	}
-	lines = append(lines, "", synopsis, "", copies)
+	lines = append(lines, "", divider, "", synopsis, "", copies)
 	if len(m.Recommendations) > 0 {
 		lines = append(lines, "", styles.TextStyle.Bold(true).Render("Also in "+g.Genre+":"))
 		for i, r := range m.Recommendations {

@@ -158,7 +158,12 @@ func (m *Model) footerView() string {
 	default:
 		hints = "[Q] back  [Ctrl+C] quit"
 	}
-	return lipgloss.NewStyle().Background(styles.BgBlue).Foreground(styles.TextMedium).Width(m.w).Padding(0, 1).Render(hints)
+	return lipgloss.NewStyle().
+		Background(styles.BG1).
+		Foreground(styles.Grey1).
+		Width(m.w).
+		Padding(0, 1).
+		Render(hints)
 }
 
 func (m *Model) totpView(w, h int) string {

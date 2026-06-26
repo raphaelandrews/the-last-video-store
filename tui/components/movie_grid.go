@@ -99,7 +99,7 @@ func (m *MovieGridModel) PageUp() {
 func (m *MovieGridModel) View(width int) string {
 	if len(m.movies) == 0 {
 		return lipgloss.Place(width, 10, lipgloss.Center, lipgloss.Center,
-			styles.DimTextStyle.Render("No movies found"))
+			styles.DimTextStyle.Render("No titles found"))
 	}
 
 	m.columns = (width - 2) / (cardWidth + 1)

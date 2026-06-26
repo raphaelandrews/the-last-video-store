@@ -25,7 +25,7 @@ type RegisterModel struct {
 
 func NewRegisterModel() *RegisterModel {
 	un := textinput.New()
-	un.Placeholder = "Username (3–20 chars)"
+	un.Placeholder = "Username (3-20 chars)"
 	un.Width = 30
 	un.CharLimit = 20
 	un.Prompt = "▸ "
@@ -113,23 +113,31 @@ func (m *RegisterModel) updateFocus() {
 }
 
 func (m *RegisterModel) View(w, h int) string {
+	headerBlock := lipgloss.NewStyle().
+		Foreground(styles.BG0).
+		Background(styles.Green).
+		Bold(true).
+		Width(42).
+		Align(lipgloss.Center).
+		Render("🎬 NEW MEMBERSHIP")
+
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.SkyBlue).
-		Background(styles.BgWhite).
+		BorderForeground(styles.Yellow).
+		Background(styles.BG1).
 		Padding(2, 4).
 		Width(42)
 
 	inner := lipgloss.JoinVertical(lipgloss.Left,
-		lipgloss.NewStyle().Foreground(styles.SkyBlue).Bold(true).Render("NEW MEMBERSHIP"),
+		headerBlock,
 		"",
-		styles.TextStyle.Render("Username:"),
+		styles.DimTextStyle.Render("Username:"),
 		m.username.View(),
 		"",
-		styles.TextStyle.Render("Password:"),
+		styles.DimTextStyle.Render("Password:"),
 		m.password.View(),
 		"",
-		styles.TextStyle.Render("Confirm:"),
+		styles.DimTextStyle.Render("Confirm:"),
 		m.confirmPassword.View(),
 	)
 

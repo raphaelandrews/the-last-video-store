@@ -75,7 +75,7 @@ func (m *AuditLogModel) View(width, height int) string {
 			status = styles.ErrorTextStyle.Render(m.VerifyMsg)
 		}
 	}
-	status += styles.DimTextStyle.Render("(" + itoaStr(len(m.entries)) + " entries)")
+	status += styles.DimTextStyle.Render(" (" + itoaStr(len(m.entries)) + " entries)")
 
 	var rows []string
 	rows = append(rows, status)

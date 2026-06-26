@@ -17,7 +17,7 @@ type SearchbarModel struct {
 
 func NewSearchbarModel() *SearchbarModel {
 	ti := textinput.New()
-	ti.Placeholder = "Search movies..."
+	ti.Placeholder = "Search titles..."
 	ti.Width = 40
 	ti.CharLimit = 60
 	ti.Prompt = "🔍 "
@@ -82,7 +82,7 @@ func (m *SearchbarModel) MoveSelection(delta int) {
 func (m *SearchbarModel) View() string {
 	bar := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Cyan).
+		BorderForeground(styles.Yellow).
 		Width(42).
 		Render(m.input.View())
 
@@ -102,7 +102,8 @@ func (m *SearchbarModel) View() string {
 
 	dropdown := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(styles.Cyan).
+		BorderForeground(styles.Yellow).
+		Background(styles.BG1).
 		Width(42).
 		Render(lipgloss.JoinVertical(lipgloss.Left, items...))
 

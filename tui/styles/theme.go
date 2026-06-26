@@ -50,7 +50,7 @@ var (
 				Foreground(Green).Bold(true).Background(BG0)
 
 	HighlightStyle = lipgloss.NewStyle().
-			Foreground(BG0).Background(Green).Bold(true)
+			Foreground(BG0).Background(Yellow).Bold(true)
 
 	SelectedStyle = lipgloss.NewStyle().
 			Foreground(FG0).Background(BGVisual)
@@ -75,13 +75,14 @@ var (
 )
 
 var TierColors = map[string]lipgloss.Color{
+	"Wood":       lipgloss.Color("#8B7355"),
 	"Bronze":     lipgloss.Color("#CD7F32"),
 	"Silver":     lipgloss.Color("#BDC3C7"),
-	"Gold":       Yellow,
-	"Employee":   Purple,
-	"Supervisor": Orange,
-	"Manager":    Green,
-	"Owner":      Blue,
+	"Gold":       lipgloss.Color("#D8A657"),
+	"Employee":   lipgloss.Color("#D3869B"),
+	"Supervisor": lipgloss.Color("#E78A4E"),
+	"Manager":    lipgloss.Color("#A9B665"),
+	"Owner":      lipgloss.Color("#7DAEA3"),
 }
 
 func TierBadgeStyle(name string) lipgloss.Style {
@@ -114,29 +115,29 @@ func FormatBadge(format string) string {
 	case "VHS":
 		return lipgloss.NewStyle().Foreground(Orange).Background(BG0).Render("📼 VHS")
 	case "DVD":
-		return lipgloss.NewStyle().Foreground(Blue).Background(BG0).Render("📀 DVD")
+		return lipgloss.NewStyle().Foreground(Aqua).Background(BG0).Render("📀 DVD")
 	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(Aqua).Background(BG0).Render("💿 BD")
+		return lipgloss.NewStyle().Foreground(Blue).Background(BG0).Render("💿 BD")
 	default:
 		return format
 	}
 }
 
 var (
-	Cyan       = Blue
-	Magenta    = Orange
+	Cyan       = Aqua
+	Magenta    = Purple
 	NeonGreen  = Green
 	Error      = Red
 	Success    = Green
 	Background = BG0
 	Surface    = BG1
-	BorderDim  = BG4
+	BorderDim  = BG5
 	Warning    = Yellow
-	WarningAmb = Yellow
+	WarningAmb = Orange
 	ErrorRed   = Red
 	SuccessGrn = Green
 	FreshGreen = Green
-	SkyBlue    = Green
+	SkyBlue    = Aqua
 	Coral      = Orange
 	Gold       = Yellow
 	GlassBlue  = BG4
@@ -156,5 +157,5 @@ var (
 	EmpColor    = Purple
 	SupColor    = Orange
 	MgrColor    = Green
-	OwnColor    = Blue
+	OwnColor    = Aqua
 )

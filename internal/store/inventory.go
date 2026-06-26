@@ -37,18 +37,6 @@ func (s *Store) ListInventory(userID string) ([]models.InventoryItem, error) {
 	return items, err
 }
 
-func hasBytePrefix(b, prefix []byte) bool {
-	if len(b) < len(prefix) {
-		return false
-	}
-	for i := range prefix {
-		if b[i] != prefix[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func (s *Store) RedeemMerchItem(itemID, userID string) (*models.MerchItem, error) {
 	var redeemed *models.MerchItem
 	err := s.db.Update(func(tx *bolt.Tx) error {

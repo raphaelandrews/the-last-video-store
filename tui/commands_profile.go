@@ -3,6 +3,7 @@ package tui
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -140,8 +141,6 @@ func (m *Model) doTopUp() tea.Cmd {
 			Message    string  `json:"message"`
 			Amount     float64 `json:"amount"`
 			NewBalance float64 `json:"new_balance"`
-			TopUpCount int     `json:"topup_count"`
-			Remaining  int     `json:"remaining"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
 		if resp.StatusCode >= 400 || r.Error != "" {
@@ -150,7 +149,7 @@ func (m *Model) doTopUp() tea.Cmd {
 		}
 		if m.userResp != nil {
 			m.userResp.Balance = r.NewBalance
-			m.userResp.TopUpCount = r.TopUpCount
+			m.userResp.LastTopUpAt = time.Now().Unix()
 		}
 		m.profile.StatusMsg = fmt.Sprintf("💰 %s — new balance: $%.2f", r.Message, r.NewBalance)
 		return tea.Sequence(

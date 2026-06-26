@@ -46,30 +46,34 @@ func (m *TabsModel) View(width int) string {
 	var items []string
 	for i, tab := range m.tabs {
 		style := lipgloss.NewStyle().
-			Foreground(styles.DimTextStyle.GetForeground()).
-			Background(styles.Background).
-			Padding(0, 1)
+			Foreground(styles.Grey1).
+			Background(styles.BG1).
+			Padding(0, 2).
+			Border(lipgloss.NormalBorder()).
+			BorderBottom(true).
+			BorderForeground(styles.BG5)
 
 		if i == m.activeTab {
 			style = style.
-				Foreground(styles.Background).
-				Background(styles.Cyan).
-				Bold(true)
+				Foreground(styles.BG0).
+				Background(styles.Green).
+				Bold(true).
+				BorderForeground(styles.Green)
 		}
 
 		items = append(items, style.Render(tab))
 	}
 
 	bar := lipgloss.NewStyle().
-		Background(styles.Background).
+		Background(styles.BG1).
 		Width(width).
 		Render(lipgloss.JoinHorizontal(lipgloss.Left, items...))
 
-	bottom := lipgloss.NewStyle().
-		Foreground(styles.BorderDim).
-		Background(styles.Background).
+	accent := lipgloss.NewStyle().
+		Foreground(styles.Green).
+		Background(styles.BG0).
 		Width(width).
-		Render("┌" + lipgloss.NewStyle().Width(width-2).Render("") + "┐")
+		Render("▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀")
 
-	return lipgloss.JoinVertical(lipgloss.Top, bottom, bar)
+	return lipgloss.JoinVertical(lipgloss.Top, accent, bar)
 }

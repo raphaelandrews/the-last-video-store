@@ -12,11 +12,11 @@ var cardWidth = 23
 var cardHeight = 8
 
 func MovieCardView(movie models.MovieResponse, selected bool) string {
-	borderColor := styles.BorderDim
-	bgColor := styles.Background
+	borderColor := styles.BG5
+	bgColor := styles.BG1
 	if selected {
-		borderColor = styles.Magenta
-		bgColor = lipgloss.Color("#1A1A4E")
+		borderColor = styles.Yellow
+		bgColor = styles.BG3
 	}
 
 	border := lipgloss.NormalBorder()
@@ -38,14 +38,14 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 	}
 
 	titleStyle := lipgloss.NewStyle().
-		Foreground(styles.Cyan).
+		Foreground(styles.FG1).
 		Background(bgColor).
 		Bold(true).
 		Width(cardWidth - 4).
 		Align(lipgloss.Center)
 
 	yearStyle := lipgloss.NewStyle().
-		Foreground(styles.DimTextStyle.GetForeground()).
+		Foreground(styles.Grey1).
 		Background(bgColor)
 
 	stars := RatingStars(movie.Rating)
@@ -53,10 +53,10 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 	formatBadge := FormatBadge(movie.Format)
 
 	status := "[RENT]"
-	statusColor := styles.NeonGreen
+	statusColor := styles.Green
 	if !movie.Available {
 		status = "[OUT]"
-		statusColor = styles.Error
+		statusColor = styles.Red
 	}
 	if movie.IsNewRelease {
 		status = "[NEW]"
@@ -96,7 +96,7 @@ func RatingStars(rating float64) string {
 	for range empty {
 		s += "☆"
 	}
-	return styles.TitleStyle.Render(s)
+	return lipgloss.NewStyle().Foreground(styles.Yellow).Render(s)
 }
 
 func truncate(s string, n int) string {
@@ -109,12 +109,12 @@ func truncate(s string, n int) string {
 func FormatBadge(format string) string {
 	switch format {
 	case "VHS":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#FFAA00")).Render("📼 VHS")
+		return lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("📼 VHS")
 	case "DVD":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#00AAFF")).Render("📀 DVD")
+		return lipgloss.NewStyle().Foreground(styles.Aqua).Bold(true).Render("📀 DVD")
 	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(lipgloss.Color("#4444FF")).Render("💿 BD")
+		return lipgloss.NewStyle().Foreground(styles.Blue).Bold(true).Render("💿 BD")
 	default:
-		return lipgloss.NewStyle().Foreground(styles.DimTextStyle.GetForeground()).Render(format)
+		return lipgloss.NewStyle().Foreground(styles.Grey1).Render(format)
 	}
 }
