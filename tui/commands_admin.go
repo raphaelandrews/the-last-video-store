@@ -67,13 +67,15 @@ func (m *Model) doVerifyAuditChain() tea.Cmd {
 			ChainIntact bool   `json:"chain_intact"`
 			Message     string `json:"message"`
 			BrokenAt    int    `json:"broken_at"`
+			BrokenID    string `json:"broken_id"`
 			Reason      string `json:"reason"`
+			Total       int    `json:"total"`
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
 		if r.ChainIntact {
-			m.auditLog.BrokenAt = -1
+			m.auditLog.MarkIntact(r.Total)
 		} else {
-			m.auditLog.BrokenAt = r.BrokenAt
+			m.auditLog.MarkBroken(r.BrokenAt, r.BrokenID, r.Reason)
 		}
 		m.auditLog.VerifyMsg = r.Message
 		return nil

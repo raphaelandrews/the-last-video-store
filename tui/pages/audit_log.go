@@ -29,10 +29,13 @@ type AuditLogModel struct {
 	entries   []map[string]interface{}
 	errMsg    string
 	VerifyMsg string
-	// BrokenAt is the 0-based index of the first entry whose hash did
-	// not match, set by the verify response. -1 means the chain is
-	// intact (or hasn't been verified yet).
-	BrokenAt int
+
+	// brokenIDX is the index of the broken row INSIDE the current
+	// (descending-sorted) m.entries slice, or -1 if intact. We map
+	// from the server's broken_id (UUID) to this index so the marker
+	// and the [g] jump land on the right row regardless of sort.
+	brokenIDX int
+	brokenID  string
 
 	paginator paginator.Model
 	page      int
@@ -66,8 +69,24 @@ func NewAuditLogModel() *AuditLogModel {
 		paginator: p,
 		pageSize:  auditPageSize,
 		page:      0,
-		BrokenAt:  -1,
+		brokenIDX: -1,
 	}
+}
+
+// MarkIntact clears any prior broken-row marker and stores the total
+// chain length returned by verify.
+func (m *AuditLogModel) MarkIntact(total int) {
+	m.brokenIDX = -1
+	m.brokenID = ""
+}
+
+// MarkBroken records the UUID of the broken entry. The actual row
+// index inside the (descending-sorted) display list is computed in
+// refreshPage so it stays correct even if entries arrive after
+// verify.
+func (m *AuditLogModel) MarkBroken(brokenAt int, brokenID, reason string) {
+	m.brokenID = brokenID
+	m.refreshPage()
 }
 
 func (m *AuditLogModel) SetEntries(entries []map[string]interface{}) {
@@ -85,6 +104,19 @@ func (m *AuditLogModel) SetEntries(entries []map[string]interface{}) {
 }
 
 func (m *AuditLogModel) refreshPage() {
+	// Re-resolve the broken row's display index from the UUID. This
+	// makes the marker correct even if the entries list was reloaded
+	// after the verify call.
+	if m.brokenID != "" {
+		m.brokenIDX = -1
+		for i, e := range m.entries {
+			if id, _ := e["id"].(string); id == m.brokenID {
+				m.brokenIDX = i
+				break
+			}
+		}
+	}
+
 	all := m.buildAllRows(m.entries)
 	totalPages := (len(all) + m.pageSize - 1) / m.pageSize
 	if totalPages < 1 {
@@ -130,17 +162,9 @@ func (m *AuditLogModel) Update(msg tea.Msg) (*AuditLogModel, tea.Cmd) {
 			return m, nil
 		case "g":
 			// Jump to the page containing the broken entry, if any.
-			// BrokenAt is an index into the ASCENDING list (oldest
-			// first, matching chain order). Our display is sorted
-			// DESCENDING, so we flip the index to find the right
-			// position in the visible (newest-first) list.
-			if m.BrokenAt >= 0 {
-				last := len(m.entries) - 1
-				flipped := last - m.BrokenAt
-				if flipped < 0 {
-					flipped = 0
-				}
-				m.page = flipped / m.pageSize
+			// brokenIDX is the index in our descending-sorted list.
+			if m.brokenIDX >= 0 {
+				m.page = m.brokenIDX / m.pageSize
 				m.refreshPage()
 			}
 			return m, nil
@@ -184,7 +208,7 @@ func (m *AuditLogModel) View(w, h int) string {
 			statusLine = styles.ErrorTextStyle.Render(m.VerifyMsg)
 		}
 	}
-	if m.BrokenAt >= 0 {
+	if m.brokenIDX >= 0 {
 		statusLine += styles.ErrorTextStyle.Render("  Press [G] to jump to broken entry")
 	}
 	if m.errMsg != "" {
@@ -230,7 +254,7 @@ func (m *AuditLogModel) buildAllRows(entries []map[string]interface{}) []table.R
 		actionStr := formatAction(action)
 		// Mark the broken row inline so it's visible even when the
 		// user is on a different page.
-		if m.BrokenAt == i {
+		if m.brokenIDX == i {
 			actionStr = "💥 " + actionStr
 			timeStr = timeStr + " ⚠"
 		}

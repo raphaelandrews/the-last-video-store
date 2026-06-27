@@ -41,7 +41,6 @@ type Model struct {
 	snackBarOrders *pages.SnackBarOrdersModel
 	snackBarManage *pages.SnackBarManageModel
 	gameDetail     *pages.GameDetailModel
-	gameSessions   *pages.GameSessionModel
 	myPlaySessions *pages.MyPlaySessionsModel
 
 	help help.Model
@@ -142,7 +141,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = scrSnackBarMenu
 				return m, nil
 			}
-			if m.screen == scrGameDetail || m.screen == scrGameSessions {
+			if m.screen == scrGameDetail {
 				m.screen = scrBrowse
 				return m, nil
 			}
@@ -319,8 +318,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.snackBarOrders.SetOrders(msg.orders)
 		case loadSnackBarManageMsg:
 			m.snackBarManage.SetItems(msg.items)
-		case loadGameSessionsMsg:
-			m.gameSessions.SetSessions(msg.sessions)
 		case gameRefreshMsg:
 			return m, nil
 		case pages.SnackBarOrderMsg:

@@ -24,6 +24,5 @@ const (
 	scrSnackBarOrders
 	scrSnackBarManage
 	scrGameDetail
-	scrGameSessions
 	scrMyPlaySessions
 )

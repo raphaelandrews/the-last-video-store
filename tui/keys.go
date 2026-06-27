@@ -113,8 +113,6 @@ func (m *Model) pageKey(msg tea.KeyMsg) tea.Cmd {
 	case scrSnackBarOrders:
 		_ = k
 
-	case scrGameSessions:
-		_ = k
 	}
 	return nil
 }

@@ -173,8 +173,6 @@ func (m *MyRentalsModel) SetRentals(rs []models.RentalResponse) {
 	}
 }
 
-func (m *MyRentalsModel) MoveUp()   { m.list.CursorUp() }
-func (m *MyRentalsModel) MoveDown() { m.list.CursorDown() }
 
 func (m *MyRentalsModel) SelectedRental() *models.RentalResponse {
 	if i, ok := m.list.SelectedItem().(rentalItem); ok {

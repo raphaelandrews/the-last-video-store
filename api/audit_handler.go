@@ -2,9 +2,11 @@ package api
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/thelastvideostore/internal/auth"
 	"github.com/thelastvideostore/internal/config"
+	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/internal/store"
 )
 
@@ -34,24 +36,38 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Sort chronologically (oldest first) so the API contract is
+	// stable regardless of BoltDB's iteration order.
+	if userID == "" {
+		if list, ok := entries.([]*models.AuditEntry); ok {
+			sort.Slice(list, func(i, j int) bool { return list[i].Timestamp < list[j].Timestamp })
+			entries = list
+		}
+	}
+
 	WriteJSON(w, http.StatusOK, entries)
 }
 
 func (h *AuditHandler) Verify(w http.ResponseWriter, r *http.Request) {
-	valid, chainErr := auth.VerifyAuditChain(h.store)
-	if chainErr != nil && !valid {
-		// chainErr can only be non-nil when valid is false here, but we
-		// guard with the check for clarity.
+	result, err := auth.VerifyAuditChain(h.store)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if result.Valid {
 		WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"chain_intact": false,
-			"message":      "⚠️ " + chainErr.Error(),
-			"broken_at":    chainErr.BrokenAt,
-			"reason":       chainErr.Reason,
+			"chain_intact": true,
+			"message":      "✅ Chain intact — no tampering detected",
+			"total":        len(result.Entries),
 		})
 		return
 	}
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"chain_intact": true,
-		"message":      "✅ Chain intact — no tampering detected",
+		"chain_intact": false,
+		"message":      "⚠️ " + result.Reason,
+		"broken_at":    result.BrokenAt,
+		"broken_id":    result.BrokenID,
+		"reason":       result.Reason,
+		"total":        len(result.Entries),
 	})
 }

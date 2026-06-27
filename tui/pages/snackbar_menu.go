@@ -140,8 +140,6 @@ func (m *SnackBarMenuModel) SetItems(items []models.SnackBarItem) {
 	}
 }
 
-func (m *SnackBarMenuModel) MoveUp()   { m.list.CursorUp() }
-func (m *SnackBarMenuModel) MoveDown() { m.list.CursorDown() }
 
 func (m *SnackBarMenuModel) SelectedItem() *models.SnackBarItem {
 	if si, ok := m.list.SelectedItem().(snackItem); ok {

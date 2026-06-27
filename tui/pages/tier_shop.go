@@ -148,8 +148,6 @@ func NewTierShopModel(currentTier string, balance float64) *TierShopModel {
 	return m
 }
 
-func (m *TierShopModel) MoveUp()   { m.list.CursorUp() }
-func (m *TierShopModel) MoveDown() { m.list.CursorDown() }
 
 func (m *TierShopModel) SelectedTier() *models.TierInfo {
 	if ti, ok := m.list.SelectedItem().(tierItem); ok {

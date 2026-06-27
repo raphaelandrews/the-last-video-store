@@ -124,8 +124,6 @@ func (m *MerchModel) SetItems(items []models.MerchItem) {
 	}
 }
 
-func (m *MerchModel) MoveUp()   { m.list.CursorUp() }
-func (m *MerchModel) MoveDown() { m.list.CursorDown() }
 
 func (m *MerchModel) SelectedItem() *models.MerchItem {
 	if mi, ok := m.list.SelectedItem().(merchItem); ok {

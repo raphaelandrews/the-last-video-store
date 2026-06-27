@@ -130,8 +130,6 @@ func (m *AdminUsersModel) SelectedUser() *models.UserResponse {
 	return nil
 }
 
-func (m *AdminUsersModel) MoveUp()   { m.list.CursorUp() }
-func (m *AdminUsersModel) MoveDown() { m.list.CursorDown() }
 
 func (m *AdminUsersModel) Update(msg tea.Msg) (*AdminUsersModel, tea.Cmd) {
 	var cmd tea.Cmd

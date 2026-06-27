@@ -283,8 +283,6 @@ func (m *AdminMoviesModel) SelectedMovie() *models.MovieResponse {
 	return nil
 }
 
-func (m *AdminMoviesModel) MoveUp()   { m.list.CursorUp() }
-func (m *AdminMoviesModel) MoveDown() { m.list.CursorDown() }
 
 func (m *AdminMoviesModel) Update(msg tea.Msg) (*AdminMoviesModel, tea.Cmd) {
 	var cmd tea.Cmd

@@ -287,13 +287,6 @@ func (snackBarManageKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Game sessions ─────────────────────────────────────────────────────────
-
-type gameSessionsKeys struct{}
-
-func (gameSessionsKeys) ShortHelp() []key.Binding  { return []key.Binding{backBinding} }
-func (gameSessionsKeys) FullHelp() [][]key.Binding { return [][]key.Binding{{backBinding}} }
-
 // ─── My play sessions ──────────────────────────────────────────────────────
 
 type myPlaySessionsKeys struct{}
@@ -466,8 +459,6 @@ func (m *Model) currentScreenKeys() screenKeyMap {
 		return helpWith(snackBarOrdersKeys{})
 	case scrSnackBarManage:
 		return helpWith(snackBarManageKeys{})
-	case scrGameSessions:
-		return helpWith(gameSessionsKeys{})
 	case scrMyPlaySessions:
 		return helpWith(myPlaySessionsKeys{})
 	case scrAdminMovies:

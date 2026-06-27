@@ -71,8 +71,6 @@ func (m *Model) View() string {
 		body = m.snackBarManage.View(m.w, ch)
 	case scrGameDetail:
 		body = m.gameDetail.View(m.w, ch)
-	case scrGameSessions:
-		body = m.gameSessions.View(m.w, ch)
 	case scrMyPlaySessions:
 		body = m.myPlaySessions.View(m.w, ch)
 	}
