@@ -12,8 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
-
 type snackManageItem struct {
 	item models.SnackBarItem
 }
@@ -25,8 +23,6 @@ func (s snackManageItem) Description() string {
 func (s snackManageItem) FilterValue() string {
 	return s.item.Name + " " + s.item.Category
 }
-
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type snackManageDelegate struct{}
 
@@ -90,8 +86,6 @@ func (d snackManageDelegate) Render(w io.Writer, m list.Model, index int, item l
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
-
 type SnackBarManageModel struct {
 	list    list.Model
 	items   []models.SnackBarItem
@@ -124,7 +118,6 @@ func (m *SnackBarManageModel) SetItems(items []models.SnackBarItem) {
 	}
 	m.list.SetItems(listItems)
 }
-
 
 func (m *SnackBarManageModel) SelectedItem() *models.SnackBarItem {
 	if si, ok := m.list.SelectedItem().(snackManageItem); ok {

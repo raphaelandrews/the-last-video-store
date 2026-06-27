@@ -27,6 +27,18 @@ func gruvboxKeyMap() *huh.KeyMap {
 		key.WithKeys("enter"),
 		key.WithHelp("enter", "submit"),
 	)
+	km.Select.Next = key.NewBinding(
+		key.WithKeys("enter", "tab"),
+		key.WithHelp("enter/tab", "select"),
+	)
+	km.Select.Prev = key.NewBinding(
+		key.WithKeys("shift+tab"),
+		key.WithHelp("shift+tab", "back"),
+	)
+	km.Select.Submit = key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "submit"),
+	)
 	return km
 }
 

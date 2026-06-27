@@ -11,7 +11,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-
 type merchItem struct {
 	item models.MerchItem
 }
@@ -19,7 +18,6 @@ type merchItem struct {
 func (m merchItem) Title() string       { return m.item.Name }
 func (m merchItem) Description() string { return m.item.Description }
 func (m merchItem) FilterValue() string { return m.item.Name + " " + m.item.Description }
-
 
 type merchDelegate struct{}
 
@@ -80,7 +78,6 @@ func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
 }
 
-
 type MerchRedeemMsg struct{ ItemID string }
 type MerchReloadMsg struct{}
 
@@ -116,7 +113,6 @@ func (m *MerchModel) SetItems(items []models.MerchItem) {
 		m.list.Select(0)
 	}
 }
-
 
 func (m *MerchModel) SelectedItem() *models.MerchItem {
 	if mi, ok := m.list.SelectedItem().(merchItem); ok {

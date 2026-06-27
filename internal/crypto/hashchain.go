@@ -82,12 +82,8 @@ func (hc *HashChain) computeHash(entry HashChainEntry) []byte {
 	return hash[:]
 }
 
-// ChainError describes where the chain broke. A non-nil error means the
-// chain is invalid; the int field is the index of the first entry whose
-// hash did not match (or whose PrevHash did not match the previous
-// entry's Hash). Index 0 is the first entry after GENESIS.
 type ChainError struct {
-	BrokenAt int // 0-based index of first broken entry; -1 if chain is empty
+	BrokenAt int
 	Reason   string
 }
 
@@ -101,10 +97,6 @@ func (e *ChainError) Error() string {
 	return "chain broken: " + e.Reason
 }
 
-// VerifyChain returns nil on success, or a *ChainError describing the
-// first entry whose hash did not match. It returns true as a convenience
-// for callers that only want the boolean; callers that need the broken
-// index should check for a non-nil error.
 func VerifyChain(entries []HashChainEntry) (bool, *ChainError) {
 	prev := []byte("GENESIS")
 	for i, entry := range entries {

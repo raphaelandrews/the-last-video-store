@@ -64,9 +64,6 @@ func (m *Model) loadRentals() tea.Cmd {
 	}
 }
 
-// loadMyPlaySessions fetches the current user's active in-store game
-// play sessions. Called on navigation to the play-sessions screen and as
-// part of the auto-refresh loop while the screen is visible.
 func (m *Model) loadMyPlaySessions() tea.Cmd {
 	return func() tea.Msg {
 		resp, _ := m.apiGet("/api/v1/games/my-sessions")

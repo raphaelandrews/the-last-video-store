@@ -1,23 +1,3 @@
-// Command tamper is a demo tool for the hash-chain audit log. It
-// simulates an attacker with direct database access and intentionally
-// corrupts a single audit row, breaking the chain at that point. After
-// running `tamper demo` the TUI's audit log screen, when asked to
-// verify, will show a "chain broken" error with the index of the
-// tampered row.
-//
-// Subcommands:
-//
-//	list                  — print every audit entry with its index, ID,
-//	                        action, actor, target, timestamp
-//	corrupt <id>           — flip the Data field on a single row, which
-//	                        breaks the chain at that point
-//	restore <id>           — undo a previous tamper by recomputing the
-//	                        correct hash for the row's current state
-//	demo                  — automatically pick a random non-edge row
-//	                        and corrupt it (best for live demo)
-//
-// All operations require the server to be stopped (the DB file is
-// opened in exclusive mode by BoltDB).
 package main
 
 import (
@@ -43,7 +23,6 @@ func main() {
 	dbPath := defaultDB
 	cmd := os.Args[1]
 
-	// Allow `tamper -d other.db <subcmd>` style flag.
 	if cmd == "-d" || cmd == "--db" {
 		if len(os.Args) < 4 {
 			usage()
@@ -104,8 +83,6 @@ func requireArg(name string) {
 	}
 }
 
-// loadChronological returns all audit entries sorted oldest-first,
-// matching the order the server uses for chain verification.
 func loadChronological(s *store.Store) []*models.AuditEntry {
 	all, err := s.GetAllAuditEntries()
 	if err != nil {
@@ -141,10 +118,6 @@ func findEntry(s *store.Store, id string) (*models.AuditEntry, int) {
 func corruptEntry(s *store.Store, id string) {
 	entry, idx := findEntry(s, id)
 	before := entry.Data
-	// Append a marker so it's obvious in the audit log which row was
-	// tampered with. We don't touch the Hash field — the recomputed
-	// hash will differ from the stored hash, which is what verify
-	// detects.
 	entry.Data = before + " [TAMPERED]"
 	if err := s.UpdateAuditEntry(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "❌ failed to write: %v\n", err)
@@ -160,9 +133,6 @@ func corruptEntry(s *store.Store, id string) {
 
 func restoreEntry(s *store.Store, id string) {
 	entry, idx := findEntry(s, id)
-	// Re-derive the original Data. We can't recover it from the broken
-	// row, so the operator has to supply it. For convenience we accept
-	// it as the second argument.
 	if len(os.Args) < 4 {
 		fmt.Fprintf(os.Stderr, "usage: tamper restore <id> <original-data>\n")
 		fmt.Fprintf(os.Stderr, "  current data: %q\n", entry.Data)
@@ -179,15 +149,7 @@ func restoreEntry(s *store.Store, id string) {
 	fmt.Printf("  $ %s\n", recomputeHint(entry))
 }
 
-// recomputeHint returns a shell command the user can run to recompute
-// the correct hash for an entry, given its current fields. Used by
-// restore as a hint.
-func recomputeHint(e *models.AuditEntry) string {
-	// We can't easily rebuild the prev-hash here because it depends
-	// on the previous entry's Hash. The hash chain is what makes
-	// tampering detectable in the first place — recovery requires the
-	// full chain. For the demo, the simplest recovery is to seed
-	// again (go run ./data).
+func recomputeHint(entry *models.AuditEntry) string {
 	return "go run ./data   # wipe + reseed to fully repair the chain"
 }
 
@@ -198,8 +160,6 @@ func demo(s *store.Store) {
 		fmt.Fprintln(os.Stderr, "   perform some actions (login, rent, return) in the TUI first.")
 		os.Exit(1)
 	}
-	// Pick a row in the middle. Tampering with index 0 or the last row
-	// is a degenerate case; the middle is the realistic attack.
 	idx := len(all) / 2
 	entry := all[idx]
 	before := entry.Data

@@ -36,8 +36,6 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Sort chronologically (oldest first) so the API contract is
-	// stable regardless of BoltDB's iteration order.
 	if userID == "" {
 		if list, ok := entries.([]*models.AuditEntry); ok {
 			sort.Slice(list, func(i, j int) bool { return list[i].Timestamp < list[j].Timestamp })

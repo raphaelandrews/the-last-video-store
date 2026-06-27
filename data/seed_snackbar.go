@@ -27,4 +27,3 @@ func seedSnackBar(s *store.Store) {
 		s.CreateSnackBarItem(&items[i])
 	}
 }
-

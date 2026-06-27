@@ -11,8 +11,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
-
 type snackOrderItem struct {
 	order models.SnackBarOrder
 }
@@ -22,8 +20,6 @@ func (s snackOrderItem) Description() string {
 	return fmt.Sprintf("qty %d  ·  $%.2f  ·  %s", s.order.Quantity, s.order.Total, s.order.Status)
 }
 func (s snackOrderItem) FilterValue() string { return s.order.ItemName }
-
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type snackOrderDelegate struct{}
 
@@ -65,8 +61,6 @@ func (d snackOrderDelegate) Render(w io.Writer, m list.Model, index int, item li
 
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
-
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type SnackBarOrdersModel struct {
 	list   list.Model

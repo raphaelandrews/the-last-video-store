@@ -14,8 +14,6 @@ import (
 
 type AdminMoviesRefreshMsg struct{}
 
-// MediaType is the admin catalog filter. The API returns one of these
-// per row in MediaType.
 type MediaType string
 
 const (
@@ -24,7 +22,6 @@ const (
 	MediaGames  MediaType = "game"
 )
 
-// AllMediaTypes is the order shown in the tabs.
 var AllMediaTypes = []MediaType{MediaMovies, MediaSeries, MediaGames}
 
 func (m MediaType) Label() string {
@@ -38,10 +35,6 @@ func (m MediaType) Label() string {
 	}
 }
 
-// AdminMoviesModel manages the entire catalog (movies, series, games).
-// A top tab row lets the admin switch the active media type; the table
-// itself only shows the active type. Each tab maintains its own
-// pagination state so switching back doesn't lose your scroll.
 type AdminMoviesModel struct {
 	table     table.Model
 	movies    []models.MovieResponse
@@ -88,11 +81,8 @@ func NewAdminMoviesModel() *AdminMoviesModel {
 	}
 }
 
-// ActiveTab returns the currently-selected media type.
 func (m *AdminMoviesModel) ActiveTab() MediaType { return m.activeTab }
 
-// SetActiveTab switches the visible table to the given media type and
-// returns true if the underlying data changed (caller can then refetch).
 func (m *AdminMoviesModel) SetActiveTab(t MediaType) {
 	if t == m.activeTab {
 		return
@@ -120,7 +110,6 @@ func (m *AdminMoviesModel) refreshRows() {
 	m.table.SetRows(rows)
 }
 
-// SetMovies updates the current tab's cached data and refreshes the table.
 func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page int) {
 	if state, ok := m.perTab[m.activeTab]; ok {
 		state.movies = movies
@@ -131,7 +120,6 @@ func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page 
 	m.applyState(&tabState{movies: movies, page: page, total: total})
 }
 
-// CurrentPageFor returns the page number for the given media type tab.
 func (m *AdminMoviesModel) CurrentPageFor(t MediaType) int {
 	if state, ok := m.perTab[t]; ok {
 		return state.page
@@ -139,7 +127,6 @@ func (m *AdminMoviesModel) CurrentPageFor(t MediaType) int {
 	return 1
 }
 
-// MarkLoading marks a tab as loading (used when navigating to it).
 func (m *AdminMoviesModel) MarkLoading(t MediaType) {
 	if state, ok := m.perTab[t]; ok {
 		state.loading = true
@@ -177,9 +164,6 @@ func (m *AdminMoviesModel) Update(msg tea.Msg) (*AdminMoviesModel, tea.Cmd) {
 	return m, cmd
 }
 
-// tabBarView renders the three media-type tabs at the top of the
-// management screen. The active tab is rendered with a green border
-// + bold green text.
 func (m *AdminMoviesModel) tabBarView(width int) string {
 	var cells []string
 	for _, t := range AllMediaTypes {

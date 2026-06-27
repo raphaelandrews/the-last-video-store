@@ -7,8 +7,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// gruvboxListStyles returns a list.Styles that matches the Gruvbox
-// Material Dark Hard palette. Reused by every list-based page in the TUI.
 func gruvboxListStyles() list.Styles {
 	s := list.DefaultStyles()
 
@@ -56,9 +54,6 @@ func gruvboxListStyles() list.Styles {
 	return s
 }
 
-// enableListPagination turns on the list's paginator and sets 15 items
-// per page. The list will automatically render page dots at the bottom
-// and respond to left/right (or h/l) arrow keys to change page.
 func enableListPagination(l *list.Model) {
 	l.Paginator.PerPage = 15
 	l.Paginator.Type = paginator.Dots

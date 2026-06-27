@@ -107,15 +107,11 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reject empty updates early — a no-op PUT would still bump
-	// UpdatedAt and return 200, which is misleading.
 	if req.Tier == nil && req.Banned == nil {
 		WriteError(w, http.StatusBadRequest, "no fields to update (tier and/or banned required)")
 		return
 	}
 
-	// Authorisation: only users with PermAdmin may update other users'
-	// tier or ban status. Self-service is not exposed here.
 	if !admin.CanAdmin() {
 		WriteError(w, http.StatusForbidden, "⛔ ACCESS DENIED — admin permission required")
 		return

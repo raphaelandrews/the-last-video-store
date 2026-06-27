@@ -15,25 +15,14 @@ import (
 
 type AuditLogRefreshMsg struct{}
 
-// pageSize is how many audit rows fit on a single page of the table.
-// The page owns this so pagination is local; the full entry slice is
-// kept in the model so we can flip pages instantly.
 const auditPageSize = 20
 
-// AuditLogModel renders the hash-chain audit log as a fixed-column table
-// with client-side pagination. Each row is one audit event: timestamp ·
-// action · actor · target · hash. The verify action highlights the
-// first broken entry (if any) and jumps to it.
 type AuditLogModel struct {
 	table     table.Model
 	entries   []map[string]interface{}
 	errMsg    string
 	VerifyMsg string
 
-	// brokenIDX is the index of the broken row INSIDE the current
-	// (descending-sorted) m.entries slice, or -1 if intact. We map
-	// from the server's broken_id (UUID) to this index so the marker
-	// and the [g] jump land on the right row regardless of sort.
 	brokenIDX int
 	brokenID  string
 
@@ -73,17 +62,11 @@ func NewAuditLogModel() *AuditLogModel {
 	}
 }
 
-// MarkIntact clears any prior broken-row marker and stores the total
-// chain length returned by verify.
 func (m *AuditLogModel) MarkIntact(total int) {
 	m.brokenIDX = -1
 	m.brokenID = ""
 }
 
-// MarkBroken records the UUID of the broken entry. The actual row
-// index inside the (descending-sorted) display list is computed in
-// refreshPage so it stays correct even if entries arrive after
-// verify.
 func (m *AuditLogModel) MarkBroken(brokenAt int, brokenID, reason string) {
 	m.brokenID = brokenID
 	m.refreshPage()

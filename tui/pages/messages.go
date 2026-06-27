@@ -4,8 +4,6 @@ import (
 	"github.com/thelastvideostore/internal/models"
 )
 
-// Message types are emitted by page models to drive navigation and async
-// workflows in the parent TUI.
 type NavigateMsg struct{ Page string }
 type ErrorMsg struct{ Message string }
 

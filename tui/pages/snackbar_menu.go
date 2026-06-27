@@ -12,7 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-
 type snackItem struct {
 	item models.SnackBarItem
 }
@@ -24,7 +23,6 @@ func (s snackItem) Description() string {
 func (s snackItem) FilterValue() string {
 	return s.item.Name + " " + s.item.Category + " " + s.item.Description
 }
-
 
 type snackDelegate struct{}
 
@@ -95,7 +93,6 @@ func (d snackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-
 type SnackBarOrderMsg struct{ ItemID string }
 
 type SnackBarMenuModel struct {
@@ -133,7 +130,6 @@ func (m *SnackBarMenuModel) SetItems(items []models.SnackBarItem) {
 	}
 }
 
-
 func (m *SnackBarMenuModel) SelectedItem() *models.SnackBarItem {
 	if si, ok := m.list.SelectedItem().(snackItem); ok {
 		return &si.item
@@ -168,7 +164,6 @@ func (m *SnackBarMenuModel) View(w, h int) string {
 		return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, empty)
 	}
 
-	// Reserve one line for the balance + status at the top.
 	m.list.SetSize(w, h-2)
 	balanceStr := lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render(
 		fmt.Sprintf("💵 Balance: $%.2f", m.Balance),

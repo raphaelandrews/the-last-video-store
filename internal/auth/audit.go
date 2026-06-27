@@ -26,17 +26,12 @@ func AppendAuditEntry(s *store.Store, hc *crypto.HashChain, action, actorID, tar
 	return s.AppendAuditEntry(auditEntry)
 }
 
-// ChainVerifyResult is the outcome of verifying the audit chain. It
-// always contains a chronological slice of entries (oldest first)
-// because chain verification requires deterministic order. Callers
-// that need a different order can re-sort the slice, but they should
-// use BrokenID (not BrokenAt) to find the broken row.
 type ChainVerifyResult struct {
 	Valid    bool
-	BrokenAt int    // 0-based index in chronological order; -1 if valid
-	BrokenID string // ID of the broken entry; "" if valid
+	BrokenAt int
+	BrokenID string
 	Reason   string
-	Entries  []*models.AuditEntry // chronological order (oldest first)
+	Entries  []*models.AuditEntry
 }
 
 func VerifyAuditChain(s *store.Store) (ChainVerifyResult, error) {
@@ -53,10 +48,6 @@ func VerifyAuditChain(s *store.Store) (ChainVerifyResult, error) {
 		return ChainVerifyResult{Valid: true, BrokenAt: -1, Entries: entries}, nil
 	}
 
-	// Sort chronologically before verification. This is the same
-	// order in which the chain was built (Append uses time.Now() at
-	// insertion time), so the chain's PrevHash links must line up
-	// with this order.
 	sort.Slice(entries, func(i, j int) bool { return entries[i].Timestamp < entries[j].Timestamp })
 
 	chainEntries := make([]crypto.HashChainEntry, len(entries))

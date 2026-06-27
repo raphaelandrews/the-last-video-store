@@ -13,8 +13,6 @@ var promotionChains = [][]bitmask.Permission{
 	bitmask.GamePromotionOrder,
 }
 
-// findInChain locates a tier by label within a single promotion chain
-// and returns its index and the chain. Returns -1, nil when not found.
 func findInChain(current string, order []bitmask.Permission) (int, bool) {
 	for i, t := range order {
 		if strings.EqualFold(bitmask.TierLabels[t], current) {
@@ -24,8 +22,6 @@ func findInChain(current string, order []bitmask.Permission) (int, bool) {
 	return -1, false
 }
 
-// canPromote reports whether a tier has a higher tier to move to in
-// any of the four promotion chains.
 func canPromote(current string) (string, bool) {
 	for _, order := range promotionChains {
 		i, ok := findInChain(current, order)
@@ -36,8 +32,6 @@ func canPromote(current string) (string, bool) {
 	return "", false
 }
 
-// canDemote reports whether a tier has a lower tier to move to in
-// any of the four promotion chains.
 func canDemote(current string) (string, bool) {
 	for _, order := range promotionChains {
 		i, ok := findInChain(current, order)

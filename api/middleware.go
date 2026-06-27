@@ -159,8 +159,6 @@ func CORSMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
-// statusRecorder wraps http.ResponseWriter so LoggingMiddleware can
-// read the final status code after the handler has written it.
 type statusRecorder struct {
 	http.ResponseWriter
 	status int

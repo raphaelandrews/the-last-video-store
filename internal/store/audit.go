@@ -62,10 +62,6 @@ func (s *Store) GetAuditEntriesByUser(userID string) ([]*models.AuditEntry, erro
 	return entries, err
 }
 
-// UpdateAuditEntry overwrites the stored JSON for the given entry ID.
-// This is normally never called — the audit chain is append-only — but
-// it is exposed so the demo tamper tool (cmd/tamper) can simulate an
-// attacker modifying a row directly in the DB.
 func (s *Store) UpdateAuditEntry(entry *models.AuditEntry) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bucketAuditLogs)

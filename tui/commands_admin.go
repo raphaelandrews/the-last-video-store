@@ -39,6 +39,25 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 	}
 }
 
+func (m *Model) loadCatalogOptions() tea.Cmd {
+	return func() tea.Msg {
+		resp, _ := m.apiGet("/api/v1/movies/options")
+		if resp == nil {
+			return loadCatalogOptionsMsg{}
+		}
+		defer resp.Body.Close()
+		if errMsg := handleAPIErr(resp); errMsg != nil {
+			return errMsg
+		}
+		var r struct {
+			Genres  []string `json:"genres"`
+			Formats []string `json:"formats"`
+		}
+		json.NewDecoder(resp.Body).Decode(&r)
+		return loadCatalogOptionsMsg{genres: r.Genres, formats: r.Formats}
+	}
+}
+
 func (m *Model) loadAdminUsers() tea.Cmd {
 	return func() tea.Msg {
 		resp, _ := m.apiGet("/api/v1/users")
@@ -118,7 +137,7 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 		})
 		resp, err := m.apiPost("/api/v1/movies", string(body))
 		if err != nil {
-			m.movieForm.ErrMsg = err.Error()
+			m.movieForm.SetError(err.Error())
 			return nil
 		}
 		defer resp.Body.Close()
@@ -130,7 +149,7 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			m.movieForm.ErrMsg = e.Error
+			m.movieForm.SetError(e.Error)
 			return nil
 		}
 		m.moveToAdminMovies()
@@ -162,7 +181,7 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 		})
 		resp, err := m.apiPut("/api/v1/movies/"+msg.MovieID, string(body))
 		if err != nil {
-			m.movieForm.ErrMsg = err.Error()
+			m.movieForm.SetError(err.Error())
 			return nil
 		}
 		defer resp.Body.Close()
@@ -174,7 +193,7 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 				Error string `json:"error"`
 			}
 			json.NewDecoder(resp.Body).Decode(&e)
-			m.movieForm.ErrMsg = e.Error
+			m.movieForm.SetError(e.Error)
 			return nil
 		}
 		m.moveToAdminMovies()

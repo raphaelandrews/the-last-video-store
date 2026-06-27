@@ -14,7 +14,6 @@ import (
 
 type AdminUsersRefreshMsg struct{}
 
-
 type adminUserItem struct {
 	user models.UserResponse
 }
@@ -30,7 +29,6 @@ func (a adminUserItem) FilterValue() string {
 func (a adminUserItem) detailLine() string {
 	return fmt.Sprintf("%s  ·  %d/%d rentals", a.user.TierName, a.user.RentalCount, a.user.MaxRentals)
 }
-
 
 type adminUserDelegate struct{}
 
@@ -86,7 +84,6 @@ func (d adminUserDelegate) Render(w io.Writer, m list.Model, index int, item lis
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-
 type AdminUsersModel struct {
 	list      list.Model
 	users     []models.UserResponse
@@ -122,7 +119,6 @@ func (m *AdminUsersModel) SelectedUser() *models.UserResponse {
 	}
 	return nil
 }
-
 
 func (m *AdminUsersModel) Update(msg tea.Msg) (*AdminUsersModel, tea.Cmd) {
 	var cmd tea.Cmd

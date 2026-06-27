@@ -347,3 +347,39 @@ func (h *MovieHandler) RemoveStaffPick(w http.ResponseWriter, r *http.Request) {
 
 	WriteJSON(w, http.StatusOK, StaffPickResponse{StaffPick: false})
 }
+
+type CatalogOptions struct {
+	Genres  []string `json:"genres"`
+	Formats []string `json:"formats"`
+}
+
+func (h *MovieHandler) Options(w http.ResponseWriter, r *http.Request) {
+	genres, err := h.store.ListGenres()
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to list genres")
+		return
+	}
+	formats, err := h.store.ListFormats()
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to list formats")
+		return
+	}
+	wantFormats := []string{"Blu-ray", "DVD", "VHS"}
+	have := make(map[string]struct{}, len(formats))
+	for _, f := range formats {
+		have[f] = struct{}{}
+	}
+	for _, f := range wantFormats {
+		if _, ok := have[f]; !ok {
+			formats = append(formats, f)
+			have[f] = struct{}{}
+		}
+	}
+	if genres == nil {
+		genres = []string{}
+	}
+	if formats == nil {
+		formats = []string{}
+	}
+	WriteJSON(w, http.StatusOK, CatalogOptions{Genres: genres, Formats: formats})
+}

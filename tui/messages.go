@@ -64,3 +64,7 @@ type loadGameSessionsMsg struct {
 	sessions []models.GameSession
 }
 type gameRefreshMsg struct{}
+type loadCatalogOptionsMsg struct {
+	genres  []string
+	formats []string
+}

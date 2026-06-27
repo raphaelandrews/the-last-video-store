@@ -98,8 +98,6 @@ func (m *Model) footerView() string {
 		return ""
 	}
 	helpView := m.help.View(m.currentScreenKeys())
-	// Add a small visual gap above the help line so it doesn't sit
-	// flush against the body content.
 	return lipgloss.NewStyle().
 		Padding(1, 0, 0, 0).
 		Render(helpView)

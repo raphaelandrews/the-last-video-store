@@ -39,4 +39,3 @@ func seedMerch(s *store.Store) {
 		s.CreateMerchItem(&items[i])
 	}
 }
-

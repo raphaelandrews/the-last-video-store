@@ -11,8 +11,6 @@ import (
 	"github.com/thelastvideostore/tui/pages"
 )
 
-// logAPIError writes a one-line diagnostic to stderr. The X-Request-ID
-// header is included so the line can be cross-referenced with server logs.
 func logAPIError(tag, method, path string, resp *http.Response, body string) {
 	if resp == nil {
 		fmt.Fprintf(os.Stderr, "[tui %s] %s %s: no response (network error)\n", tag, method, path)
@@ -61,8 +59,6 @@ func (m *Model) apiDelete(path string) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-// decodeAPIErr returns the {error} body for any non-2xx response.
-// The bool is true when the response is a 403 (access denied).
 func decodeAPIErr(resp *http.Response) (string, bool) {
 	if resp == nil || resp.StatusCode < 400 {
 		return "", false
@@ -79,8 +75,6 @@ func decodeAPIErr(resp *http.Response) (string, bool) {
 	return e.Error, false
 }
 
-// handleAPIErr turns a 4xx/5xx response into a pages.ErrorMsg. Returns
-// nil for 2xx.
 func handleAPIErr(resp *http.Response) tea.Msg {
 	if resp == nil {
 		return nil

@@ -52,6 +52,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 				r.Get("/search", movieHandler.Search)
 				r.Get("/staff-picks", movieHandler.StaffPicks)
 				r.Get("/last-chance", movieHandler.LastChance)
+				r.Get("/options", movieHandler.Options)
 				r.Get("/{id}", movieHandler.GetByID)
 
 				r.Group(func(r chi.Router) {

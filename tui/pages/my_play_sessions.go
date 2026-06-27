@@ -13,7 +13,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-
 type playSessionItem struct {
 	session models.GameSession
 }
@@ -29,7 +28,6 @@ func (p playSessionItem) Description() string {
 	return fmt.Sprintf("🎮 %dm%02ds remaining", mins, secs)
 }
 func (p playSessionItem) FilterValue() string { return p.session.GameTitle }
-
 
 type playSessionDelegate struct{}
 
@@ -76,8 +74,6 @@ func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item l
 		fmt.Sprintf("%dm%02ds", mins, secs),
 	)
 
-	// Status reflects actual remaining time so the row updates without
-	// waiting for a server round-trip.
 	var status string
 	switch {
 	case remaining == 0:
@@ -104,18 +100,10 @@ func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item l
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
 }
 
-
 type PlaySessionsReloadMsg struct{}
 
-// PlayTickMsg is sent every second while the play-sessions screen is
-// visible so the countdown updates in real time. It is exported so the
-// parent's Update can observe it (e.g. to refetch from the server when
-// a session expires locally).
 type PlayTickMsg time.Time
 
-// MyPlaySessionsModel shows the currently logged-in user's active in-store
-// game play sessions. Each row displays the game, the live countdown of the
-// remaining time, and the session ID + start time.
 type MyPlaySessionsModel struct {
 	list     list.Model
 	sessions []models.GameSession
@@ -134,12 +122,8 @@ func NewMyPlaySessionsModel() *MyPlaySessionsModel {
 	return &MyPlaySessionsModel{list: l}
 }
 
-// Init starts the per-second tick that drives the live countdown.
 func (m *MyPlaySessionsModel) Init() tea.Cmd { return playTick() }
 
-// SetSessions stores the given sessions, keeps only the active ones and
-// sorts them most-recent-first so the user's latest play session is
-// always at the top.
 func (m *MyPlaySessionsModel) SetSessions(sessions []models.GameSession) {
 	active := make([]models.GameSession, 0, len(sessions))
 	for _, s := range sessions {
@@ -165,9 +149,6 @@ func (m *MyPlaySessionsModel) SetSessions(sessions []models.GameSession) {
 	m.list.SetItems(items)
 }
 
-// HasExpired reports whether any active session has just crossed its
-// expiry since the last render. The parent uses this to know when to
-// refetch from the server.
 func (m *MyPlaySessionsModel) HasExpired() bool {
 	now := time.Now().Unix()
 	for _, s := range m.sessions {
@@ -200,8 +181,6 @@ func (m *MyPlaySessionsModel) View(w, h int) string {
 	return m.list.View()
 }
 
-// tick returns a tea.Cmd that fires in 1 second, used to drive the live
-// countdown on the play-sessions screen.
 func playTick() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg { return PlayTickMsg(t) })
 }

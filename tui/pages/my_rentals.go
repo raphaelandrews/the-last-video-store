@@ -62,7 +62,6 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 	const minute = int64(60)
 	secs := (r.DueDate - now) / minute
 
-	// ── Line 1: title + format + status
 	marker := "  "
 	titleStyle := lipgloss.NewStyle().Foreground(styles.FG1).Bold(true)
 	if selected {
@@ -116,7 +115,6 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 		marker, titleStr, "  ", formatStr, "  ", statusStr, ptsStr,
 	)
 
-	// ── Line 2: metadata
 	meta := []string{}
 
 	if r.IsFreeRental {

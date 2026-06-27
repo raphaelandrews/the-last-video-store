@@ -295,6 +295,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.searchBar.SetResults(msg.results)
 		case loadAdminMoviesMsg:
 			m.adminMovies.SetMovies(msg.movies, msg.total, msg.page)
+		case loadCatalogOptionsMsg:
+			if m.movieForm != nil {
+				m.movieForm.SetOptions(msg.genres, msg.formats)
+			}
 		case loadAdminUsersMsg:
 			m.adminUsers.SetUsers(msg.users)
 		case loadAuditLogMsg:
@@ -370,25 +374,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		_, pageCmd = m.movieForm.Update(msg)
 	}
 
-	// Audit log uses a table component (not a list) so it has its own
-	// dedicated keypath. Route all messages to it.
 	if m.screen == scrAuditLog && m.auditLog != nil {
 		_, pc := m.auditLog.Update(msg)
 		pageCmd = tea.Batch(pageCmd, pc)
 	}
 
-	// Play-sessions screen also receives non-key messages (the per-second
-	// tick that drives the live countdown). Route the original message
-	// through the page's Update so the tick can self-perpetuate.
 	if m.screen == scrMyPlaySessions && m.myPlaySessions != nil {
 		_, pc := m.myPlaySessions.Update(msg)
 		pageCmd = tea.Batch(pageCmd, pc)
 	}
 
-	// Route messages to list-based pages so their built-in filtering,
-	// selection and navigation work. Skip if the user is in a filter
-	// input (list is handling all keys) or if the list already accepted
-	// a navigation key.
 	if km, ok := msg.(tea.KeyMsg); ok {
 		switch m.screen {
 		case scrRentals:

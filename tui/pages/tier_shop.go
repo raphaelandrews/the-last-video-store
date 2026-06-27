@@ -12,7 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-
 type tierItem struct {
 	tier models.TierInfo
 }
@@ -34,7 +33,6 @@ func (t tierItem) summary() string {
 	}
 	return perks
 }
-
 
 type tierDelegate struct {
 	balance float64
@@ -97,7 +95,6 @@ func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-
 type TierShopModel struct {
 	list    list.Model
 	tiers   []models.TierInfo
@@ -125,7 +122,6 @@ func NewTierShopModel(currentTier string, balance float64) *TierShopModel {
 	}
 	l.SetItems(items)
 
-	// Pre-select current tier.
 	m := &TierShopModel{
 		list:    l,
 		tiers:   tiers,
@@ -140,7 +136,6 @@ func NewTierShopModel(currentTier string, balance float64) *TierShopModel {
 	}
 	return m
 }
-
 
 func (m *TierShopModel) SelectedTier() *models.TierInfo {
 	if ti, ok := m.list.SelectedItem().(tierItem); ok {

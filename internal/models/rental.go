@@ -36,11 +36,7 @@ type RentalResponse struct {
 	NeedsRewind  bool    `json:"needs_rewind"`
 	Status       string  `json:"status"`
 	IsFreeRental bool    `json:"is_free_rental"`
-	// PointsEarned is the change in 🍿 Popcorn Points from this
-	// return: +10 on time, -5 if late, +5 bonus if the user owns the
-	// Popcorn Bucket. Set by the return handler; 0 for active rentals
-	// or rentals never returned through the API.
-	PointsEarned int `json:"points_earned"`
+	PointsEarned int     `json:"points_earned"`
 }
 
 func (r *Rental) ToResponse(movieTitle string) RentalResponse {

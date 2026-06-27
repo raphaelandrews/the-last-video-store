@@ -508,4 +508,3 @@ func sanitizeID(s string) string {
 	}
 	return string(out)
 }
-

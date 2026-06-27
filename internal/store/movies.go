@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/thelastvideostore/internal/models"
@@ -260,4 +261,56 @@ func (s *Store) GetLastChanceMovies() ([]*models.Movie, error) {
 		return nil
 	})
 	return movies, err
+}
+
+func (s *Store) ListGenres() ([]string, error) {
+	set := make(map[string]struct{})
+	err := s.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(bucketMoviesByGenre).Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			name := string(k)
+			if i := strings.IndexByte(name, ':'); i > 0 {
+				name = name[:i]
+			}
+			if name != "" {
+				set[name] = struct{}{}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(set))
+	for g := range set {
+		out = append(out, g)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func (s *Store) ListFormats() ([]string, error) {
+	set := make(map[string]struct{})
+	err := s.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(bucketMovies).Cursor()
+		for _, v := c.First(); v != nil; _, v = c.Next() {
+			var movie models.Movie
+			if err := json.Unmarshal(v, &movie); err != nil {
+				continue
+			}
+			if movie.Format != "" {
+				set[movie.Format] = struct{}{}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, 0, len(set))
+	for f := range set {
+		out = append(out, f)
+	}
+	sort.Strings(out)
+	return out, nil
 }

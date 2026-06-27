@@ -5,8 +5,6 @@ import (
 	"github.com/thelastvideostore/internal/ds/bitmask"
 )
 
-// ─── Splash ────────────────────────────────────────────────────────────────
-
 type splashKeys struct{}
 
 func (splashKeys) ShortHelp() []key.Binding {
@@ -16,8 +14,6 @@ func (splashKeys) ShortHelp() []key.Binding {
 	}
 }
 func (splashKeys) FullHelp() [][]key.Binding { return nil }
-
-// ─── Auth (login / register) ───────────────────────────────────────────────
 
 type authKeys struct {
 	isRegister bool
@@ -42,8 +38,6 @@ func (a authKeys) FullHelp() [][]key.Binding {
 		{quitBinding},
 	}
 }
-
-// ─── Browse ────────────────────────────────────────────────────────────────
 
 type browseKeys struct{}
 
@@ -71,8 +65,6 @@ func (browseKeys) FullHelp() [][]key.Binding {
 			key.NewBinding(key.WithKeys("v"), key.WithHelp("v", "wishlist"))},
 	}
 }
-
-// ─── Movie detail ──────────────────────────────────────────────────────────
 
 type movieDetailKeys struct {
 	rented bool
@@ -105,8 +97,6 @@ func (d movieDetailKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Game detail ───────────────────────────────────────────────────────────
-
 type gameDetailKeys struct{}
 
 func (gameDetailKeys) ShortHelp() []key.Binding {
@@ -126,8 +116,6 @@ func (gameDetailKeys) FullHelp() [][]key.Binding {
 		{backBinding},
 	}
 }
-
-// ─── My rentals ────────────────────────────────────────────────────────────
 
 type rentalsKeys struct{}
 
@@ -151,8 +139,6 @@ func (rentalsKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Profile ───────────────────────────────────────────────────────────────
-
 type profileKeys struct{}
 
 func (profileKeys) ShortHelp() []key.Binding {
@@ -175,8 +161,6 @@ func (profileKeys) FullHelp() [][]key.Binding {
 		{backBinding},
 	}
 }
-
-// ─── Wishlist / Inventory / Merch / Tier shop (simple list screens) ────────
 
 type wishlistKeys struct{}
 
@@ -238,8 +222,6 @@ func (tierShopKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── SnackBar menu ─────────────────────────────────────────────────────────
-
 type snackBarMenuKeys struct {
 	canManage bool
 }
@@ -290,8 +272,6 @@ func (snackBarManageKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── My play sessions ──────────────────────────────────────────────────────
-
 type myPlaySessionsKeys struct{}
 
 func (myPlaySessionsKeys) ShortHelp() []key.Binding {
@@ -307,8 +287,6 @@ func (myPlaySessionsKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── TOTP ──────────────────────────────────────────────────────────────────
-
 type totpKeys struct{}
 
 func (totpKeys) ShortHelp() []key.Binding {
@@ -319,8 +297,6 @@ func (totpKeys) ShortHelp() []key.Binding {
 }
 func (totpKeys) FullHelp() [][]key.Binding { return nil }
 
-// ─── Access denied ─────────────────────────────────────────────────────────
-
 type accessDeniedKeys struct{}
 
 func (accessDeniedKeys) ShortHelp() []key.Binding {
@@ -330,8 +306,6 @@ func (accessDeniedKeys) ShortHelp() []key.Binding {
 	}
 }
 func (accessDeniedKeys) FullHelp() [][]key.Binding { return nil }
-
-// ─── Admin movies ──────────────────────────────────────────────────────────
 
 type adminMoviesKeys struct {
 	page int
@@ -362,8 +336,6 @@ func (a adminMoviesKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Admin users ───────────────────────────────────────────────────────────
-
 type adminUsersKeys struct{}
 
 func (adminUsersKeys) ShortHelp() []key.Binding {
@@ -387,8 +359,6 @@ func (adminUsersKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Audit log ─────────────────────────────────────────────────────────────
-
 type auditLogKeys struct{}
 
 func (auditLogKeys) ShortHelp() []key.Binding {
@@ -411,22 +381,18 @@ func (auditLogKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// ─── Movie form ────────────────────────────────────────────────────────────
-
 type movieFormKeys struct{}
 
 func (movieFormKeys) ShortHelp() []key.Binding {
 	return []key.Binding{
 		key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab/↓", "next field")),
 		key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab/↑", "prev")),
-		key.NewBinding(key.WithKeys("1", "2", "3"), key.WithHelp("1/2/3 on title", "type")),
 		key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "submit")),
 		key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
 	}
 }
 func (movieFormKeys) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{key.NewBinding(key.WithKeys("1", "2", "3"), key.WithHelp("1/2/3 (on Title)", "pick type"))},
 		{key.NewBinding(key.WithKeys("tab", "down"), key.WithHelp("tab/↓", "next field")),
 			key.NewBinding(key.WithKeys("shift+tab", "up"), key.WithHelp("shift+tab/↑", "prev field"))},
 		{key.NewBinding(key.WithKeys("ctrl+s", "ctrl+enter"), key.WithHelp("ctrl+s", "submit")),
@@ -434,8 +400,6 @@ func (movieFormKeys) FullHelp() [][]key.Binding {
 	}
 }
 
-// currentScreenKeys returns the help.KeyMap for the current screen, wrapped
-// so the global `?` toggle and quit binding are always present.
 func (m *Model) currentScreenKeys() screenKeyMap {
 	switch m.screen {
 	case scrSplash:
