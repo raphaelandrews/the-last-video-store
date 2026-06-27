@@ -90,9 +90,6 @@ func (m *AuditLogModel) MarkBroken(brokenAt int, brokenID, reason string) {
 }
 
 func (m *AuditLogModel) SetEntries(entries []map[string]interface{}) {
-	// Sort by timestamp descending so the most recent event is at the
-	// top of page 0. The server iterates a BoltDB cursor in key
-	// (UUID) order, not timestamp order, so we sort client-side.
 	sort.SliceStable(entries, func(i, j int) bool {
 		ti, _ := entries[i]["timestamp"].(float64)
 		tj, _ := entries[j]["timestamp"].(float64)
@@ -104,9 +101,6 @@ func (m *AuditLogModel) SetEntries(entries []map[string]interface{}) {
 }
 
 func (m *AuditLogModel) refreshPage() {
-	// Re-resolve the broken row's display index from the UUID. This
-	// makes the marker correct even if the entries list was reloaded
-	// after the verify call.
 	if m.brokenID != "" {
 		m.brokenIDX = -1
 		for i, e := range m.entries {
@@ -144,8 +138,6 @@ func (m *AuditLogModel) refreshPage() {
 
 func (m *AuditLogModel) Update(msg tea.Msg) (*AuditLogModel, tea.Cmd) {
 	var cmd tea.Cmd
-	// Handle our own page keys before delegating to the table, otherwise
-	// the table will swallow them.
 	if km, ok := msg.(tea.KeyMsg); ok {
 		switch km.String() {
 		case "n", "pgdown", "right":
@@ -161,8 +153,6 @@ func (m *AuditLogModel) Update(msg tea.Msg) (*AuditLogModel, tea.Cmd) {
 			}
 			return m, nil
 		case "g":
-			// Jump to the page containing the broken entry, if any.
-			// brokenIDX is the index in our descending-sorted list.
 			if m.brokenIDX >= 0 {
 				m.page = m.brokenIDX / m.pageSize
 				m.refreshPage()
@@ -183,7 +173,6 @@ func (m *AuditLogModel) Update(msg tea.Msg) (*AuditLogModel, tea.Cmd) {
 }
 
 func (m *AuditLogModel) View(w, h int) string {
-	// Reserve 4 lines: title, paginator, verify status, optional hint.
 	m.table.SetWidth(w)
 	m.table.SetHeight(h - 4)
 	if m.table.Focused() {
@@ -252,8 +241,6 @@ func (m *AuditLogModel) buildAllRows(entries []map[string]interface{}) []table.R
 			timeStr = t.Format("15:04:05")
 		}
 		actionStr := formatAction(action)
-		// Mark the broken row inline so it's visible even when the
-		// user is on a different page.
 		if m.brokenIDX == i {
 			actionStr = "💥 " + actionStr
 			timeStr = timeStr + " ⚠"

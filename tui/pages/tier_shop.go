@@ -12,7 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type tierItem struct {
 	tier models.TierInfo
@@ -36,7 +35,6 @@ func (t tierItem) summary() string {
 	return perks
 }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type tierDelegate struct {
 	balance float64
@@ -48,7 +46,7 @@ func newTierDelegate(balance float64, current string) tierDelegate {
 }
 
 func (d tierDelegate) Height() int                             { return 2 }
-func (d tierDelegate) Spacing() int                            { return 2 }
+func (d tierDelegate) Spacing() int                            { return 1 }
 func (d tierDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -66,8 +64,6 @@ func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
 		marker = styles.HighlightStyle.Render("▸ ")
 	}
-
-	// Line 1: name + price
 	priceStr := "FREE"
 	priceColor := styles.Green
 	if t.Price > 0 {
@@ -91,8 +87,6 @@ func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 		priceRender,
 		currentMarker,
 	)
-
-	// Line 2: free rentals, max concurrent, perks
 	meta := []string{
 		fmt.Sprintf("%d free/mo", t.FreeRentals),
 		fmt.Sprintf("max %d concurrent", t.MaxConcurrent),
@@ -103,7 +97,6 @@ func (d tierDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type TierShopModel struct {
 	list    list.Model

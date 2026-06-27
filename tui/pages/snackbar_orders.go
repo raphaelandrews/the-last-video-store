@@ -30,7 +30,7 @@ type snackOrderDelegate struct{}
 func newSnackOrderDelegate() snackOrderDelegate { return snackOrderDelegate{} }
 
 func (d snackOrderDelegate) Height() int                             { return 2 }
-func (d snackOrderDelegate) Spacing() int                            { return 2 }
+func (d snackOrderDelegate) Spacing() int                            { return 1 }
 func (d snackOrderDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d snackOrderDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {

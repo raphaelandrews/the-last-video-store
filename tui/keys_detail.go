@@ -46,11 +46,11 @@ func (m *Model) detailKey(k string) tea.Cmd {
 			m.detail.Choosing = false
 			m.detail.ErrMsg = ""
 		}
-	case "down", "j":
+	case "n":
 		if m.detail != nil {
 			m.detail.MoveRelatedDown()
 		}
-	case "up", "k":
+	case "p":
 		if m.detail != nil {
 			m.detail.MoveRelatedUp()
 		}
@@ -88,9 +88,9 @@ func (m *Model) gameDetailKey(k string) tea.Cmd {
 			m.gameDetail.ChoosingTime = false
 			return m.doGamePlayStart(m.gameDetail.Game.ID, m.gameDetail.Game.Title, duration)
 		}
-	case "down", "j":
+	case "]":
 		m.gameDetail.MoveRelatedDown()
-	case "up", "k":
+	case "[":
 		m.gameDetail.MoveRelatedUp()
 	}
 	return nil

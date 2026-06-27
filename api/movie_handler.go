@@ -184,13 +184,20 @@ func (h *MovieHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.CopiesTotal < 1 {
 		req.CopiesTotal = 1
 	}
+	if req.MediaType == "" {
+		req.MediaType = "movie"
+	}
 
 	movie := &models.Movie{
 		ID:              uuid.NewString(),
+		MediaType:       req.MediaType,
 		Title:           req.Title,
 		Year:            req.Year,
 		Genre:           req.Genre,
 		Format:          req.Format,
+		Platform:        req.Platform,
+		SeasonNumber:    req.SeasonNumber,
+		EpisodeCount:    req.EpisodeCount,
 		Director:        req.Director,
 		Cast:            req.Cast,
 		Synopsis:        req.Synopsis,
@@ -198,6 +205,7 @@ func (h *MovieHandler) Create(w http.ResponseWriter, r *http.Request) {
 		CopiesAvailable: req.CopiesTotal,
 		Available:       true,
 		IsNewRelease:    req.IsNewRelease,
+		RentalPrice:     req.RentalPrice,
 		CreatedAt:       time.Now().Unix(),
 	}
 
@@ -226,6 +234,9 @@ func (h *MovieHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.MediaType != nil {
+		movie.MediaType = *req.MediaType
+	}
 	if req.Title != nil {
 		movie.Title = *req.Title
 	}
@@ -246,6 +257,15 @@ func (h *MovieHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 		movie.Format = *req.Format
 	}
+	if req.Platform != nil {
+		movie.Platform = *req.Platform
+	}
+	if req.SeasonNumber != nil {
+		movie.SeasonNumber = *req.SeasonNumber
+	}
+	if req.EpisodeCount != nil {
+		movie.EpisodeCount = *req.EpisodeCount
+	}
 	if req.Director != nil {
 		movie.Director = *req.Director
 	}
@@ -257,6 +277,9 @@ func (h *MovieHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.CopiesTotal != nil {
 		movie.CopiesTotal = *req.CopiesTotal
+	}
+	if req.RentalPrice != nil {
+		movie.RentalPrice = *req.RentalPrice
 	}
 	if req.IsNewRelease != nil {
 		movie.IsNewRelease = *req.IsNewRelease

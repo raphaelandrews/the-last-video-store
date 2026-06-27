@@ -16,26 +16,36 @@ type RegisterRequest struct {
 }
 
 type CreateMovieRequest struct {
+	MediaType    string   `json:"media_type"`
 	Title        string   `json:"title"`
 	Year         int      `json:"year"`
 	Genre        string   `json:"genre"`
 	Format       string   `json:"format"`
+	Platform     string   `json:"platform"`
+	SeasonNumber int      `json:"season"`
+	EpisodeCount int      `json:"episodes"`
 	Director     string   `json:"director"`
 	Cast         []string `json:"cast"`
 	Synopsis     string   `json:"synopsis"`
 	CopiesTotal  int      `json:"copies_total"`
+	RentalPrice  float64  `json:"rental_price"`
 	IsNewRelease bool     `json:"is_new_release"`
 }
 
 type UpdateMovieRequest struct {
+	MediaType    *string   `json:"media_type,omitempty"`
 	Title        *string   `json:"title,omitempty"`
 	Year         *int      `json:"year,omitempty"`
 	Genre        *string   `json:"genre,omitempty"`
 	Format       *string   `json:"format,omitempty"`
+	Platform     *string   `json:"platform,omitempty"`
+	SeasonNumber *int      `json:"season,omitempty"`
+	EpisodeCount *int      `json:"episodes,omitempty"`
 	Director     *string   `json:"director,omitempty"`
 	Cast         *[]string `json:"cast,omitempty"`
 	Synopsis     *string   `json:"synopsis,omitempty"`
 	CopiesTotal  *int      `json:"copies_total,omitempty"`
+	RentalPrice  *float64  `json:"rental_price,omitempty"`
 	IsNewRelease *bool     `json:"is_new_release,omitempty"`
 }
 

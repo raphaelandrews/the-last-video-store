@@ -84,13 +84,18 @@ func (d movieDetailKeys) ShortHelp() []key.Binding {
 	}
 	return []key.Binding{
 		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "rent")),
+		key.NewBinding(key.WithKeys("↑↓"), key.WithHelp("↑↓", "scroll")),
+		key.NewBinding(key.WithKeys("n/p"), key.WithHelp("n/p", "next/prev related")),
 		key.NewBinding(key.WithKeys("w"), key.WithHelp("w", "waitlist")),
 		backBinding,
 	}
 }
 func (d movieDetailKeys) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{key.NewBinding(key.WithKeys("up", "down", "k", "j"), key.WithHelp("↑↓", "related movies"))},
+		{key.NewBinding(key.WithKeys("up", "down", "k", "j"), key.WithHelp("↑↓", "scroll body")),
+			key.NewBinding(key.WithKeys("pgup", "pgdown"), key.WithHelp("pgup/dn", "page")),
+			key.NewBinding(key.WithKeys("home", "end"), key.WithHelp("home/end", "top/bottom"))},
+		{key.NewBinding(key.WithKeys("n", "p"), key.WithHelp("n p", "next/prev related"))},
 		{key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "rent")),
 			key.NewBinding(key.WithKeys("t"), key.WithHelp("t", "use ticket")),
 			key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "pay money"))},

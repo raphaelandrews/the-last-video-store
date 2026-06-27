@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strings"
@@ -19,7 +21,16 @@ type contextKey string
 const (
 	ctxUserKey        contextKey = "user"
 	ctxPermissionsKey contextKey = "permissions"
+	ctxRequestIDKey   contextKey = "request_id"
 )
+
+func newRequestID() string {
+	b := make([]byte, 6)
+	if _, err := rand.Read(b); err != nil {
+		return "no-rand"
+	}
+	return hex.EncodeToString(b)
+}
 
 func GetUser(r *http.Request) *models.User {
 	u, _ := r.Context().Value(ctxUserKey).(*models.User)
@@ -29,6 +40,11 @@ func GetUser(r *http.Request) *models.User {
 func GetPermissions(r *http.Request) bitmask.Permission {
 	p, _ := r.Context().Value(ctxPermissionsKey).(bitmask.Permission)
 	return p
+}
+
+func GetRequestID(r *http.Request) string {
+	id, _ := r.Context().Value(ctxRequestIDKey).(string)
+	return id
 }
 
 func AuthMiddleware(secret string, store *store.Store) func(http.Handler) http.Handler {
@@ -143,12 +159,51 @@ func CORSMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
+// statusRecorder wraps http.ResponseWriter so LoggingMiddleware can
+// read the final status code after the handler has written it.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	if r.status == 0 {
+		r.status = http.StatusOK
+	}
+	return r.ResponseWriter.Write(b)
+}
+
+func RequestIDMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			id := r.Header.Get("X-Request-ID")
+			if id == "" {
+				id = newRequestID()
+			}
+			w.Header().Set("X-Request-ID", id)
+			ctx := context.WithValue(r.Context(), ctxRequestIDKey, id)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 func LoggingMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			next.ServeHTTP(w, r)
-			log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+			rec := &statusRecorder{ResponseWriter: w}
+			next.ServeHTTP(rec, r)
+
+			if rec.status >= 400 {
+				log.Printf("%s %s %d %s", r.Method, r.URL.Path, rec.status, time.Since(start))
+			} else {
+				log.Printf("%s %s %s", r.Method, r.URL.Path, time.Since(start))
+			}
 		})
 	}
 }
@@ -158,7 +213,7 @@ func RecoverMiddleware() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {
 				if err := recover(); err != nil {
-					log.Printf("panic recovered: %v", err)
+					log.Printf("panic: %v", err)
 					WriteError(w, http.StatusInternalServerError, "internal server error")
 				}
 			}()

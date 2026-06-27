@@ -3,6 +3,7 @@ package pages
 import (
 	"errors"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/tui/styles"
@@ -12,8 +13,23 @@ func errorMsg(s string) error {
 	return errors.New(s)
 }
 
-// gruvboxHuhTheme returns a huh theme that matches the Gruvbox Material
-// Dark Hard palette used throughout the TUI.
+func gruvboxKeyMap() *huh.KeyMap {
+	km := huh.NewDefaultKeyMap()
+	km.Input.Next = key.NewBinding(
+		key.WithKeys("enter", "tab", "down"),
+		key.WithHelp("enter/tab/↓", "next"),
+	)
+	km.Input.Prev = key.NewBinding(
+		key.WithKeys("shift+tab", "up"),
+		key.WithHelp("shift+tab/↑", "prev"),
+	)
+	km.Input.Submit = key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("enter", "submit"),
+	)
+	return km
+}
+
 func gruvboxHuhTheme() *huh.Theme {
 	t := huh.ThemeBase()
 

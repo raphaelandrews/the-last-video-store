@@ -115,6 +115,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.w, m.h = msg.Width, msg.Height
 		m.help.Width = msg.Width
 		m.ready = true
+		if m.detail != nil {
+			_, dc := m.detail.Update(msg)
+			if dc != nil {
+				return m, dc
+			}
+		}
 		return m, nil
 
 	case tea.KeyMsg:
@@ -125,6 +131,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if helpKeyMatches(msg) {
 			m.help.ShowAll = !m.help.ShowAll
 			return m, nil
+		}
+		if m.screen == scrDetail && m.detail != nil {
+			_, dc := m.detail.Update(msg)
+			if dc != nil {
+				return m, dc
+			}
 		}
 		if m.searching {
 			return m, m.searchKey(msg)

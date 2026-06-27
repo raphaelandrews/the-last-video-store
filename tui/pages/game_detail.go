@@ -114,7 +114,7 @@ func (m *GameDetailModel) View(w, h int) string {
 		badge += "  " + lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render(fmt.Sprintf("$%.2f/hr", g.PlayPrice))
 	}
 
-	synopsis := styles.TextStyle.Width(w - 4).Render(wrap(g.Synopsis, w-4))
+	synopsis := styles.TextStyle.Width(w - 4).Render(g.Synopsis)
 	copies := fmt.Sprintf("🎮 %d/%d copies available", g.CopiesAvailable, g.CopiesTotal)
 
 	actionLine := ""

@@ -39,7 +39,6 @@ func (m MediaType) Label() string {
 	}
 }
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type adminMovieItem struct {
 	movie models.MovieResponse
@@ -60,8 +59,6 @@ func (a adminMovieItem) detailLine() string {
 	if a.movie.IsStaffPick {
 		pick = "  ★ staff pick"
 	}
-
-	// Media-type-specific badges
 	meta := ""
 	switch a.movie.MediaType {
 	case "series":
@@ -86,14 +83,13 @@ func (a adminMovieItem) detailLine() string {
 	return fmt.Sprintf("%d  %s  ·  %s  ·  %s%s%s", a.movie.Year, a.movie.Genre, format, copies, pick, meta)
 }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type adminMovieDelegate struct{}
 
 func newAdminMovieDelegate() adminMovieDelegate { return adminMovieDelegate{} }
 
 func (d adminMovieDelegate) Height() int                             { return 2 }
-func (d adminMovieDelegate) Spacing() int                            { return 2 }
+func (d adminMovieDelegate) Spacing() int                            { return 1 }
 func (d adminMovieDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d adminMovieDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -122,8 +118,6 @@ func (d adminMovieDelegate) Render(w io.Writer, m list.Model, index int, item li
 		titleStyle.Render(truncateStr(mv.Title, 38)),
 		pick,
 	)
-
-	// Detail: year, genre, format, copies
 	format := components.FormatBadge(mv.Format)
 
 	copyColor := styles.Green
@@ -160,7 +154,6 @@ func (d adminMovieDelegate) Render(w io.Writer, m list.Model, index int, item li
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 // AdminMoviesModel manages the entire catalog (movies, series, games).
 // A top tab row lets the admin switch the active media type; the list
@@ -172,9 +165,6 @@ type AdminMoviesModel struct {
 	Page     int
 	Total    int
 	PageSize int
-
-	// Per-tab cached data, so flipping tabs is instant and remembers
-	// where the admin left off in each section.
 	activeTab MediaType
 	perTab    map[MediaType]*tabState
 }
@@ -192,9 +182,6 @@ func NewAdminMoviesModel() *AdminMoviesModel {
 	l.Styles = gruvboxListStyles()
 	l.SetShowStatusBar(true)
 	l.SetShowHelp(false)
-	// Server-side pagination handles the catalog; the inner list
-	// paginator is disabled so 30 fetched items render as a single
-	// page (the list will scroll within those 30).
 	l.SetShowPagination(false)
 	l.Paginator.PerPage = 0
 	l.SetFilteringEnabled(true)
@@ -313,7 +300,6 @@ func (m *AdminMoviesModel) tabBarView(width int) string {
 				Foreground(styles.Grey1).
 				BorderForeground(styles.BG5)
 		}
-		// Append the row count for inactive tabs as a faint hint.
 		label := t.Label()
 		if !active {
 			if state, ok := m.perTab[t]; ok && state.total > 0 {
@@ -324,8 +310,6 @@ func (m *AdminMoviesModel) tabBarView(width int) string {
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
-
-	// Underline using a thin green rule that spans the whole width.
 	rule := lipgloss.NewStyle().
 		Foreground(styles.Green).
 		Width(width).
@@ -335,10 +319,7 @@ func (m *AdminMoviesModel) tabBarView(width int) string {
 }
 
 func (m *AdminMoviesModel) View(w, h int) string {
-	// Reserve 4 lines: tabs (2) + status bar (1) + bottom strip (1).
 	tabBar := m.tabBarView(w)
-
-	// Reset the list's title for the active tab.
 	m.list.Title = m.activeTab.Label()
 
 	listH := h - 4
@@ -365,9 +346,7 @@ func (m *AdminMoviesModel) View(w, h int) string {
 			Padding(2, 0).
 			Render("Loading " + m.activeTab.Label() + "…")
 	} else if len(m.movies) == 0 {
-		// Strip the leading emoji + space so the message reads naturally.
 		label := m.activeTab.Label()
-		// Find first space and drop everything up to and including it.
 		short := label
 		for i, r := range label {
 			if r == ' ' {

@@ -161,20 +161,28 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 		if rentalUser.RentalCount < 0 {
 			rentalUser.RentalCount = 0
 		}
+		pointsEarned := 0
 		if rental.LateFee == 0 && rental.RewindFee == 0 {
 			rentalUser.PopcornPoints += 10
+			pointsEarned += 10
 		} else if rental.LateFee > 0 {
 			rentalUser.PopcornPoints -= 5
+			pointsEarned -= 5
 		}
 		rentalUser.Balance -= rental.LateFee + rental.RewindFee
 		inventory, _ := h.store.ListInventory(rentalUser.ID)
 		for _, item := range inventory {
 			if item.MerchID == "merch-popcorn-bucket" {
 				rentalUser.PopcornPoints += 5
+				pointsEarned += 5
 				break
 			}
 		}
 		h.store.UpdateUser(rentalUser)
+		resp := rental.ToResponse(h.movieTitle(rental.MovieID))
+		resp.PointsEarned = pointsEarned
+		WriteJSON(w, http.StatusOK, resp)
+		return
 	}
 
 	h.store.UpdateRental(rental)

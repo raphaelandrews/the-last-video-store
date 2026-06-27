@@ -14,7 +14,6 @@ import (
 
 type AdminUsersRefreshMsg struct{}
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type adminUserItem struct {
 	user models.UserResponse
@@ -32,14 +31,13 @@ func (a adminUserItem) detailLine() string {
 	return fmt.Sprintf("%s  ·  %d/%d rentals", a.user.TierName, a.user.RentalCount, a.user.MaxRentals)
 }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type adminUserDelegate struct{}
 
 func newAdminUserDelegate() adminUserDelegate { return adminUserDelegate{} }
 
 func (d adminUserDelegate) Height() int                             { return 2 }
-func (d adminUserDelegate) Spacing() int                            { return 2 }
+func (d adminUserDelegate) Spacing() int                            { return 1 }
 func (d adminUserDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d adminUserDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -57,8 +55,6 @@ func (d adminUserDelegate) Render(w io.Writer, m list.Model, index int, item lis
 		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
 		marker = styles.HighlightStyle.Render("▸ ")
 	}
-
-	// Line 1: username + status flags
 	var flags []string
 	if u.Banned {
 		flags = append(flags, lipgloss.NewStyle().Foreground(styles.Red).Bold(true).Render("🚫 BANNED"))
@@ -76,8 +72,6 @@ func (d adminUserDelegate) Render(w io.Writer, m list.Model, index int, item lis
 		nameStyle.Render(truncateStr(u.Username, 24)),
 		flagStr,
 	)
-
-	// Line 2: tier badge + rentals
 	badge := styles.TierBadgeStyle(u.TierName).Render(" " + u.TierName + " ")
 	rentals := styles.DimTextStyle.Render(
 		fmt.Sprintf("  %d / %d concurrent rentals", u.RentalCount, u.MaxRentals),
@@ -92,7 +86,6 @@ func (d adminUserDelegate) Render(w io.Writer, m list.Model, index int, item lis
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type AdminUsersModel struct {
 	list      list.Model

@@ -12,8 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
-
 type rentalItem struct {
 	rental models.RentalResponse
 }
@@ -42,14 +40,12 @@ func (r rentalItem) detailLine() string {
 	return status
 }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
-
 type rentalDelegate struct{}
 
 func newRentalDelegate() rentalDelegate { return rentalDelegate{} }
 
 func (d rentalDelegate) Height() int  { return 2 }
-func (d rentalDelegate) Spacing() int { return 2 }
+func (d rentalDelegate) Spacing() int { return 1 }
 
 func (d rentalDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
@@ -116,6 +112,20 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 		meta = append(meta, lipgloss.NewStyle().Foreground(styles.Orange).Render(fmt.Sprintf("💵 $%.2f fees", fee)))
 	}
 
+	if r.Status == "returned" && r.PointsEarned != 0 {
+		var ptsColor lipgloss.Color
+		var prefix string
+		if r.PointsEarned > 0 {
+			ptsColor = styles.Orange
+			prefix = "+"
+		} else {
+			ptsColor = styles.Red
+		}
+		meta = append(meta, lipgloss.NewStyle().Foreground(ptsColor).Bold(true).Render(
+			fmt.Sprintf("%s%d🍿", prefix, r.PointsEarned),
+		))
+	}
+
 	if r.Status != "returned" && r.RentedAt > 0 {
 		meta = append(meta, styles.DimTextStyle.Render(fmt.Sprintf("rented %s", time.Unix(r.RentedAt, 0).Format("15:04"))))
 	}
@@ -131,8 +141,6 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
-
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type ReturnRequestMsg struct{ RentalID string }
 type ExtendRentalMsg struct{ RentalID string }
@@ -172,7 +180,6 @@ func (m *MyRentalsModel) SetRentals(rs []models.RentalResponse) {
 		m.selectedID = ""
 	}
 }
-
 
 func (m *MyRentalsModel) SelectedRental() *models.RentalResponse {
 	if i, ok := m.list.SelectedItem().(rentalItem); ok {

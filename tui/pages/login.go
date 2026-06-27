@@ -53,7 +53,8 @@ func NewLoginModel() *LoginModel {
 	).
 		WithShowHelp(false).
 		WithShowErrors(true).
-		WithTheme(theme)
+		WithTheme(theme).
+		WithKeyMap(gruvboxKeyMap())
 
 	return m
 }
@@ -119,7 +120,7 @@ func (m *LoginModel) View(w, h int) string {
 	help := styles.DimTextStyle.
 		Width(54).
 		Align(lipgloss.Center).
-		Render("tab/↑↓ navigate · enter submit · ctrl+r sign up · ctrl+c quit")
+		Render("tab/↓ next · shift+tab/↑ prev · enter submit · ctrl+r sign up · ctrl+c quit")
 
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center, content, "", help))

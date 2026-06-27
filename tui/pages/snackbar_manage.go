@@ -33,7 +33,7 @@ type snackManageDelegate struct{}
 func newSnackManageDelegate() snackManageDelegate { return snackManageDelegate{} }
 
 func (d snackManageDelegate) Height() int                             { return 2 }
-func (d snackManageDelegate) Spacing() int                            { return 2 }
+func (d snackManageDelegate) Spacing() int                            { return 1 }
 func (d snackManageDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d snackManageDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {

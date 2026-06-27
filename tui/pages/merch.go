@@ -11,7 +11,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type merchItem struct {
 	item models.MerchItem
@@ -21,14 +20,13 @@ func (m merchItem) Title() string       { return m.item.Name }
 func (m merchItem) Description() string { return m.item.Description }
 func (m merchItem) FilterValue() string { return m.item.Name + " " + m.item.Description }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type merchDelegate struct{}
 
 func newMerchDelegate() merchDelegate { return merchDelegate{} }
 
 func (d merchDelegate) Height() int                             { return 2 }
-func (d merchDelegate) Spacing() int                            { return 2 }
+func (d merchDelegate) Spacing() int                            { return 1 }
 func (d merchDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -46,8 +44,6 @@ func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
 		marker = styles.HighlightStyle.Render("▸ ")
 	}
-
-	// Line 1: name + popcorn cost
 	costStr := lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render(
 		fmt.Sprintf("%d 🍿", it.PointsCost),
 	)
@@ -58,8 +54,6 @@ func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 		"   ",
 		costStr,
 	)
-
-	// Line 2: stock + description preview
 	var stockGlyph, stockColor lipgloss.Color
 	var stockText string
 	switch {
@@ -86,7 +80,6 @@ func (d merchDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type MerchRedeemMsg struct{ ItemID string }
 type MerchReloadMsg struct{}

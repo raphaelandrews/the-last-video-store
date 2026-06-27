@@ -13,7 +13,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type playSessionItem struct {
 	session models.GameSession
@@ -31,14 +30,13 @@ func (p playSessionItem) Description() string {
 }
 func (p playSessionItem) FilterValue() string { return p.session.GameTitle }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type playSessionDelegate struct{}
 
 func newPlaySessionDelegate() playSessionDelegate { return playSessionDelegate{} }
 
 func (d playSessionDelegate) Height() int                             { return 2 }
-func (d playSessionDelegate) Spacing() int                            { return 2 }
+func (d playSessionDelegate) Spacing() int                            { return 1 }
 func (d playSessionDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -56,8 +54,6 @@ func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item l
 		titleStyle = lipgloss.NewStyle().Foreground(styles.Orange).Bold(true)
 		marker = styles.HighlightStyle.Render("▸ ")
 	}
-
-	// Line 1: game title + status
 	remaining := s.ExpiresAt - time.Now().Unix()
 	if remaining < 0 {
 		remaining = 0
@@ -99,8 +95,6 @@ func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item l
 		"  ",
 		status,
 	)
-
-	// Line 2: time remaining + duration info
 	meta := styles.DimTextStyle.Render("  ⏱ ") + timeStr +
 		styles.DimTextStyle.Render(fmt.Sprintf("  ·  session %s  ·  started %s",
 			truncateStr(s.ID, 12),
@@ -110,7 +104,6 @@ func (d playSessionDelegate) Render(w io.Writer, m list.Model, index int, item l
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, meta))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type PlaySessionsReloadMsg struct{}
 
@@ -187,9 +180,6 @@ func (m *MyPlaySessionsModel) HasExpired() bool {
 
 func (m *MyPlaySessionsModel) Update(msg tea.Msg) (*MyPlaySessionsModel, tea.Cmd) {
 	if _, ok := msg.(PlayTickMsg); ok {
-		// Schedule the next tick and return a no-op cmd; the next View()
-		// recomputes remaining time from time.Now() so the countdown
-		// updates each second.
 		return m, playTick()
 	}
 	var cmd tea.Cmd

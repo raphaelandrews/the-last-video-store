@@ -134,7 +134,7 @@ func (m *RegisterModel) View(w, h int) string {
 	help := styles.DimTextStyle.
 		Width(54).
 		Align(lipgloss.Center).
-		Render("tab/↑↓ navigate · enter submit · ctrl+l back to login · ctrl+c quit")
+		Render("tab/↓ next · shift+tab/↑ prev · enter submit · ctrl+l back to login · ctrl+c quit")
 
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center, content, "", help))

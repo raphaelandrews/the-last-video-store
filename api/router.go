@@ -14,6 +14,7 @@ func NewRouter(store *store.Store, cfg *config.Config, hc *crypto.HashChain) htt
 	r := chi.NewRouter()
 
 	r.Use(RecoverMiddleware())
+	r.Use(RequestIDMiddleware())
 	r.Use(LoggingMiddleware())
 	r.Use(CORSMiddleware())
 	r.Use(RateLimitMiddleware(config.RateLimitPerMinute))

@@ -12,7 +12,6 @@ import (
 	"github.com/thelastvideostore/tui/styles"
 )
 
-// ─── Item ──────────────────────────────────────────────────────────────────
 
 type snackItem struct {
 	item models.SnackBarItem
@@ -26,14 +25,13 @@ func (s snackItem) FilterValue() string {
 	return s.item.Name + " " + s.item.Category + " " + s.item.Description
 }
 
-// ─── Delegate ──────────────────────────────────────────────────────────────
 
 type snackDelegate struct{}
 
 func newSnackDelegate() snackDelegate { return snackDelegate{} }
 
 func (d snackDelegate) Height() int                             { return 2 }
-func (d snackDelegate) Spacing() int                            { return 2 }
+func (d snackDelegate) Spacing() int                            { return 1 }
 func (d snackDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 
 func (d snackDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
@@ -53,8 +51,6 @@ func (d snackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 		nameStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
 		marker = styles.HighlightStyle.Render("▸ ")
 	}
-
-	// Line 1: emoji + name + price
 	priceColor := styles.Yellow
 	if it.Stock <= 0 {
 		priceColor = styles.Grey1
@@ -70,8 +66,6 @@ func (d snackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 		"   ",
 		priceStr,
 	)
-
-	// Line 2: stock + category + affordability
 	var stockGlyph, stockColor lipgloss.Color
 	var stockText string
 	switch {
@@ -101,7 +95,6 @@ func (d snackDelegate) Render(w io.Writer, m list.Model, index int, item list.It
 	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
 }
 
-// ─── Model ─────────────────────────────────────────────────────────────────
 
 type SnackBarOrderMsg struct{ ItemID string }
 

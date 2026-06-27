@@ -108,8 +108,8 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			"genre":        msg.Genre,
 			"format":       msg.Format,
 			"platform":     msg.Platform,
-			"season":       msg.Season,
-			"episodes":     msg.Episodes,
+			"season":       msg.SeasonNumber,
+			"episodes":     msg.EpisodeCount,
 			"director":     msg.Director,
 			"cast":         cast,
 			"synopsis":     msg.Synopsis,
@@ -134,7 +134,11 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab()))()
+		// After add, the new item may land on any page depending on
+		// its UUID's BoltDB iteration order. Re-fetch from page 1 of
+		// the active tab so the user lands on a refreshed view.
+		m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab())
+		return m.loadAdminMovies(1)()
 	}
 }
 
@@ -148,8 +152,8 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			"genre":        msg.Genre,
 			"format":       msg.Format,
 			"platform":     msg.Platform,
-			"season":       msg.Season,
-			"episodes":     msg.Episodes,
+			"season":       msg.SeasonNumber,
+			"episodes":     msg.EpisodeCount,
 			"director":     msg.Director,
 			"cast":         cast,
 			"synopsis":     msg.Synopsis,
@@ -174,7 +178,10 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		return m.loadAdminMovies(m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab()))()
+		// After edit, refresh from page 1 so any change is visible
+		// even if the row moved between BoltDB pages.
+		m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab())
+		return m.loadAdminMovies(1)()
 	}
 }
 
