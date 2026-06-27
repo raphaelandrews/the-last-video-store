@@ -96,8 +96,24 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 	}
 	statusStr := lipgloss.NewStyle().Foreground(statusColor).Render(fmt.Sprintf("%s %s", statusGlyph, statusText))
 
+	ptsStr := ""
+	if r.Status == "returned" && r.PointsEarned != 0 {
+		var ptsColor lipgloss.Color
+		var ptsPrefix string
+		if r.PointsEarned > 0 {
+			ptsColor = styles.Orange
+			ptsPrefix = "+"
+		} else {
+			ptsColor = styles.Red
+		}
+		ptsStr = lipgloss.NewStyle().
+			Foreground(ptsColor).
+			Bold(true).
+			Render(fmt.Sprintf("  %s%d🍿", ptsPrefix, r.PointsEarned))
+	}
+
 	line1 := lipgloss.JoinHorizontal(lipgloss.Left,
-		marker, titleStr, "  ", formatStr, "  ", statusStr,
+		marker, titleStr, "  ", formatStr, "  ", statusStr, ptsStr,
 	)
 
 	// ── Line 2: metadata
@@ -110,20 +126,6 @@ func (d rentalDelegate) Render(w io.Writer, m list.Model, index int, item list.I
 	fee := r.LateFee + r.RewindFee
 	if fee > 0 {
 		meta = append(meta, lipgloss.NewStyle().Foreground(styles.Orange).Render(fmt.Sprintf("💵 $%.2f fees", fee)))
-	}
-
-	if r.Status == "returned" && r.PointsEarned != 0 {
-		var ptsColor lipgloss.Color
-		var prefix string
-		if r.PointsEarned > 0 {
-			ptsColor = styles.Orange
-			prefix = "+"
-		} else {
-			ptsColor = styles.Red
-		}
-		meta = append(meta, lipgloss.NewStyle().Foreground(ptsColor).Bold(true).Render(
-			fmt.Sprintf("%s%d🍿", prefix, r.PointsEarned),
-		))
 	}
 
 	if r.Status != "returned" && r.RentedAt > 0 {
@@ -208,10 +210,5 @@ func (m *MyRentalsModel) View(w, h int) string {
 		return empty
 	}
 
-	view := m.list.View()
-
-	if m.Status != "" {
-		view += "\n" + styles.SuccessTextStyle.Render(m.Status)
-	}
-	return view
+	return m.list.View()
 }

@@ -2,7 +2,9 @@ package tui
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -22,18 +24,23 @@ func (m *Model) doReturn(rentalID string) tea.Cmd {
 		}
 		var rental models.RentalResponse
 		json.NewDecoder(resp.Body).Decode(&rental)
-		m.rentals.Status = "Returned!"
-		if m.userResp != nil {
-			m.userResp.RentalCount--
-			if rental.LateFee == 0 && rental.RewindFee == 0 {
-				m.userResp.PopcornPoints += 10
-				m.rentals.Status += " (+10🍿)"
-			} else {
-				m.userResp.PopcornPoints -= 5
-			}
-		}
+		m.rentals.Status = formatReturnStatus(rental)
 		return tea.Batch(m.loadRentals(), m.loadMovies(m.browse.Page, m.browse.Genre))()
 	}
+}
+
+func formatReturnStatus(r models.RentalResponse) string {
+	parts := []string{"✓ Returned"}
+	totalFee := r.LateFee + r.RewindFee
+	if totalFee > 0 {
+		parts = append(parts, fmt.Sprintf("-$%.2f fees", totalFee))
+	}
+	if r.PointsEarned > 0 {
+		parts = append(parts, fmt.Sprintf("+%d🍿", r.PointsEarned))
+	} else if r.PointsEarned < 0 {
+		parts = append(parts, fmt.Sprintf("%d🍿", r.PointsEarned))
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (m *Model) loadRentals() tea.Cmd {

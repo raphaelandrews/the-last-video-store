@@ -14,11 +14,7 @@ type LoginModel struct {
 	errMsg   string
 }
 
-func NewLoginModel() *LoginModel {
-	m := &LoginModel{}
-
-	theme := gruvboxHuhTheme()
-
+func (m *LoginModel) buildForm() {
 	m.form = huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
@@ -53,9 +49,13 @@ func NewLoginModel() *LoginModel {
 	).
 		WithShowHelp(false).
 		WithShowErrors(true).
-		WithTheme(theme).
+		WithTheme(gruvboxHuhTheme()).
 		WithKeyMap(gruvboxKeyMap())
+}
 
+func NewLoginModel() *LoginModel {
+	m := &LoginModel{}
+	m.buildForm()
 	return m
 }
 
@@ -63,7 +63,13 @@ func (m *LoginModel) Init() tea.Cmd {
 	return m.form.Init()
 }
 
-func (m *LoginModel) SetError(s string) { m.errMsg = s }
+func (m *LoginModel) SetError(s string) {
+	m.errMsg = s
+	m.username = ""
+	m.password = ""
+	m.buildForm()
+	m.form.Init()
+}
 
 func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+c" {
@@ -78,9 +84,8 @@ func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 	if m.form.State == huh.StateCompleted {
 		username := m.username
 		password := m.password
-		m.username = ""
-		m.password = ""
-		m.form = NewLoginModel().form
+		m.buildForm()
+		m.form.Init()
 		return m, func() tea.Msg { return LoginRequestMsg{Username: username, Password: password} }
 	}
 
@@ -88,15 +93,19 @@ func (m *LoginModel) Update(msg tea.Msg) (*LoginModel, tea.Cmd) {
 }
 
 func (m *LoginModel) View(w, h int) string {
-	title := styles.TitleStyle.
+	header := lipgloss.NewStyle().
+		Foreground(styles.Green).
+		Bold(true).
 		Width(54).
 		Align(lipgloss.Center).
 		Render("─── MEMBER LOGIN ───")
 
-	subtitle := styles.DimTextStyle.
+	subtitle := lipgloss.NewStyle().
+		Foreground(styles.Grey1).
+		Italic(true).
 		Width(54).
 		Align(lipgloss.Center).
-		Render("Welcome back. Sign in to your account.")
+		Render("Sign in to your account to continue browsing.")
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -107,7 +116,7 @@ func (m *LoginModel) View(w, h int) string {
 	body := m.form.View()
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
-		title,
+		header,
 		subtitle,
 		"",
 		box.Render(body),
@@ -117,7 +126,8 @@ func (m *LoginModel) View(w, h int) string {
 		content += "\n" + styles.ErrorTextStyle.Render("⛔ "+m.errMsg)
 	}
 
-	help := styles.DimTextStyle.
+	help := lipgloss.NewStyle().
+		Foreground(styles.Grey1).
 		Width(54).
 		Align(lipgloss.Center).
 		Render("tab/↓ next · shift+tab/↑ prev · enter submit · ctrl+r sign up · ctrl+c quit")

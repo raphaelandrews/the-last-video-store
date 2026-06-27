@@ -33,17 +33,22 @@ func gruvboxKeyMap() *huh.KeyMap {
 func gruvboxHuhTheme() *huh.Theme {
 	t := huh.ThemeBase()
 
+	greenBold := lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
+	greenAccent := lipgloss.NewStyle().Foreground(styles.Green)
+	neutral := lipgloss.NewStyle().Foreground(styles.FG0)
+	muted := lipgloss.NewStyle().Foreground(styles.Grey1)
+
 	t.Focused.Base = t.Focused.Base.
 		BorderLeft(true).
 		BorderStyle(lipgloss.ThickBorder()).
 		BorderForeground(styles.Green)
 	t.Focused.Card = t.Focused.Base
-	t.Focused.Title = styles.TitleStyle.Foreground(styles.Green)
-	t.Focused.Description = styles.DimTextStyle
-	t.Focused.TextInput.Prompt = lipgloss.NewStyle().Foreground(styles.Green)
-	t.Focused.TextInput.Cursor = lipgloss.NewStyle().Foreground(styles.Green)
-	t.Focused.TextInput.Placeholder = styles.DimTextStyle
-	t.Focused.TextInput.Text = styles.TextStyle
+	t.Focused.Title = greenBold
+	t.Focused.Description = muted
+	t.Focused.TextInput.Prompt = greenAccent
+	t.Focused.TextInput.Cursor = greenAccent
+	t.Focused.TextInput.Placeholder = muted
+	t.Focused.TextInput.Text = neutral
 	t.Focused.NextIndicator = lipgloss.NewStyle().
 		SetString("→").
 		Foreground(styles.Green).
@@ -55,9 +60,9 @@ func gruvboxHuhTheme() *huh.Theme {
 	t.Focused.SelectSelector = lipgloss.NewStyle().
 		SetString("▸ ").
 		Foreground(styles.Green)
-	t.Focused.Option = styles.TextStyle
-	t.Focused.SelectedOption = lipgloss.NewStyle().Foreground(styles.Green)
-	t.Focused.UnselectedOption = styles.TextStyle
+	t.Focused.Option = neutral
+	t.Focused.SelectedOption = greenAccent
+	t.Focused.UnselectedOption = neutral
 	t.Focused.SelectedPrefix = lipgloss.NewStyle().
 		SetString("[•] ").
 		Foreground(styles.Green)
@@ -81,8 +86,8 @@ func gruvboxHuhTheme() *huh.Theme {
 	t.Blurred = t.Focused
 	t.Blurred.Base = t.Blurred.Base.
 		BorderStyle(lipgloss.HiddenBorder())
-	t.Blurred.Title = styles.DimTextStyle
-	t.Blurred.TextInput.Text = styles.DimTextStyle
+	t.Blurred.Title = muted
+	t.Blurred.TextInput.Text = muted
 
 	return t
 }

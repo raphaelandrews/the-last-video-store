@@ -19,6 +19,7 @@ type Rental struct {
 	NeedsRewind  bool    `json:"needs_rewind"`
 	Status       string  `json:"status"`
 	IsFreeRental bool    `json:"is_free_rental"`
+	PointsEarned int     `json:"points_earned"`
 }
 
 type RentalResponse struct {
@@ -57,6 +58,7 @@ func (r *Rental) ToResponse(movieTitle string) RentalResponse {
 		NeedsRewind:  r.NeedsRewind,
 		Status:       r.Status,
 		IsFreeRental: r.IsFreeRental,
+		PointsEarned: r.PointsEarned,
 	}
 }
 

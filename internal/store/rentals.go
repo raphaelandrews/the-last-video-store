@@ -3,6 +3,7 @@ package store
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/thelastvideostore/internal/models"
@@ -53,7 +54,27 @@ func (s *Store) UpdateRental(rental *models.Rental) error {
 		if err != nil {
 			return err
 		}
-		return tx.Bucket(bucketRentals).Put([]byte(rental.ID), data)
+		if err := tx.Bucket(bucketRentals).Put([]byte(rental.ID), data); err != nil {
+			return err
+		}
+		rb := tx.Bucket(bucketRentalsByUser)
+		if rb != nil {
+			keysToDelete := [][]byte{}
+			c := rb.Cursor()
+			prefix := rental.UserID + ":"
+			for k, _ := c.Seek([]byte(prefix)); k != nil && hasPrefix(string(k), prefix); k, _ = c.Next() {
+				parts := splitKey(string(k), ':')
+				if len(parts) >= 2 && parts[1] == rental.ID {
+					keysToDelete = append(keysToDelete, k)
+				}
+			}
+			for _, k := range keysToDelete {
+				rb.Delete(k)
+			}
+			newKey := []byte(rental.UserID + ":" + rental.ID + ":" + strconv.FormatInt(rental.RentedAt, 10))
+			rb.Put(newKey, nil)
+		}
+		return nil
 	})
 }
 

@@ -19,12 +19,10 @@ func (m *AccessDeniedModel) View(w, h int) string {
 		Bold(true).
 		Width(50).
 		Align(lipgloss.Center).
-		Render("⛔  ACCESS DENIED  ⛔")
+		Render(m.Message)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		banner,
-		"",
-		styles.TextStyle.Render(m.Message),
 		"",
 		styles.DimTextStyle.Render("Your current role does not have permission to access this area."),
 		"",

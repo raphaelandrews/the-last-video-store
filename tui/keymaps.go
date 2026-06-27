@@ -159,7 +159,6 @@ func (profileKeys) ShortHelp() []key.Binding {
 	return []key.Binding{
 		key.NewBinding(key.WithKeys("l"), key.WithHelp("l", "logout")),
 		key.NewBinding(key.WithKeys("t"), key.WithHelp("t", "tiers")),
-		key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "play sessions")),
 		key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "snack bar")),
 		key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "rewards")),
 	}
@@ -170,7 +169,6 @@ func (profileKeys) FullHelp() [][]key.Binding {
 		{key.NewBinding(key.WithKeys("t"), key.WithHelp("t", "tier shop")),
 			key.NewBinding(key.WithKeys("$"), key.WithHelp("$", "top up")),
 			key.NewBinding(key.WithKeys("2"), key.WithHelp("2", "toggle TOTP"))},
-		{key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "view play sessions"))},
 		{key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "snack bar")),
 			key.NewBinding(key.WithKeys("m"), key.WithHelp("m", "rewards shop")),
 			key.NewBinding(key.WithKeys("i"), key.WithHelp("i", "inventory"))},
@@ -419,12 +417,22 @@ type movieFormKeys struct{}
 
 func (movieFormKeys) ShortHelp() []key.Binding {
 	return []key.Binding{
-		key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "next field")),
-		key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "next/submit")),
+		key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab/↓", "next field")),
+		key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab/↑", "prev")),
+		key.NewBinding(key.WithKeys("1", "2", "3"), key.WithHelp("1/2/3 on title", "type")),
+		key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "submit")),
 		key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel")),
 	}
 }
-func (movieFormKeys) FullHelp() [][]key.Binding { return nil }
+func (movieFormKeys) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{key.NewBinding(key.WithKeys("1", "2", "3"), key.WithHelp("1/2/3 (on Title)", "pick type"))},
+		{key.NewBinding(key.WithKeys("tab", "down"), key.WithHelp("tab/↓", "next field")),
+			key.NewBinding(key.WithKeys("shift+tab", "up"), key.WithHelp("shift+tab/↑", "prev field"))},
+		{key.NewBinding(key.WithKeys("ctrl+s", "ctrl+enter"), key.WithHelp("ctrl+s", "submit")),
+			key.NewBinding(key.WithKeys("esc"), key.WithHelp("esc", "cancel"))},
+	}
+}
 
 // currentScreenKeys returns the help.KeyMap for the current screen, wrapped
 // so the global `?` toggle and quit binding are always present.

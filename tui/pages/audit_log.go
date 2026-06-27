@@ -273,8 +273,8 @@ func gruvboxTableStyles() table.Styles {
 
 	s.Selected = lipgloss.NewStyle().
 		Padding(0, 1).
-		Foreground(styles.BG0).
-		Background(styles.Yellow).
+		Background(styles.BG3).
+		Foreground(styles.Green).
 		Bold(true)
 
 	return s

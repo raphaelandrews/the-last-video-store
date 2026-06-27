@@ -178,9 +178,12 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
+		rental.PointsEarned = pointsEarned
 		h.store.UpdateUser(rentalUser)
+		h.store.UpdateRental(rental)
+		auth.AppendAuditEntry(h.store, h.hc, models.ActionReturn, user.ID, rental.MovieID,
+			h.movieTitle(rental.MovieID))
 		resp := rental.ToResponse(h.movieTitle(rental.MovieID))
-		resp.PointsEarned = pointsEarned
 		WriteJSON(w, http.StatusOK, resp)
 		return
 	}

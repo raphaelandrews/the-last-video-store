@@ -367,7 +367,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case scrRegister:
 		_, pageCmd = m.register.Update(msg)
 	case scrMovieForm:
-		pageCmd, _ = m.movieForm.Update(msg)
+		_, pageCmd = m.movieForm.Update(msg)
 	}
 
 	// Audit log uses a table component (not a list) so it has its own

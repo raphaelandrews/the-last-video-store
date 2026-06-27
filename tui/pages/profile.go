@@ -45,13 +45,11 @@ func (m *ProfileModel) View(w, h int) string {
 
 	header := m.headerView(tierColor, cardW-4)
 	body := m.bodyView(tierColor, cardW-4)
-	footer := m.footerView(tierColor, cardW-4)
 
 	cardBody := lipgloss.JoinVertical(lipgloss.Left,
 		header,
 		strings.Repeat("─", cardW-4),
 		body,
-		footer,
 	)
 
 	title := styles.HeadingStyle.
@@ -184,15 +182,12 @@ func (m *ProfileModel) rentalProgressBar() string {
 	bar := strings.Repeat("▰", filled) + strings.Repeat("▱", barWidth-filled)
 	coloredBar := lipgloss.NewStyle().Foreground(fillColor).Render(bar)
 
-	label := lipgloss.NewStyle().Foreground(styles.Grey1).Render(
-		fmt.Sprintf("RENTALS  %d/%d", u.RentalCount, u.MaxRentals),
-	)
+	label := lipgloss.NewStyle().Foreground(styles.Grey1).Render("RENTALS")
 	count := lipgloss.NewStyle().Foreground(styles.FG1).Bold(true).Render(
-		fmt.Sprintf(" %d/%d", u.RentalCount, u.MaxRentals),
+		fmt.Sprintf("  %d/%d", u.RentalCount, u.MaxRentals),
 	)
 
-	row := label + count + "  " + coloredBar
-	return row
+	return label + count + "  " + coloredBar
 }
 
 func (m *ProfileModel) statsLine() string {
@@ -212,34 +207,4 @@ func (m *ProfileModel) statsLine() string {
 				fmt.Sprintf("🔄 $%.2f rewind", s.Rewind)))
 	}
 	return strings.Join(parts, "  ")
-}
-
-func (m *ProfileModel) footerView(tierColor lipgloss.Color, w int) string {
-	u := m.User
-
-	var topUpLine string
-	elapsed := time.Now().Unix() - u.LastTopUpAt
-	switch {
-	case u.LastTopUpAt == 0, elapsed >= 30:
-		topUpLine = fmt.Sprintf("  [%s]  Top up  ",
-			lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("$"))
-	case elapsed < 30:
-		cooldown := 30 - int(elapsed)
-		topUpLine = fmt.Sprintf("  [%s]  Top-up in %ds  ",
-			lipgloss.NewStyle().Foreground(styles.Grey1).Bold(true).Render("$"),
-			cooldown)
-	}
-
-	shopLine := fmt.Sprintf("  [%s] Tier shop  [%s] Rewards  [%s] Rentals  [%s] Back",
-		lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("t"),
-		lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("m"),
-		lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("r"),
-		lipgloss.NewStyle().Foreground(styles.Green).Bold(true).Render("q"),
-	)
-
-	return lipgloss.JoinVertical(lipgloss.Left,
-		strings.Repeat("─", w),
-		styles.DimTextStyle.Render(topUpLine),
-		styles.DimTextStyle.Render(shopLine),
-	)
 }

@@ -3,9 +3,11 @@ package pages
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/tui/styles"
@@ -18,34 +20,32 @@ const (
 	FormEdit
 )
 
-var FormMediaTypes = []struct {
-	Label string
-	Value string
-}{
-	{"🎬 Movie", "movie"},
-	{"📺 Series", "series"},
-	{"🕹️ Game", "game"},
+const (
+	catalogMovie  = "movie"
+	catalogSeries = "series"
+	catalogGame   = "game"
+)
+
+type catalogField struct {
+	label       string
+	placeholder string
+	value       string
+	required    bool
+	validate    func(string) error
 }
 
 type MovieFormModel struct {
-	mode      MovieFormMode
-	movieID   string
-	form      *huh.Form
+	mode    MovieFormMode
+	movieID string
+
 	mediaType string
-	title     string
-	year      string
-	genre     string
-	format    string
-	platform  string
-	season    string
-	episodes  string
-	director  string
-	cast      string
-	synopsis  string
-	copies    string
-	price     string
-	ErrMsg    string
-	showType  bool
+
+	fields []catalogField
+	focus  int
+	inputs []textinput.Model
+	width  int
+
+	ErrMsg string
 }
 
 type MovieFormSubmitMsg struct {
@@ -67,326 +67,391 @@ type MovieFormSubmitMsg struct {
 }
 
 func NewMovieFormModel() *MovieFormModel {
-	m := &MovieFormModel{mode: FormAdd, mediaType: "movie", showType: true}
-	m.form = m.buildForm()
+	m := &MovieFormModel{mode: FormAdd, mediaType: catalogMovie}
+	m.buildInputs()
 	return m
 }
 
 func NewMovieEditFormModel(mv *models.MovieResponse) *MovieFormModel {
 	mt := mv.MediaType
 	if mt == "" {
-		mt = "movie"
+		mt = catalogMovie
 	}
 	m := &MovieFormModel{
 		mode:      FormEdit,
 		movieID:   mv.ID,
 		mediaType: mt,
-		title:     mv.Title,
-		year:      fmt.Sprintf("%d", mv.Year),
-		genre:     mv.Genre,
-		format:    mv.Format,
-		platform:  mv.Platform,
-		season:    fmt.Sprintf("%d", mv.SeasonNumber),
-		episodes:  fmt.Sprintf("%d", mv.EpisodeCount),
-		director:  mv.Director,
-		cast:      joinCast(mv.Cast),
-		synopsis:  mv.Synopsis,
-		copies:    fmt.Sprintf("%d", mv.CopiesTotal),
-		price:     fmt.Sprintf("%.2f", mv.RentalPrice),
-		showType:  true,
 	}
-	m.form = m.buildForm()
+	m.buildInputs()
+	for i := range m.inputs {
+		if i < len(m.fields) {
+			m.inputs[i].SetValue(m.fields[i].value)
+		}
+	}
 	return m
 }
 
-func (m *MovieFormModel) buildForm() *huh.Form {
-	yearValidate := func(s string) error {
-		y, err := strconv.Atoi(s)
-		if err != nil || y < 1880 || y > 2100 {
-			return errorMsg("enter a valid year (1880-2100)")
+func (m *MovieFormModel) buildInputs() {
+	m.fields = nil
+	m.inputs = nil
+
+	add := func(label, placeholder, def string, required bool, validate func(string) error) {
+		ti := textinput.New()
+		ti.Placeholder = placeholder
+		ti.CharLimit = 200
+		ti.Width = 30
+		ti.Prompt = "▸ "
+		ti.SetValue(def)
+		m.inputs = append(m.inputs, ti)
+		m.fields = append(m.fields, catalogField{
+			label:       label,
+			placeholder: placeholder,
+			value:       def,
+			required:    required,
+			validate:    validate,
+		})
+	}
+
+	intValidator := func(s string, min, max int) error {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return fmt.Errorf("must be a number")
+		}
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			return fmt.Errorf("not a valid number")
+		}
+		if n < min || n > max {
+			return fmt.Errorf("must be between %d and %d", min, max)
 		}
 		return nil
 	}
-	copiesValidate := func(s string) error {
-		c, err := strconv.Atoi(s)
-		if err != nil || c < 0 {
-			return errorMsg("copies must be a non-negative number")
-		}
-		return nil
-	}
-	priceValidate := func(s string) error {
-		p, err := strconv.ParseFloat(s, 64)
-		if err != nil || p < 0 {
-			return errorMsg("price must be a non-negative number")
-		}
-		return nil
-	}
-	seasonValidate := func(s string) error {
+
+	floatValidator := func(s string, min, max float64) error {
+		s = strings.TrimSpace(s)
 		if s == "" {
 			return nil
 		}
-		n, err := strconv.Atoi(s)
-		if err != nil || n < 0 {
-			return errorMsg("season must be a non-negative number")
+		n, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return fmt.Errorf("not a valid amount")
+		}
+		if n < min || n > max {
+			return fmt.Errorf("must be between %.2f and %.2f", min, max)
 		}
 		return nil
 	}
-	episodesValidate := func(s string) error {
+
+	nonEmpty := func(s string) error {
+		if strings.TrimSpace(s) == "" {
+			return fmt.Errorf("required")
+		}
+		return nil
+	}
+
+	thisYear := time.Now().Year()
+	yearValidator := func(s string) error {
+		return intValidator(s, 1880, thisYear+5)
+	}
+
+	priceValidator := func(s string) error {
+		s = strings.TrimSpace(s)
 		if s == "" {
 			return nil
 		}
-		n, err := strconv.Atoi(s)
-		if err != nil || n < 0 {
-			return errorMsg("episodes must be a non-negative number")
+		return floatValidator(s, 0, 999.99)
+	}
+
+	platformValidator := func(s string) error {
+		if m.mediaType != catalogGame {
+			return nil
+		}
+		if strings.TrimSpace(s) == "" {
+			return fmt.Errorf("required for games")
 		}
 		return nil
 	}
-
-	genreOptions := make([]huh.Option[string], 0)
-	switch m.mediaType {
-	case "series":
-		for _, g := range models.SeriesGenreList {
-			genreOptions = append(genreOptions, huh.NewOption(g, g))
+	seasonValidator := func(s string) error {
+		if m.mediaType != catalogSeries {
+			return nil
 		}
-	case "game":
-		for _, g := range models.GameGenreList {
-			genreOptions = append(genreOptions, huh.NewOption(g, g))
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil
 		}
-	default:
-		for _, g := range models.GenreList {
-			genreOptions = append(genreOptions, huh.NewOption(g, g))
+		return intValidator(s, 1, 99)
+	}
+	episodesValidator := func(s string) error {
+		if m.mediaType != catalogSeries {
+			return nil
 		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return nil
+		}
+		return intValidator(s, 1, 9999)
 	}
 
-	groups := []*huh.Group{}
-
-	if m.showType {
-		mediaTypeOptions := make([]huh.Option[string], len(FormMediaTypes))
-		for i, mt := range FormMediaTypes {
-			mediaTypeOptions[i] = huh.NewOption(mt.Label, mt.Value)
+	formatValidator := func(s string) error {
+		switch strings.TrimSpace(strings.ToUpper(s)) {
+		case "VHS", "DVD", "BLU-RAY", "BLURAY":
+			return nil
 		}
-		groups = append(groups, huh.NewGroup(
-			huh.NewSelect[string]().
-				Key("mediaType").
-				Title("Type").
-				Description("movie, series, or game").
-				Options(mediaTypeOptions...).
-				Value(&m.mediaType),
-		))
+		return fmt.Errorf("must be VHS, DVD, or Blu-ray")
 	}
 
-	common := func(g *huh.Group) *huh.Group { return g }
-
-	groups = append(groups, common(huh.NewGroup(
-		huh.NewInput().
-			Key("title").
-			Title("Title").
-			Prompt("▸ ").
-			CharLimit(200).
-			Validate(func(s string) error {
-				if s == "" {
-					return errorMsg("title is required")
-				}
-				return nil
-			}).
-			Value(&m.title),
-
-		huh.NewInput().
-			Key("year").
-			Title("Year").
-			Prompt("▸ ").
-			CharLimit(4).
-			Validate(yearValidate).
-			Value(&m.year),
-
-		huh.NewSelect[string]().
-			Key("genre").
-			Title("Genre").
-			Options(genreOptions...).
-			Value(&m.genre),
-
-		huh.NewSelect[string]().
-			Key("format").
-			Title("Format").
-			Options(
-				huh.NewOption("VHS", models.FormatVHS),
-				huh.NewOption("DVD", models.FormatDVD),
-				huh.NewOption("Blu-ray", models.FormatBluRay),
-			).
-			Value(&m.format),
-	)))
-
-	switch m.mediaType {
-	case "series":
-		groups = append(groups, huh.NewGroup(
-			huh.NewInput().
-				Key("season").
-				Title("Season").
-				Prompt("▸ ").
-				CharLimit(3).
-				Validate(seasonValidate).
-				Value(&m.season),
-
-			huh.NewInput().
-				Key("episodes").
-				Title("Episodes").
-				Prompt("▸ ").
-				CharLimit(4).
-				Validate(episodesValidate).
-				Value(&m.episodes),
-		))
-	case "game":
-		groups = append(groups, huh.NewGroup(
-			huh.NewInput().
-				Key("platform").
-				Title("Platform").
-				Description("PS5 · Xbox · Switch · PC · Arcade").
-				Prompt("▸ ").
-				CharLimit(30).
-				Value(&m.platform),
-		))
+	genreValidator := func(s string) error {
+		return nonEmpty(s)
 	}
 
-	groups = append(groups, huh.NewGroup(
-		huh.NewInput().
-			Key("director").
-			Title("Director").
-			Prompt("▸ ").
-			CharLimit(100).
-			Value(&m.director),
+	if m.mode == FormEdit {
+		switch m.mediaType {
+		case catalogSeries:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "Breaking Bad", required: true, validate: nonEmpty,
+			})
+		case catalogGame:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "Halo", required: true, validate: nonEmpty,
+			})
+		default:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "The Matrix", required: true, validate: nonEmpty,
+			})
+		}
+	} else {
+		switch m.mediaType {
+		case catalogSeries:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "Breaking Bad", required: true, validate: nonEmpty,
+			})
+		case catalogGame:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "Halo", required: true, validate: nonEmpty,
+			})
+		default:
+			m.fields = append(m.fields, catalogField{
+				label: "Title", placeholder: "The Matrix", required: true, validate: nonEmpty,
+			})
+		}
+	}
+	add("Year", "1999", "", true, yearValidator)
+	add("Genre", "SciFi", "", true, genreValidator)
+	add("Format", "VHS / DVD / Blu-ray", "", true, formatValidator)
+	add("Director", "Wachowski", "", true, nonEmpty)
+	add("Cast (comma-separated)", "Keanu Reeves, Laurence Fishburne", "", true, nonEmpty)
+	add("Synopsis", "A computer hacker learns the true nature of reality", "", false, func(s string) error { return nil })
+	add("Total copies", "5", "5", true, func(s string) error {
+		return intValidator(s, 1, 9999)
+	})
+	add("Rental price (USD)", "4.99", "0", false, priceValidator)
 
-		huh.NewInput().
-			Key("cast").
-			Title("Cast").
-			Description("comma-separated").
-			Prompt("▸ ").
-			CharLimit(500).
-			Value(&m.cast),
+	if m.mediaType == catalogSeries {
+		add("Season", "1", "", false, seasonValidator)
+		add("Episodes", "13", "", false, episodesValidator)
+	}
+	if m.mediaType == catalogGame {
+		add("Platform", "PS5", "", true, platformValidator)
+	}
 
-		huh.NewText().
-			Key("synopsis").
-			Title("Synopsis").
-			CharLimit(1000).
-			Lines(3).
-			Value(&m.synopsis),
-	))
+	m.inputs = nil
+	for _, f := range m.fields {
+		ti := textinput.New()
+		ti.Placeholder = f.placeholder
+		ti.CharLimit = 300
+		ti.Prompt = "▸ "
+		ti.SetValue(f.value)
+		m.inputs = append(m.inputs, ti)
+	}
+}
 
-	groups = append(groups, huh.NewGroup(
-		huh.NewInput().
-			Key("copies").
-			Title("Total copies").
-			Prompt("▸ ").
-			CharLimit(6).
-			Validate(copiesValidate).
-			Value(&m.copies),
-
-		huh.NewInput().
-			Key("price").
-			Title("Rental price").
-			Description("USD").
-			Prompt("▸ ").
-			CharLimit(10).
-			Validate(priceValidate).
-			Value(&m.price),
-	))
-
-	return huh.NewForm(groups...).
-		WithShowHelp(false).
-		WithShowErrors(true).
-		WithTheme(gruvboxHuhTheme()).
-		WithKeyMap(gruvboxKeyMap())
+func (m *MovieFormModel) SetMediaType(mediaType string) {
+	if mediaType == "" {
+		mediaType = catalogMovie
+	}
+	if m.mediaType == mediaType {
+		return
+	}
+	previous := make([]string, len(m.fields))
+	for i, f := range m.fields {
+		previous[i] = m.inputs[i].Value()
+		f.value = m.inputs[i].Value()
+	}
+	m.mediaType = mediaType
+	m.buildInputs()
+	common := len(m.fields)
+	if len(previous) < common {
+		common = len(previous)
+	}
+	for i := 0; i < common; i++ {
+		m.inputs[i].SetValue(previous[i])
+	}
 }
 
 func (m *MovieFormModel) Init() tea.Cmd {
-	return m.form.Init()
+	return textinput.Blink
 }
 
-func (m *MovieFormModel) Update(msg tea.Msg) (tea.Cmd, error) {
-	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "ctrl+c" {
-		return tea.Quit, nil
-	}
-	if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "esc" {
-		return nil, nil
-	}
-
-	prevType := m.mediaType
-	form, cmd := m.form.Update(msg)
-	if f, ok := form.(*huh.Form); ok {
-		m.form = f
-	}
-
-	if m.mediaType != prevType {
-		preserved := map[string]string{
-			"title":    m.title,
-			"year":     m.year,
-			"director": m.director,
-			"cast":     m.cast,
-			"synopsis": m.synopsis,
-			"copies":   m.copies,
-			"price":    m.price,
-		}
-		m.showType = false
-		m.form = m.buildForm()
-		m.title = preserved["title"]
-		m.year = preserved["year"]
-		m.director = preserved["director"]
-		m.cast = preserved["cast"]
-		m.synopsis = preserved["synopsis"]
-		m.copies = preserved["copies"]
-		m.price = preserved["price"]
-	}
-
-	if m.form.State == huh.StateCompleted {
-		year, _ := strconv.Atoi(m.year)
-		copies, _ := strconv.Atoi(m.copies)
-		price, _ := strconv.ParseFloat(m.price, 64)
-		season, _ := strconv.Atoi(m.season)
-		episodes, _ := strconv.Atoi(m.episodes)
-		mode := m.mode
-		movieID := m.movieID
-		mediaType := m.mediaType
-		title := m.title
-		genre := m.genre
-		format := m.format
-		platform := m.platform
-		director := m.director
-		cast := m.cast
-		synopsis := m.synopsis
-		m.title = ""
-		m.year = ""
-		m.genre = ""
-		m.format = ""
-		m.platform = ""
-		m.season = ""
-		m.episodes = ""
-		m.director = ""
-		m.cast = ""
-		m.synopsis = ""
-		m.copies = ""
-		m.price = ""
-		m.form = NewMovieFormModel().form
-		return func() tea.Msg {
-			return MovieFormSubmitMsg{
-				Mode:         mode,
-				MovieID:      movieID,
-				MediaType:    mediaType,
-				Title:        title,
-				Year:         year,
-				Genre:        genre,
-				Format:       format,
-				Platform:     platform,
-				SeasonNumber: season,
-				EpisodeCount: episodes,
-				Director:     director,
-				Cast:         cast,
-				Synopsis:     synopsis,
-				Copies:       copies,
-				Price:        price,
+func (m *MovieFormModel) Update(msg tea.Msg) (*MovieFormModel, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok {
+		switch km.String() {
+		case "ctrl+c":
+			return m, tea.Quit
+		case "esc":
+			return m, nil
+		case "tab", "down":
+			m.nextField()
+			return m, nil
+		case "shift+tab", "up":
+			m.prevField()
+			return m, nil
+		case "1":
+			if m.focus == 0 {
+				m.SetMediaType(catalogMovie)
+				return m, nil
 			}
-		}, nil
+		case "2":
+			if m.focus == 0 {
+				m.SetMediaType(catalogSeries)
+				return m, nil
+			}
+		case "3":
+			if m.focus == 0 {
+				m.SetMediaType(catalogGame)
+				return m, nil
+			}
+		case "ctrl+s", "ctrl+enter":
+			return m, m.trySubmit()
+		}
 	}
 
-	return cmd, nil
+	if m.focus >= 0 && m.focus < len(m.inputs) {
+		var cmd tea.Cmd
+		m.inputs[m.focus], cmd = m.inputs[m.focus].Update(msg)
+		m.fields[m.focus].value = m.inputs[m.focus].Value()
+		return m, cmd
+	}
+	return m, nil
+}
+
+func (m *MovieFormModel) nextField() {
+	if len(m.inputs) == 0 {
+		return
+	}
+	if m.focus >= 0 {
+		m.inputs[m.focus].Blur()
+	}
+	m.focus++
+	if m.focus >= len(m.inputs) {
+		m.focus = 0
+	}
+	m.inputs[m.focus].Focus()
+}
+
+func (m *MovieFormModel) prevField() {
+	if len(m.inputs) == 0 {
+		return
+	}
+	if m.focus >= 0 {
+		m.inputs[m.focus].Blur()
+	}
+	m.focus--
+	if m.focus < 0 {
+		m.focus = len(m.inputs) - 1
+	}
+	m.inputs[m.focus].Focus()
+}
+
+func (m *MovieFormModel) trySubmit() tea.Cmd {
+	for i, f := range m.fields {
+		v := strings.TrimSpace(m.inputs[i].Value())
+		if f.required && v == "" {
+			m.ErrMsg = fmt.Sprintf("⛔ %s is required", f.label)
+			m.focus = i
+			m.inputs[i].Focus()
+			for j := range m.inputs {
+				if j != i {
+					m.inputs[j].Blur()
+				}
+			}
+			return nil
+		}
+		if err := f.validate(v); err != nil {
+			m.ErrMsg = fmt.Sprintf("⛔ %s: %s", f.label, err)
+			m.focus = i
+			m.inputs[i].Focus()
+			for j := range m.inputs {
+				if j != i {
+					m.inputs[j].Blur()
+				}
+			}
+			return nil
+		}
+	}
+
+	thisYear := time.Now().Year()
+	year, _ := strconv.Atoi(strings.TrimSpace(m.inputs[1].Value()))
+	copies, _ := strconv.Atoi(strings.TrimSpace(m.fieldValue("Total copies")))
+	price, _ := strconv.ParseFloat(strings.TrimSpace(m.fieldValue("Rental price (USD)")), 64)
+
+	msg := MovieFormSubmitMsg{
+		Mode:      m.mode,
+		MovieID:   m.movieID,
+		MediaType: m.mediaType,
+		Title:     strings.TrimSpace(m.fieldValue("Title")),
+		Year:      year,
+		Genre:     strings.TrimSpace(m.fieldValue("Genre")),
+		Format:    m.normalizeFormat(m.fieldValue("Format")),
+		Director:  strings.TrimSpace(m.fieldValue("Director")),
+		Cast:      strings.TrimSpace(m.fieldValue("Cast (comma-separated)")),
+		Synopsis:  strings.TrimSpace(m.fieldValue("Synopsis")),
+		Copies:    copies,
+		Price:     price,
+	}
+
+	if m.mediaType == catalogSeries {
+		season, _ := strconv.Atoi(strings.TrimSpace(m.fieldValue("Season")))
+		episodes, _ := strconv.Atoi(strings.TrimSpace(m.fieldValue("Episodes")))
+		if season > 0 {
+			msg.SeasonNumber = season
+		}
+		if episodes > 0 {
+			msg.EpisodeCount = episodes
+		}
+	}
+	if m.mediaType == catalogGame {
+		msg.Platform = strings.TrimSpace(m.fieldValue("Platform"))
+	}
+
+	if year < 1900 || year > thisYear+5 {
+		m.ErrMsg = fmt.Sprintf("⛔ Year must be between 1900 and %d", thisYear+5)
+		return nil
+	}
+	if msg.Copies < 1 {
+		m.ErrMsg = "⛔ Total copies must be at least 1"
+		return nil
+	}
+
+	m.ErrMsg = ""
+	return func() tea.Msg { return msg }
+}
+
+func (m *MovieFormModel) fieldValue(label string) string {
+	for i, f := range m.fields {
+		if f.label == label {
+			return m.inputs[i].Value()
+		}
+	}
+	return ""
+}
+
+func (m *MovieFormModel) normalizeFormat(s string) string {
+	s = strings.TrimSpace(s)
+	switch strings.ToUpper(s) {
+	case "BLURAY":
+		return "Blu-ray"
+	}
+	return s
 }
 
 func (m *MovieFormModel) View(w, h int) string {
@@ -395,26 +460,25 @@ func (m *MovieFormModel) View(w, h int) string {
 		formTitle = "─── EDIT CATALOG ITEM ───"
 	}
 
-	typeStrip := ""
-	if m.showType {
-		current := "🎬 Movie"
-		switch m.mediaType {
-		case "series":
-			current = "📺 Series"
-		case "game":
-			current = "🕹️ Game"
-		}
-		typeStrip = lipgloss.NewStyle().
-			Foreground(styles.Grey1).
-			Width(64).
-			Align(lipgloss.Center).
-			Render(fmt.Sprintf("STEP 1: pick the type · currently: %s", current))
-	}
-
 	header := styles.TitleStyle.
 		Width(64).
 		Align(lipgloss.Center).
 		Render(formTitle)
+
+	typeLabel := map[string]string{
+		catalogMovie:  "🎬 Movie",
+		catalogSeries: "📺 Series",
+		catalogGame:   "🕹️ Game",
+	}
+	current := typeLabel[m.mediaType]
+	if current == "" {
+		current = "🎬 Movie"
+	}
+	typeBar := lipgloss.NewStyle().
+		Foreground(styles.Grey1).
+		Width(64).
+		Align(lipgloss.Center).
+		Render(fmt.Sprintf("[1] 🎬  [2] 📺  [3] 🕹️      currently: %s", current))
 
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
@@ -422,22 +486,35 @@ func (m *MovieFormModel) View(w, h int) string {
 		Padding(1, 3).
 		Width(64)
 
-	parts := []string{header}
-	if typeStrip != "" {
-		parts = append(parts, typeStrip)
+	fieldLines := []string{}
+	for i, f := range m.fields {
+		if i >= len(m.inputs) {
+			break
+		}
+		label := styles.DimTextStyle.Render(f.label)
+		fieldLines = append(fieldLines, lipgloss.JoinHorizontal(lipgloss.Left, "  ", label))
+		fieldLines = append(fieldLines, "  "+m.inputs[i].View())
+		fieldLines = append(fieldLines, "")
 	}
-	parts = append(parts, "", box.Render(m.form.View()))
+	body := lipgloss.JoinVertical(lipgloss.Left, fieldLines...)
+	boxed := box.Render(body)
 
-	content := lipgloss.JoinVertical(lipgloss.Center, parts...)
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		header,
+		"",
+		typeBar,
+		"",
+		boxed,
+	)
 
 	if m.ErrMsg != "" {
-		content += "\n" + styles.ErrorTextStyle.Render("⛔ "+m.ErrMsg)
+		content += "\n" + styles.ErrorTextStyle.Render(m.ErrMsg)
 	}
 
 	help := styles.DimTextStyle.
 		Width(64).
 		Align(lipgloss.Center).
-		Render("tab/↓ next · shift+tab/↑ prev · enter submit · esc cancel")
+		Render("tab/↓ next · shift+tab/↑ prev · [1][2][3] type · ctrl+s submit · esc cancel")
 
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Center, content, "", help))

@@ -2,10 +2,9 @@ package pages
 
 import (
 	"fmt"
-	"io"
 	"strings"
 
-	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
@@ -39,132 +38,16 @@ func (m MediaType) Label() string {
 	}
 }
 
-
-type adminMovieItem struct {
-	movie models.MovieResponse
-}
-
-func (a adminMovieItem) Title() string { return a.movie.Title }
-func (a adminMovieItem) Description() string {
-	return a.detailLine()
-}
-func (a adminMovieItem) FilterValue() string {
-	return a.movie.Title + " " + a.movie.Genre + " " + a.movie.Format + " " + a.movie.Platform
-}
-
-func (a adminMovieItem) detailLine() string {
-	format := components.FormatBadge(a.movie.Format)
-	copies := fmt.Sprintf("%d/%d copies", a.movie.CopiesAvailable, a.movie.CopiesTotal)
-	pick := ""
-	if a.movie.IsStaffPick {
-		pick = "  ★ staff pick"
-	}
-	meta := ""
-	switch a.movie.MediaType {
-	case "series":
-		if a.movie.SeasonNumber > 0 {
-			meta = fmt.Sprintf("S%02d", a.movie.SeasonNumber)
-		}
-		if a.movie.EpisodeCount > 0 {
-			if meta != "" {
-				meta += " · "
-			}
-			meta += fmt.Sprintf("%d eps", a.movie.EpisodeCount)
-		}
-	case "game":
-		if a.movie.Platform != "" {
-			meta = a.movie.Platform
-		}
-	}
-	if meta != "" {
-		meta = "  ·  " + meta
-	}
-
-	return fmt.Sprintf("%d  %s  ·  %s  ·  %s%s%s", a.movie.Year, a.movie.Genre, format, copies, pick, meta)
-}
-
-
-type adminMovieDelegate struct{}
-
-func newAdminMovieDelegate() adminMovieDelegate { return adminMovieDelegate{} }
-
-func (d adminMovieDelegate) Height() int                             { return 2 }
-func (d adminMovieDelegate) Spacing() int                            { return 1 }
-func (d adminMovieDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
-
-func (d adminMovieDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	mi, ok := item.(adminMovieItem)
-	if !ok {
-		return
-	}
-	mv := mi.movie
-
-	selected := index == m.Index()
-
-	marker := "  "
-	titleStyle := lipgloss.NewStyle().Foreground(styles.FG1).Bold(true)
-	if selected {
-		titleStyle = lipgloss.NewStyle().Foreground(styles.Green).Bold(true)
-		marker = styles.HighlightStyle.Render("▸ ")
-	}
-
-	pick := ""
-	if mv.IsStaffPick {
-		pick = lipgloss.NewStyle().Foreground(styles.Yellow).Bold(true).Render("  ★")
-	}
-
-	line1 := lipgloss.JoinHorizontal(lipgloss.Left,
-		marker,
-		titleStyle.Render(truncateStr(mv.Title, 38)),
-		pick,
-	)
-	format := components.FormatBadge(mv.Format)
-
-	copyColor := styles.Green
-	if mv.CopiesAvailable == 0 {
-		copyColor = styles.Red
-	} else if mv.CopiesAvailable <= 2 {
-		copyColor = styles.Yellow
-	}
-	copies := lipgloss.NewStyle().Foreground(copyColor).Render(
-		fmt.Sprintf("%d/%d copies", mv.CopiesAvailable, mv.CopiesTotal),
-	)
-
-	meta := []string{
-		fmt.Sprintf("%d", mv.Year),
-		mv.Genre,
-		format,
-		copies,
-	}
-	switch mv.MediaType {
-	case "series":
-		if mv.SeasonNumber > 0 {
-			meta = append(meta, fmt.Sprintf("S%02d", mv.SeasonNumber))
-		}
-		if mv.EpisodeCount > 0 {
-			meta = append(meta, fmt.Sprintf("%d eps", mv.EpisodeCount))
-		}
-	case "game":
-		if mv.Platform != "" {
-			meta = append(meta, mv.Platform)
-		}
-	}
-	metaLine := styles.DimTextStyle.Render("  " + strings.Join(meta, "  ·  "))
-
-	io.WriteString(w, lipgloss.JoinVertical(lipgloss.Left, line1, metaLine))
-}
-
-
 // AdminMoviesModel manages the entire catalog (movies, series, games).
-// A top tab row lets the admin switch the active media type; the list
+// A top tab row lets the admin switch the active media type; the table
 // itself only shows the active type. Each tab maintains its own
 // pagination state so switching back doesn't lose your scroll.
 type AdminMoviesModel struct {
-	list     list.Model
-	movies   []models.MovieResponse
-	Page     int
-	Total    int
-	PageSize int
+	table     table.Model
+	movies    []models.MovieResponse
+	Page      int
+	Total     int
+	PageSize  int
 	activeTab MediaType
 	perTab    map[MediaType]*tabState
 }
@@ -177,17 +60,24 @@ type tabState struct {
 }
 
 func NewAdminMoviesModel() *AdminMoviesModel {
-	delegate := newAdminMovieDelegate()
-	l := list.New([]list.Item{}, delegate, 0, 0)
-	l.Styles = gruvboxListStyles()
-	l.SetShowStatusBar(true)
-	l.SetShowHelp(false)
-	l.SetShowPagination(false)
-	l.Paginator.PerPage = 0
-	l.SetFilteringEnabled(true)
-	l.DisableQuitKeybindings()
+	cols := []table.Column{
+		{Title: "Title", Width: 38},
+		{Title: "Year", Width: 6},
+		{Title: "Genre", Width: 14},
+		{Title: "Format", Width: 8},
+		{Title: "Copies", Width: 10},
+		{Title: "★", Width: 3},
+		{Title: "Meta", Width: 14},
+	}
+	t := table.New(
+		table.WithColumns(cols),
+		table.WithFocused(true),
+		table.WithHeight(20),
+	)
+	t.SetStyles(gruvboxTableStyles())
+
 	return &AdminMoviesModel{
-		list:      l,
+		table:     t,
 		PageSize:  50,
 		activeTab: MediaMovies,
 		perTab: map[MediaType]*tabState{
@@ -201,7 +91,7 @@ func NewAdminMoviesModel() *AdminMoviesModel {
 // ActiveTab returns the currently-selected media type.
 func (m *AdminMoviesModel) ActiveTab() MediaType { return m.activeTab }
 
-// SetActiveTab switches the visible list to the given media type and
+// SetActiveTab switches the visible table to the given media type and
 // returns true if the underlying data changed (caller can then refetch).
 func (m *AdminMoviesModel) SetActiveTab(t MediaType) {
 	if t == m.activeTab {
@@ -218,14 +108,19 @@ func (m *AdminMoviesModel) applyState(s *tabState) {
 	m.movies = s.movies
 	m.Page = s.page
 	m.Total = s.total
-	items := make([]list.Item, len(s.movies))
-	for i, mv := range s.movies {
-		items[i] = adminMovieItem{movie: mv}
-	}
-	m.list.SetItems(items)
+	m.refreshRows()
 }
 
-// SetMovies updates the current tab's cached data and refreshes the list.
+func (m *AdminMoviesModel) refreshRows() {
+	rows := make([]table.Row, len(m.movies))
+	selected := m.table.Cursor()
+	for i, mv := range m.movies {
+		rows[i] = buildRow(mv, i == selected)
+	}
+	m.table.SetRows(rows)
+}
+
+// SetMovies updates the current tab's cached data and refreshes the table.
 func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page int) {
 	if state, ok := m.perTab[m.activeTab]; ok {
 		state.movies = movies
@@ -251,7 +146,7 @@ func (m *AdminMoviesModel) MarkLoading(t MediaType) {
 	}
 	if t == m.activeTab {
 		m.movies = nil
-		m.list.SetItems(nil)
+		m.table.SetRows(nil)
 	}
 }
 
@@ -264,16 +159,21 @@ func (m *AdminMoviesModel) HasNextPage() bool {
 func (m *AdminMoviesModel) HasPrevPage() bool { return m.Page > 1 }
 
 func (m *AdminMoviesModel) SelectedMovie() *models.MovieResponse {
-	if mi, ok := m.list.SelectedItem().(adminMovieItem); ok {
-		return &mi.movie
+	idx := m.table.Cursor()
+	if idx < 0 || idx >= len(m.movies) {
+		return nil
 	}
-	return nil
+	mv := m.movies[idx]
+	return &mv
 }
 
-
 func (m *AdminMoviesModel) Update(msg tea.Msg) (*AdminMoviesModel, tea.Cmd) {
+	prev := m.table.Cursor()
 	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
+	m.table, cmd = m.table.Update(msg)
+	if m.table.Cursor() != prev {
+		m.refreshRows()
+	}
 	return m, cmd
 }
 
@@ -320,13 +220,13 @@ func (m *AdminMoviesModel) tabBarView(width int) string {
 
 func (m *AdminMoviesModel) View(w, h int) string {
 	tabBar := m.tabBarView(w)
-	m.list.Title = m.activeTab.Label()
 
-	listH := h - 4
-	if listH < 5 {
-		listH = 5
+	m.table.SetWidth(w)
+	tableH := h - 4
+	if tableH < 5 {
+		tableH = 5
 	}
-	m.list.SetSize(w, listH)
+	m.table.SetHeight(tableH)
 
 	state := m.perTab[m.activeTab]
 	var status string
@@ -360,8 +260,71 @@ func (m *AdminMoviesModel) View(w, h int) string {
 			Padding(2, 0).
 			Render("No " + short + " in catalog yet — press [A] to add")
 	} else {
-		body = m.list.View()
+		body = m.table.View()
 	}
 
 	return strings.Join([]string{tabBar, body, status}, "\n")
+}
+
+func buildRow(mv models.MovieResponse, selected bool) table.Row {
+	title := mv.Title
+	if mv.IsStaffPick {
+		title = "★ " + title
+	}
+	if selected {
+		title = "▸ " + title
+	}
+	format := stripAnsi(components.FormatBadge(mv.Format))
+	meta := ""
+	switch mv.MediaType {
+	case "series":
+		if mv.SeasonNumber > 0 {
+			meta = fmt.Sprintf("S%02d", mv.SeasonNumber)
+		}
+		if mv.EpisodeCount > 0 {
+			if meta != "" {
+				meta += " · "
+			}
+			meta += fmt.Sprintf("%d eps", mv.EpisodeCount)
+		}
+	case "game":
+		if mv.Platform != "" {
+			meta = mv.Platform
+		}
+	}
+	return table.Row{
+		truncateStr(title, 38),
+		fmt.Sprintf("%d", mv.Year),
+		mv.Genre,
+		format,
+		fmt.Sprintf("%d/%d", mv.CopiesAvailable, mv.CopiesTotal),
+		staffPickMark(mv.IsStaffPick),
+		meta,
+	}
+}
+
+func staffPickMark(b bool) string {
+	if b {
+		return "★"
+	}
+	return ""
+}
+
+func stripAnsi(s string) string {
+	var b strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == 0x1b {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }

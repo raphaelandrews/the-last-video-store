@@ -82,14 +82,16 @@ func seedIntegrationData(s *store.Store) {
 		hash, _ := auth.HashPassword(u.pass)
 		now := time.Now().Unix()
 		s.CreateUser(&models.User{
-			ID:           u.id,
-			Username:     u.name,
-			PasswordHash: hash,
-			Tier:         u.tier,
-			MaxRentals:   bitmask.MaxRentalsForTier(u.tier),
-			Banned:       u.banned,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			ID:            u.id,
+			Username:      u.name,
+			PasswordHash:  hash,
+			Tier:          u.tier,
+			MaxRentals:    bitmask.MaxRentalsForTier(u.tier),
+			Banned:        u.banned,
+			Balance:       1000,
+			PopcornPoints: 250,
+			CreatedAt:     now,
+			UpdatedAt:     now,
 		})
 	}
 
@@ -467,4 +469,124 @@ func TestIntegration_ManagerCanCRUDMovies(t *testing.T) {
 		map[string]interface{}{"title": "Manager Test Movie Updated"}, http.StatusOK)
 
 	authDo(t, token, "DELETE", "/api/v1/movies/"+movieID, nil, http.StatusOK)
+}
+
+func TestIntegration_ReturnOnTimeCreditsPoints(t *testing.T) {
+	token := login(t, "manager", "password5")
+
+	authDo(t, token, "POST", "/api/v1/users/me/topup", nil, http.StatusOK)
+
+	meData := authDo(t, token, "GET", "/api/v1/auth/me", nil, http.StatusOK)
+	var meBefore models.UserResponse
+	mustDecode(meData, &meBefore)
+
+	rentData := authDo(t, token, "POST", "/api/v1/rentals/rent",
+		map[string]string{"movie_id": "seed-movie-TheMatrix"}, http.StatusCreated)
+	var rental models.RentalResponse
+	mustDecode(rentData, &rental)
+
+	returnData := authDo(t, token, "POST", "/api/v1/rentals/return",
+		map[string]string{"rental_id": rental.ID}, http.StatusOK)
+	var returned models.RentalResponse
+	mustDecode(returnData, &returned)
+
+	if returned.Status != "returned" {
+		t.Errorf("status = %s, want returned", returned.Status)
+	}
+	if returned.PointsEarned != 10 {
+		t.Errorf("points_earned = %d, want 10 (on-time return)", returned.PointsEarned)
+	}
+
+	meData = authDo(t, token, "GET", "/api/v1/auth/me", nil, http.StatusOK)
+	var meAfter models.UserResponse
+	mustDecode(meData, &meAfter)
+
+	if meAfter.PopcornPoints != meBefore.PopcornPoints+10 {
+		t.Errorf("popcorn_points = %d, want %d", meAfter.PopcornPoints, meBefore.PopcornPoints+10)
+	}
+
+	historyData := authDo(t, token, "GET", "/api/v1/rentals/history", nil, http.StatusOK)
+	var history []models.RentalResponse
+	mustDecode(historyData, &history)
+	var found bool
+	for _, r := range history {
+		if r.ID == rental.ID {
+			found = true
+			if r.PointsEarned != 10 {
+				t.Errorf("history points_earned = %d, want 10", r.PointsEarned)
+			}
+			if r.Status != "returned" {
+				t.Errorf("history status = %s, want returned", r.Status)
+			}
+		}
+	}
+	if !found {
+		t.Error("rental not found in history")
+	}
+}
+
+func TestIntegration_ReturnLateDeductsBalance(t *testing.T) {
+	token := login(t, "gold", "password3")
+
+	meData := authDo(t, token, "GET", "/api/v1/auth/me", nil, http.StatusOK)
+	var meBefore models.UserResponse
+	mustDecode(meData, &meBefore)
+
+	if meBefore.Balance < 5 {
+		t.Skip("test user has insufficient balance; previous tests drained it")
+	}
+
+	rentData := authDo(t, token, "POST", "/api/v1/rentals/rent",
+		map[string]string{"movie_id": "seed-movie-PulpFiction"}, http.StatusCreated)
+	var rental models.RentalResponse
+	mustDecode(rentData, &rental)
+
+	if rental.MovieFormat != "VHS" {
+		t.Skip("Pulp Fiction is not VHS — skipping late test")
+	}
+
+	time.Sleep(70 * time.Second)
+
+	returnData := authDo(t, token, "POST", "/api/v1/rentals/return",
+		map[string]string{"rental_id": rental.ID}, http.StatusOK)
+	var returned models.RentalResponse
+	mustDecode(returnData, &returned)
+
+	if returned.Status != "returned" {
+		t.Errorf("status = %s, want returned", returned.Status)
+	}
+	if returned.LateFee <= 0 {
+		t.Errorf("late_fee = %.2f, want > 0 after 70s wait", returned.LateFee)
+	}
+	if returned.PointsEarned != -5 {
+		t.Errorf("points_earned = %d, want -5 (late return)", returned.PointsEarned)
+	}
+
+	meData = authDo(t, token, "GET", "/api/v1/auth/me", nil, http.StatusOK)
+	var meAfter models.UserResponse
+	mustDecode(meData, &meAfter)
+
+	wantBalance := meBefore.Balance - models.MovieCost(2.99, "VHS") - (returned.LateFee + returned.RewindFee)
+	if meAfter.Balance > wantBalance+0.01 || meAfter.Balance < wantBalance-0.01 {
+		t.Errorf("balance = %.2f, want %.2f (initial - rent cost - late+rewind fees)", meAfter.Balance, wantBalance)
+	}
+
+	historyData := authDo(t, token, "GET", "/api/v1/rentals/history", nil, http.StatusOK)
+	var history []models.RentalResponse
+	mustDecode(historyData, &history)
+	var found bool
+	for _, r := range history {
+		if r.ID == rental.ID {
+			found = true
+			if r.Status != "returned" {
+				t.Errorf("history status = %s, want returned", r.Status)
+			}
+			if r.PointsEarned != -5 {
+				t.Errorf("history points_earned = %d, want -5", r.PointsEarned)
+			}
+		}
+	}
+	if !found {
+		t.Error("rental not found in history after late return")
+	}
 }
