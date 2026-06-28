@@ -25,16 +25,24 @@ func (m *Model) loadAdminMovies(page int) tea.Cmd {
 		if mediaType != "" {
 			url += "&media_type=" + string(mediaType)
 		}
-		resp, _ := m.apiGetURL(url)
+		resp, err := m.apiGetURL(url)
+		if err != nil {
+			return loadAdminMoviesMsg{page: page, errMsg: err.Error()}
+		}
 		if resp == nil {
-			return loadAdminMoviesMsg{}
+			return loadAdminMoviesMsg{page: page, errMsg: "no response from server"}
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			return loadAdminMoviesMsg{page: page, errMsg: fmt.Sprintf("server returned %d", resp.StatusCode)}
+		}
 		var r struct {
 			Movies []models.MovieResponse `json:"movies"`
 			Total  int                    `json:"total"`
 		}
-		json.NewDecoder(resp.Body).Decode(&r)
+		if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+			return loadAdminMoviesMsg{page: page, errMsg: "failed to decode response"}
+		}
 		return loadAdminMoviesMsg{movies: r.Movies, total: r.Total, page: page}
 	}
 }

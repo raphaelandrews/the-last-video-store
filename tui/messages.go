@@ -38,6 +38,7 @@ type loadAdminMoviesMsg struct {
 	movies []models.MovieResponse
 	total  int
 	page   int
+	errMsg string
 }
 type loadAdminUsersMsg struct {
 	users []models.UserResponse

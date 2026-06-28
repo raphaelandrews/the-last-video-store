@@ -41,6 +41,7 @@ type AdminMoviesModel struct {
 	Total     int
 	PageSize  int
 	activeTab MediaType
+	ErrMsg    string
 	perTab    map[MediaType]*tabState
 }
 
@@ -49,6 +50,7 @@ type tabState struct {
 	page    int
 	total   int
 	loading bool
+	errMsg  string
 }
 
 func NewAdminMoviesModel() *AdminMoviesModel {
@@ -57,9 +59,8 @@ func NewAdminMoviesModel() *AdminMoviesModel {
 		{Title: "Year", Width: 6},
 		{Title: "Genre", Width: 14},
 		{Title: "Format", Width: 8},
-		{Title: "Copies", Width: 10},
-		{Title: "★", Width: 3},
-		{Title: "Meta", Width: 14},
+		{Title: "Avail/Total", Width: 12},
+		{Title: "Info", Width: 14},
 	}
 	t := table.New(
 		table.WithColumns(cols),
@@ -109,14 +110,16 @@ func (m *AdminMoviesModel) refreshRows() {
 	m.table.SetRows(rows)
 }
 
-func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page int) {
+func (m *AdminMoviesModel) SetMovies(movies []models.MovieResponse, total, page int, errMsg string) {
 	if state, ok := m.perTab[m.activeTab]; ok {
 		state.movies = movies
 		state.page = page
 		state.total = total
 		state.loading = false
+		state.errMsg = errMsg
 	}
 	m.applyState(&tabState{movies: movies, page: page, total: total})
+	m.ErrMsg = errMsg
 }
 
 func (m *AdminMoviesModel) CurrentPageFor(t MediaType) int {
@@ -193,10 +196,7 @@ func (m *AdminMoviesModel) tabBarView(width int) string {
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Left, cells...)
-	rule := lipgloss.NewStyle().
-		Foreground(styles.Green).
-		Width(width).
-		Render("▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔")
+	rule := styles.DimTextStyle.Render(strings.Repeat("▔", width))
 
 	return row + "\n" + rule
 }
@@ -215,9 +215,11 @@ func (m *AdminMoviesModel) View(w, h int) string {
 	var status string
 	if state.loading {
 		status = styles.DimTextStyle.Render("Loading…")
+	} else if state.errMsg != "" {
+		status = styles.ErrorTextStyle.Render(state.errMsg)
 	} else {
 		status = styles.DimTextStyle.Render(
-			fmt.Sprintf("Page %d  ·  %d total  ·  [tab] switch type  ·  [n/b] page", m.Page, m.Total),
+			fmt.Sprintf("Page %d  ·  %d total  ·  [tab] switch type  ·  [n/b] page", state.page, state.total),
 		)
 	}
 
@@ -228,6 +230,12 @@ func (m *AdminMoviesModel) View(w, h int) string {
 			Align(lipgloss.Center).
 			Padding(2, 0).
 			Render("Loading " + m.activeTab.Label() + "…")
+	} else if state.errMsg != "" {
+		body = styles.ErrorTextStyle.
+			Width(w).
+			Align(lipgloss.Center).
+			Padding(2, 0).
+			Render("⚠ " + state.errMsg)
 	} else if len(m.movies) == 0 {
 		label := m.activeTab.Label()
 		short := label
@@ -257,7 +265,7 @@ func buildRow(mv models.MovieResponse, selected bool) table.Row {
 	if selected {
 		title = "▸ " + title
 	}
-	format := styles.FormatBadge(mv.Format)
+	format := stripAnsi(styles.FormatBadge(mv.Format))
 	meta := ""
 	switch mv.MediaType {
 	case "series":
@@ -281,14 +289,25 @@ func buildRow(mv models.MovieResponse, selected bool) table.Row {
 		mv.Genre,
 		format,
 		fmt.Sprintf("%d/%d", mv.CopiesAvailable, mv.CopiesTotal),
-		staffPickMark(mv.IsStaffPick),
 		meta,
 	}
 }
 
-func staffPickMark(b bool) string {
-	if b {
-		return "★"
+func stripAnsi(s string) string {
+	var b strings.Builder
+	inEscape := false
+	for _, r := range s {
+		if r == 0x1b {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if r == 'm' {
+				inEscape = false
+			}
+			continue
+		}
+		b.WriteRune(r)
 	}
-	return ""
+	return b.String()
 }

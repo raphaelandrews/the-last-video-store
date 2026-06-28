@@ -101,7 +101,7 @@ func (m *Model) handleMessage(msg tea.Msg) tea.Cmd {
 		m.searchBar.SetResults(msg.results)
 
 	case loadAdminMoviesMsg:
-		m.adminMovies.SetMovies(msg.movies, msg.total, msg.page)
+		m.adminMovies.SetMovies(msg.movies, msg.total, msg.page, msg.errMsg)
 	case loadCatalogOptionsMsg:
 		if m.movieForm != nil {
 			m.movieForm.SetOptions(msg.genres, msg.formats)
