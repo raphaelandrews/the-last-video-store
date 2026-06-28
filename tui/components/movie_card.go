@@ -29,9 +29,10 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 		BorderForeground(borderColor).
 		Padding(0, 1)
 
-	title := truncate(movie.Title, 18)
-	if len(title) < len(movie.Title) {
-		title = title[:len(title)-1] + "…"
+	runes := []rune(movie.Title)
+	title := string(runes)
+	if len(runes) > 18 {
+		title = string(runes[:17]) + "…"
 	}
 
 	titleColor := styles.FG1
@@ -48,9 +49,7 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 	yearStyle := lipgloss.NewStyle().
 		Foreground(styles.Grey1)
 
-	stars := RatingStars(movie.Rating)
-
-	formatBadge := FormatBadge(movie.Format)
+	formatBadge := styles.FormatBadge(movie.Format)
 
 	status := "[RENT]"
 	statusColor := styles.Green
@@ -70,50 +69,9 @@ func MovieCardView(movie models.MovieResponse, selected bool) string {
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		titleStyle.Render(title),
 		yearStyle.Render(fmt.Sprintf("(%d)", movie.Year)),
-		stars,
+		styles.StarRating(movie.Rating),
 		lipgloss.JoinHorizontal(lipgloss.Center, formatBadge, "  ", statusStyle.Render(status)),
 	)
 
 	return card.Render(content)
-}
-
-func RatingStars(rating float64) string {
-	full := int(rating)
-	half := 0
-	if rating-float64(full) >= 0.5 {
-		half = 1
-	}
-	empty := 5 - full - half
-
-	s := ""
-	for range full {
-		s += "★"
-	}
-	for range half {
-		s += "½"
-	}
-	for range empty {
-		s += "☆"
-	}
-	return lipgloss.NewStyle().Foreground(styles.Yellow).Render(s)
-}
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
-}
-
-func FormatBadge(format string) string {
-	switch format {
-	case "VHS":
-		return lipgloss.NewStyle().Foreground(styles.Orange).Bold(true).Render("📼 VHS")
-	case "DVD":
-		return lipgloss.NewStyle().Foreground(styles.Aqua).Bold(true).Render("📀 DVD")
-	case "Blu-ray":
-		return lipgloss.NewStyle().Foreground(styles.Blue).Bold(true).Render("💿 BD")
-	default:
-		return lipgloss.NewStyle().Foreground(styles.Grey1).Render(format)
-	}
 }

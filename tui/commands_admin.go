@@ -58,63 +58,9 @@ func (m *Model) loadCatalogOptions() tea.Cmd {
 	}
 }
 
-func (m *Model) loadAdminUsers() tea.Cmd {
-	return func() tea.Msg {
-		resp, _ := m.apiGet("/api/v1/users")
-		if resp == nil {
-			return loadAdminUsersMsg{}
-		}
-		defer resp.Body.Close()
-		if errMsg := handleAPIErr(resp); errMsg != nil {
-			return errMsg
-		}
-		var users []models.UserResponse
-		json.NewDecoder(resp.Body).Decode(&users)
-		return loadAdminUsersMsg{users: users}
-	}
-}
-
-func (m *Model) doVerifyAuditChain() tea.Cmd {
-	return func() tea.Msg {
-		resp, err := m.apiGet("/api/v1/audit/verify")
-		if err != nil {
-			m.auditLog.VerifyMsg = "⚠️ Verification failed: " + err.Error()
-			return nil
-		}
-		defer resp.Body.Close()
-		var r struct {
-			ChainIntact bool   `json:"chain_intact"`
-			Message     string `json:"message"`
-			BrokenAt    int    `json:"broken_at"`
-			BrokenID    string `json:"broken_id"`
-			Reason      string `json:"reason"`
-			Total       int    `json:"total"`
-		}
-		json.NewDecoder(resp.Body).Decode(&r)
-		if r.ChainIntact {
-			m.auditLog.MarkIntact(r.Total)
-		} else {
-			m.auditLog.MarkBroken(r.BrokenAt, r.BrokenID, r.Reason)
-		}
-		m.auditLog.VerifyMsg = r.Message
-		return nil
-	}
-}
-
-func (m *Model) loadAuditLog() tea.Cmd {
-	return func() tea.Msg {
-		resp, _ := m.apiGet("/api/v1/audit")
-		if resp == nil {
-			return loadAuditLogMsg{}
-		}
-		defer resp.Body.Close()
-		if errMsg := handleAPIErr(resp); errMsg != nil {
-			return errMsg
-		}
-		var entries []map[string]interface{}
-		json.NewDecoder(resp.Body).Decode(&entries)
-		return loadAuditLogMsg{entries: entries}
-	}
+func (m *Model) moveToAdminMovies() {
+	m.screen = scrAdminMovies
+	m.movieForm = nil
 }
 
 func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
@@ -153,9 +99,6 @@ func (m *Model) doCreateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		// After add, the new item may land on any page depending on
-		// its UUID's BoltDB iteration order. Re-fetch from page 1 of
-		// the active tab so the user lands on a refreshed view.
 		m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab())
 		return m.loadAdminMovies(1)()
 	}
@@ -197,80 +140,8 @@ func (m *Model) doUpdateMovie(msg pages.MovieFormSubmitMsg) tea.Cmd {
 			return nil
 		}
 		m.moveToAdminMovies()
-		// After edit, refresh from page 1 so any change is visible
-		// even if the row moved between BoltDB pages.
 		m.adminMovies.CurrentPageFor(m.adminMovies.ActiveTab())
 		return m.loadAdminMovies(1)()
-	}
-}
-
-func (m *Model) doUpdateUser(userID, action string) tea.Cmd {
-	return func() tea.Msg {
-		u := m.adminUsers.SelectedUser()
-		if u == nil {
-			return nil
-		}
-		var body string
-		switch action {
-		case "promote":
-			next, ok := canPromote(u.TierName)
-			if !ok {
-				m.adminUsers.StatusMsg = fmt.Sprintf("⛔ %s is already at the highest tier", u.TierName)
-				return nil
-			}
-			body = `{"tier":"` + next + `"}`
-		case "demote":
-			prev, ok := canDemote(u.TierName)
-			if !ok {
-				m.adminUsers.StatusMsg = fmt.Sprintf("⛔ %s is already at the lowest tier", u.TierName)
-				return nil
-			}
-			body = `{"tier":"` + prev + `"}`
-		case "ban":
-			if u.Banned {
-				body = `{"banned":false}`
-			} else {
-				body = `{"banned":true}`
-			}
-		default:
-			return nil
-		}
-		resp, err := m.apiPut("/api/v1/users/"+userID, body)
-		if err != nil {
-			m.adminUsers.ErrMsg = err.Error()
-			return nil
-		}
-		defer resp.Body.Close()
-		if apiErr, ok := decodeAPIErr(resp); ok {
-			m.adminUsers.ErrMsg = apiErr
-			return nil
-		}
-		if resp.StatusCode >= 400 {
-			var e struct {
-				Error string `json:"error"`
-			}
-			json.NewDecoder(resp.Body).Decode(&e)
-			if e.Error != "" {
-				m.adminUsers.ErrMsg = e.Error
-			} else {
-				m.adminUsers.ErrMsg = fmt.Sprintf("server returned %d", resp.StatusCode)
-			}
-			return nil
-		}
-		m.adminUsers.ErrMsg = ""
-		switch action {
-		case "promote":
-			m.adminUsers.StatusMsg = fmt.Sprintf("✅ Promoted %s", u.TierName)
-		case "demote":
-			m.adminUsers.StatusMsg = fmt.Sprintf("✅ Demoted %s", u.TierName)
-		case "ban":
-			if u.Banned {
-				m.adminUsers.StatusMsg = fmt.Sprintf("✅ Unbanned %s", u.Username)
-			} else {
-				m.adminUsers.StatusMsg = fmt.Sprintf("🚫 Banned %s", u.Username)
-			}
-		}
-		return m.loadAdminUsers()()
 	}
 }
 
@@ -320,76 +191,5 @@ func (m *Model) doDeleteMovie(movieID string) tea.Cmd {
 			}
 		}
 		return m.loadAdminMovies(m.adminMovies.Page)()
-	}
-}
-
-func (m *Model) moveToAdminMovies() {
-	m.screen = scrAdminMovies
-	m.movieForm = nil
-}
-
-func (m *Model) doTOTPToggle(userID string) tea.Cmd {
-	return func() tea.Msg {
-		u := m.adminUsers.SelectedUser()
-		if u == nil {
-			return nil
-		}
-		enabled := !u.TOTPEnabled
-		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
-		resp, err := m.apiPost("/api/v1/users/"+userID+"/totp", body)
-		if err != nil {
-			m.adminUsers.ErrMsg = err.Error()
-			return nil
-		}
-		defer resp.Body.Close()
-		if errMsg := handleAPIErr(resp); errMsg != nil {
-			return errMsg
-		}
-		if enabled {
-			var r struct {
-				Secret string `json:"secret"`
-				URL    string `json:"url"`
-			}
-			json.NewDecoder(resp.Body).Decode(&r)
-			m.adminUsers.StatusMsg = fmt.Sprintf("🔒 TOTP enabled — secret: %s", r.Secret)
-		} else {
-			m.adminUsers.StatusMsg = "🔓 TOTP disabled"
-		}
-		return m.loadAdminUsers()()
-	}
-}
-
-func (m *Model) doProfileTOTP() tea.Cmd {
-	return func() tea.Msg {
-		if m.userResp == nil {
-			return nil
-		}
-		enabled := !m.userResp.TOTPEnabled
-		body := fmt.Sprintf(`{"enabled":%v}`, enabled)
-		resp, err := m.apiPost("/api/v1/users/"+m.userResp.ID+"/totp", body)
-		if err != nil {
-			m.profile.StatusMsg = err.Error()
-			return nil
-		}
-		defer resp.Body.Close()
-		if errMsg := handleAPIErr(resp); errMsg != nil {
-			return errMsg
-		}
-		if enabled {
-			var r struct {
-				Secret string `json:"secret"`
-				URL    string `json:"url"`
-			}
-			json.NewDecoder(resp.Body).Decode(&r)
-			m.userResp.TOTPEnabled = true
-			m.profile.StatusMsg = fmt.Sprintf("🔒 TOTP enabled\nSecret: %s\nScan this into your authenticator app", r.Secret)
-		} else {
-			m.userResp.TOTPEnabled = false
-			m.profile.StatusMsg = "🔓 TOTP disabled"
-		}
-		return tea.Sequence(
-			func() tea.Msg { return wishlistResultMsg{} },
-			m.doRefreshMe(),
-		)
 	}
 }

@@ -59,10 +59,3 @@ func TestMyRentalsE2EAfterReturn(t *testing.T) {
 		t.Error("after return, view does not show '-5' points")
 	}
 }
-
-func truncate(s string, n int) string {
-	if len(s) <= n {
-		return s
-	}
-	return s[:n] + "..."
-}

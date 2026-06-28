@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
@@ -145,14 +146,17 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 	rental.LateFee = rental.CalculateLateFee(now)
 	rental.RewindFee = rental.CalculateRewindFee()
 
-	movie, err := h.store.GetMovieByID(rental.MovieID)
-	if err == nil {
+	if movie, err := h.store.GetMovieByID(rental.MovieID); err == nil {
 		movie.CopiesAvailable++
 		if movie.CopiesAvailable > movie.CopiesTotal {
 			movie.CopiesAvailable = movie.CopiesTotal
 		}
 		movie.Available = movie.CopiesAvailable > 0
-		h.store.UpdateMovie(movie)
+		if err := h.store.UpdateMovie(movie); err != nil {
+			log.Printf("return: update movie %s: %v", movie.ID, err)
+			WriteError(w, http.StatusInternalServerError, "failed to update movie")
+			return
+		}
 	}
 
 	rentalUser, err := h.store.GetUserByID(rental.UserID)
@@ -179,16 +183,18 @@ func (h *RentalHandler) Return(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		rental.PointsEarned = pointsEarned
-		h.store.UpdateUser(rentalUser)
-		h.store.UpdateRental(rental)
-		auth.AppendAuditEntry(h.store, h.hc, models.ActionReturn, user.ID, rental.MovieID,
-			h.movieTitle(rental.MovieID))
-		resp := rental.ToResponse(h.movieTitle(rental.MovieID))
-		WriteJSON(w, http.StatusOK, resp)
-		return
+		if err := h.store.UpdateUser(rentalUser); err != nil {
+			log.Printf("return: update user %s: %v", rentalUser.ID, err)
+			WriteError(w, http.StatusInternalServerError, "failed to update user")
+			return
+		}
 	}
 
-	h.store.UpdateRental(rental)
+	if err := h.store.UpdateRental(rental); err != nil {
+		log.Printf("return: update rental %s: %v", rental.ID, err)
+		WriteError(w, http.StatusInternalServerError, "failed to update rental")
+		return
+	}
 
 	auth.AppendAuditEntry(h.store, h.hc, models.ActionReturn, user.ID, rental.MovieID,
 		h.movieTitle(rental.MovieID))

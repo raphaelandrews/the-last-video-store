@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/internal/store"
 )
@@ -24,6 +26,8 @@ func seedSnackBar(s *store.Store) {
 		{ID: "snack-milkshake", Name: "Milkshake", Description: "Thick milkshake — chocolate, vanilla, or strawberry.", Price: 4.99, Category: "drink", Stock: 25, Emoji: "🥛"},
 	}
 	for i := range items {
-		s.CreateSnackBarItem(&items[i])
+		if err := s.CreateSnackBarItem(&items[i]); err != nil {
+			panic(fmt.Errorf("seed snackbar: %s: %w", items[i].ID, err))
+		}
 	}
 }

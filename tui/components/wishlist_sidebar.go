@@ -63,8 +63,13 @@ func (m *WishlistSidebarModel) View(width int) string {
 			if item.Available {
 				availability = "🟢"
 			}
-			entry := availability + " " + truncate(item.Title, sidebarW-6) + "\n" +
-				"  " + FormatBadge(item.Format)
+			runes := []rune(item.Title)
+			title := string(runes)
+			if len(runes) > sidebarW-6 {
+				title = string(runes[:sidebarW-7]) + "…"
+			}
+			entry := availability + " " + title + "\n" +
+				"  " + styles.FormatBadge(item.Format)
 			lines = append(lines, styles.TextStyle.Width(sidebarW).Render(entry))
 		}
 	}

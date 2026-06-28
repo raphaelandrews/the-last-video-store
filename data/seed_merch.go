@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/internal/store"
 )
@@ -36,6 +38,8 @@ func seedMerch(s *store.Store) {
 		{ID: "merch-2001-monolith", Name: "Mini Monolith", Description: "Solid obsidian-black monolith paperweight. 1:4:9 proportions. Touch it and you might evolve.", PointsCost: 220, Stock: 4},
 	}
 	for i := range items {
-		s.CreateMerchItem(&items[i])
+		if err := s.CreateMerchItem(&items[i]); err != nil {
+			panic(fmt.Errorf("seed merch: %s: %w", items[i].ID, err))
+		}
 	}
 }

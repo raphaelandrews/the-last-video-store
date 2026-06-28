@@ -121,7 +121,7 @@ func (m *GameDetailModel) View(w, h int) string {
 	if m.Rental != nil {
 		actionLine = "🎮 Game rented — enjoy!"
 	} else if m.ChoosingTime {
-		actionLine = fmt.Sprintf("⏱️  How long?  [1] 1min · [2] 2min · [3] 3min · [4] 4min · [5] 5min · [ESC] cancel")
+		actionLine = "⏱️  How long?  [1] 1min · [2] 2min · [3] 3min · [4] 4min · [5] 5min · [ESC] cancel"
 	} else if m.Playing {
 		actionLine = "🎮 Press [E] to end play session"
 	} else if g.Available && g.RentalPrice > 0 {

@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -217,7 +218,11 @@ func (h *UserHandler) TOTPSetup(w http.ResponseWriter, r *http.Request) {
 		}
 
 		user.TOTPEnabled = true
-		h.store.UpdateUser(user)
+		if err := h.store.UpdateUser(user); err != nil {
+			log.Printf("user: update TOTP-enabled: %v", err)
+			WriteError(w, http.StatusInternalServerError, "failed to update user")
+			return
+		}
 
 		auth.AppendAuditEntry(h.store, h.hc, models.ActionTOTPEnabled, currentUser.ID, user.ID, "")
 
@@ -226,7 +231,11 @@ func (h *UserHandler) TOTPSetup(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.store.DeleteTOTPSecret(user.ID)
 		user.TOTPEnabled = false
-		h.store.UpdateUser(user)
+		if err := h.store.UpdateUser(user); err != nil {
+			log.Printf("user: update TOTP-disabled: %v", err)
+			WriteError(w, http.StatusInternalServerError, "failed to update user")
+			return
+		}
 
 		auth.AppendAuditEntry(h.store, h.hc, models.ActionTOTPDisabled, currentUser.ID, user.ID, "")
 

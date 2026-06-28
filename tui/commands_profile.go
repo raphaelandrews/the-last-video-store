@@ -45,8 +45,8 @@ func (m *Model) loadMerch() tea.Cmd {
 
 func (m *Model) doRedeemMerch(itemID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"item_id":"` + itemID + `"}`
-		resp, err := m.apiPost("/api/v1/merch/redeem", body)
+		body, _ := json.Marshal(map[string]string{"item_id": itemID})
+		resp, err := m.apiPost("/api/v1/merch/redeem", string(body))
 		if err != nil {
 			m.merch.Error = err.Error()
 			return nil
@@ -77,8 +77,8 @@ func (m *Model) doRedeemMerch(itemID string) tea.Cmd {
 
 func (m *Model) doPurchaseTier(tierName string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"tier_name":"` + tierName + `"}`
-		resp, err := m.apiPost("/api/v1/tiers/purchase", body)
+		body, _ := json.Marshal(map[string]string{"tier_name": tierName})
+		resp, err := m.apiPost("/api/v1/tiers/purchase", string(body))
 		if err != nil {
 			m.tierShop.Error = err.Error()
 			return nil

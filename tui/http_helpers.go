@@ -4,22 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/tui/pages"
 )
-
-func logAPIError(tag, method, path string, resp *http.Response, body string) {
-	if resp == nil {
-		fmt.Fprintf(os.Stderr, "[tui %s] %s %s: no response (network error)\n", tag, method, path)
-		return
-	}
-	reqID := resp.Header.Get("X-Request-ID")
-	fmt.Fprintf(os.Stderr, "[tui %s] %s %s → %d  req_id=%s  body=%s\n",
-		tag, method, path, resp.StatusCode, reqID, strings.TrimSpace(body))
-}
 
 func (m *Model) apiGet(path string) (*http.Response, error) {
 	req, _ := http.NewRequest("GET", m.baseURL+path, nil)
@@ -34,9 +23,15 @@ func (m *Model) apiGetURL(url string) (*http.Response, error) {
 }
 
 func (m *Model) apiPost(path, body string) (*http.Response, error) {
+	return m.apiPostWithToken(path, body, m.token)
+}
+
+func (m *Model) apiPostWithToken(path, body, token string) (*http.Response, error) {
 	req, _ := http.NewRequest("POST", m.baseURL+path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+m.token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	return http.DefaultClient.Do(req)
 }
 
@@ -76,10 +71,7 @@ func decodeAPIErr(resp *http.Response) (string, bool) {
 }
 
 func handleAPIErr(resp *http.Response) tea.Msg {
-	if resp == nil {
-		return nil
-	}
-	if resp.StatusCode < 400 {
+	if resp == nil || resp.StatusCode < 400 {
 		return nil
 	}
 	var e struct {
@@ -89,23 +81,5 @@ func handleAPIErr(resp *http.Response) tea.Msg {
 	if e.Error == "" {
 		e.Error = fmt.Sprintf("HTTP %d", resp.StatusCode)
 	}
-	if strings.Contains(e.Error, "ACCESS DENIED") || strings.Contains(e.Error, "⛔") {
-		return pages.ErrorMsg{Message: e.Error}
-	}
 	return pages.ErrorMsg{Message: e.Error}
-}
-
-func handleAPIErrInline(resp *http.Response, fallbackErr string) string {
-	msg, _ := decodeAPIErr(resp)
-	if msg == "" {
-		msg = fallbackErr
-	}
-	return msg
-}
-
-func logFailedRequest(tag, method, path string, resp *http.Response) {
-	if resp == nil {
-		return
-	}
-	logAPIError(tag, method, path, resp, "")
 }

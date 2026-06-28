@@ -1,6 +1,8 @@
 package components
 
 import (
+	"strconv"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -96,7 +98,11 @@ func (m *SearchbarModel) View() string {
 		if i == m.selected {
 			prefix = styles.HighlightStyle.Render("▸ ")
 		}
-		line := prefix + r.Title + styles.DimTextStyle.Render(" ("+itoa(r.Year)+") "+r.Format)
+		yearStr := "----"
+		if r.Year > 0 {
+			yearStr = strconv.Itoa(r.Year)
+		}
+		line := prefix + r.Title + styles.DimTextStyle.Render(" ("+yearStr+") "+r.Format)
 		items = append(items, line)
 	}
 
@@ -107,16 +113,4 @@ func (m *SearchbarModel) View() string {
 		Render(lipgloss.JoinVertical(lipgloss.Left, items...))
 
 	return lipgloss.JoinVertical(lipgloss.Left, bar, dropdown)
-}
-
-func itoa(y int) string {
-	if y == 0 {
-		return "----"
-	}
-	s := ""
-	for y > 0 {
-		s = string(rune('0'+y%10)) + s
-		y /= 10
-	}
-	return s
 }

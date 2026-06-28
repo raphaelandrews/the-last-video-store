@@ -10,11 +10,6 @@ import (
 	"github.com/thelastvideostore/internal/store"
 )
 
-var (
-	genres    = []string{"Action", "Comedy", "Horror", "SciFi", "Drama", "Thriller", "Romance", "Animation"}
-	directors = []string{"Wachowski", "Tarantino", "Fincher", "Spielberg", "Nolan", "Scorsese", "Coppola", "Kubrick", "Scott", "Cameron"}
-)
-
 func seedMovies(s *store.Store) {
 	movies := []struct {
 		Title        string
@@ -308,12 +303,20 @@ func seedMovies(s *store.Store) {
 		} else {
 			movie.MediaType = "movie"
 		}
-		s.CreateMovie(movie)
+		if err := s.CreateMovie(movie); err != nil {
+			panic(fmt.Errorf("seed movie: %s: %w", movie.ID, err))
+		}
 	}
 
-	s.AddStaffPick("seed-movie-TheMatrix")
-	s.AddStaffPick("seed-movie-TheDarkKnight")
-	s.AddStaffPick("seed-movie-PulpFiction")
+	if err := s.AddStaffPick("seed-movie-TheMatrix"); err != nil {
+		panic(fmt.Errorf("seed staff pick: %w", err))
+	}
+	if err := s.AddStaffPick("seed-movie-TheDarkKnight"); err != nil {
+		panic(fmt.Errorf("seed staff pick: %w", err))
+	}
+	if err := s.AddStaffPick("seed-movie-PulpFiction"); err != nil {
+		panic(fmt.Errorf("seed staff pick: %w", err))
+	}
 
 	seedSequels(s)
 }
@@ -427,7 +430,9 @@ func seedSequels(s *store.Store) {
 		m, err := s.GetMovieByID(movieID)
 		if err == nil {
 			m.SequelTo = prequelID
-			s.UpdateMovie(m)
+			if err := s.UpdateMovie(m); err != nil {
+				panic(fmt.Errorf("seed sequel: %s: %w", movieID, err))
+			}
 		}
 	}
 }

@@ -91,6 +91,8 @@ func seedGames(s *store.Store) {
 			RatingCount:     50 + rand.Intn(3000),
 			CreatedAt:       time.Now().Unix(),
 		}
-		s.CreateMovie(movie)
+		if err := s.CreateMovie(movie); err != nil {
+			panic(fmt.Errorf("seed game: %s: %w", movie.ID, err))
+		}
 	}
 }

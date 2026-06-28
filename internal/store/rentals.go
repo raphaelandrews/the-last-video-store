@@ -63,7 +63,7 @@ func (s *Store) UpdateRental(rental *models.Rental) error {
 			c := rb.Cursor()
 			prefix := rental.UserID + ":"
 			for k, _ := c.Seek([]byte(prefix)); k != nil && hasPrefix(string(k), prefix); k, _ = c.Next() {
-				parts := splitKey(string(k), ':')
+				parts := splitKey(string(k))
 				if len(parts) >= 2 && parts[1] == rental.ID {
 					keysToDelete = append(keysToDelete, k)
 				}
@@ -89,7 +89,7 @@ func (s *Store) GetActiveRentalsByUser(userID string) ([]*models.Rental, error) 
 		c := rub.Cursor()
 		prefix := userID + ":"
 		for k, _ := c.Seek([]byte(prefix)); k != nil && hasPrefix(string(k), prefix); k, _ = c.Next() {
-			parts := splitKey(string(k), ':')
+			parts := splitKey(string(k))
 			if len(parts) < 2 {
 				continue
 			}
@@ -126,7 +126,7 @@ func (s *Store) GetRentalHistoryByUser(userID string) ([]*models.Rental, error) 
 		c := rub.Cursor()
 		prefix := userID + ":"
 		for k, _ := c.Seek([]byte(prefix)); k != nil && hasPrefix(string(k), prefix); k, _ = c.Next() {
-			parts := splitKey(string(k), ':')
+			parts := splitKey(string(k))
 			if len(parts) < 2 {
 				continue
 			}
@@ -182,7 +182,7 @@ func (s *Store) CountActiveRentalsByUser(userID string) (int, error) {
 		c := rub.Cursor()
 		prefix := userID + ":"
 		for k, _ := c.Seek([]byte(prefix)); k != nil && hasPrefix(string(k), prefix); k, _ = c.Next() {
-			parts := splitKey(string(k), ':')
+			parts := splitKey(string(k))
 			if len(parts) < 2 {
 				continue
 			}
@@ -255,11 +255,11 @@ func hasPrefix(s, prefix string) bool {
 	return len(s) >= len(prefix) && s[:len(prefix)] == prefix
 }
 
-func splitKey(s string, sep byte) []string {
+func splitKey(s string) []string {
 	var parts []string
 	start := 0
 	for i := 0; i < len(s); i++ {
-		if s[i] == sep {
+		if s[i] == ':' {
 			parts = append(parts, s[start:i])
 			start = i + 1
 		}

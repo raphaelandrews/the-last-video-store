@@ -43,8 +43,8 @@ func (m *ProfileModel) View(w, h int) string {
 		Padding(1, 2).
 		Width(cardW)
 
-	header := m.headerView(tierColor, cardW-4)
-	body := m.bodyView(tierColor, cardW-4)
+	header := m.headerView()
+	body := m.bodyView()
 
 	cardBody := lipgloss.JoinVertical(lipgloss.Left,
 		header,
@@ -71,7 +71,7 @@ func (m *ProfileModel) View(w, h int) string {
 	return column
 }
 
-func (m *ProfileModel) headerView(tierColor lipgloss.Color, w int) string {
+func (m *ProfileModel) headerView() string {
 	u := m.User
 
 	badge := styles.TierBadgeStyle(u.TierName).Render(" ★ " + u.TierName + " ★ ")
@@ -119,7 +119,7 @@ func (m *ProfileModel) statusFlags() string {
 	return lipgloss.NewStyle().Foreground(styles.Grey1).Render(strings.Join(flags, "  "))
 }
 
-func (m *ProfileModel) bodyView(tierColor lipgloss.Color, w int) string {
+func (m *ProfileModel) bodyView() string {
 	u := m.User
 
 	grid := lipgloss.JoinHorizontal(lipgloss.Top,

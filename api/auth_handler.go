@@ -128,7 +128,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.issueTokens(w, r, user)
+	h.issueTokens(w, user)
 }
 
 func (h *AuthHandler) LoginTOTP(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +179,7 @@ func (h *AuthHandler) LoginTOTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.store.ResetTOTPFailures(user.ID)
-	h.issueTokens(w, r, user)
+	h.issueTokens(w, user)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +236,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusOK, SuccessResponse{Message: "logged out"})
 }
 
-func (h *AuthHandler) issueTokens(w http.ResponseWriter, r *http.Request, user *models.User) {
+func (h *AuthHandler) issueTokens(w http.ResponseWriter, user *models.User) {
 	pair, err := auth.GenerateTokenPair(user.ID, uint16(user.Tier), h.cfg.JWTSecret)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to generate tokens")

@@ -81,7 +81,3 @@ func encode(v any) ([]byte, error) {
 func decode(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
-
-func keyUID(prefix string, id string) []byte {
-	return []byte(fmt.Sprintf("%s:%s", prefix, id))
-}

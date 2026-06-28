@@ -27,8 +27,11 @@ func (m *Model) loadSnackBarMenu() tea.Cmd {
 
 func (m *Model) doSnackBarOrder(itemID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"item_id":"` + itemID + `","quantity":1}`
-		resp, err := m.apiPost("/api/v1/snackbar/order", body)
+		body, _ := json.Marshal(map[string]interface{}{
+			"item_id":  itemID,
+			"quantity": 1,
+		})
+		resp, err := m.apiPost("/api/v1/snackbar/order", string(body))
 		if err != nil {
 			m.snackBarMenu.Error = err.Error()
 			return nil
@@ -95,8 +98,11 @@ func (m *Model) loadSnackBarManage() tea.Cmd {
 
 func (m *Model) doSnackBarRestock(itemID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"item_id":"` + itemID + `","amount":5}`
-		resp, err := m.apiPost("/api/v1/snackbar/restock", body)
+		body, _ := json.Marshal(map[string]interface{}{
+			"item_id": itemID,
+			"amount":  5,
+		})
+		resp, err := m.apiPost("/api/v1/snackbar/restock", string(body))
 		if err != nil {
 			m.snackBarManage.Error = err.Error()
 			return nil

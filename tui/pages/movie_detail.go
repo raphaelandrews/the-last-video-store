@@ -87,8 +87,8 @@ func (m *MovieDetailModel) SetSize(w, h int) {
 }
 
 func (m *MovieDetailModel) resize(w, h int) {
-	headerH := lipgloss.Height(m.headerView(w, 0))
-	footerH := lipgloss.Height(m.footerView(w, 0))
+	headerH := lipgloss.Height(m.headerView(w))
+	footerH := lipgloss.Height(m.footerView())
 	viewportH := h - headerH - footerH
 	if viewportH < 3 {
 		viewportH = 3
@@ -134,13 +134,13 @@ func (m *MovieDetailModel) View(w, h int) string {
 		m.viewport.SetContent(m.bodyView(w))
 	}
 
-	header := m.headerView(w, m.viewport.Width)
+	header := m.headerView(w)
 	body := m.viewport.View()
-	footer := m.footerView(w, m.viewport.Width)
+	footer := m.footerView()
 	return lipgloss.JoinVertical(lipgloss.Left, header, body, footer)
 }
 
-func (m *MovieDetailModel) headerView(w, viewportW int) string {
+func (m *MovieDetailModel) headerView(w int) string {
 	if m.Movie == nil {
 		return ""
 	}
@@ -284,7 +284,7 @@ func (m *MovieDetailModel) bodyView(w int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
-func (m *MovieDetailModel) footerView(w, viewportW int) string {
+func (m *MovieDetailModel) footerView() string {
 	status := ""
 	if m.StatusMsg != "" {
 		status = styles.SuccessTextStyle.Render("✓ " + m.StatusMsg)
@@ -308,29 +308,4 @@ func (m *MovieDetailModel) footerView(w, viewportW int) string {
 		row = lipgloss.JoinVertical(lipgloss.Left, row, status)
 	}
 	return row
-}
-
-func wrap(s string, w int) string {
-	if w <= 0 {
-		return s
-	}
-	if len(s) <= w {
-		return s
-	}
-	var out string
-	for len(s) > w {
-		brk := w
-		for brk > 0 && s[brk] != ' ' {
-			brk--
-		}
-		if brk == 0 {
-			brk = w
-		}
-		out += s[:brk] + "\n"
-		s = s[brk:]
-		if len(s) > 0 && s[0] == ' ' {
-			s = s[1:]
-		}
-	}
-	return out + s
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log"
 	"sort"
 
 	"github.com/google/uuid"
@@ -23,7 +24,11 @@ func AppendAuditEntry(s *store.Store, hc *crypto.HashChain, action, actorID, tar
 		PrevHash:  entry.PrevHash,
 	}
 
-	return s.AppendAuditEntry(auditEntry)
+	if err := s.AppendAuditEntry(auditEntry); err != nil {
+		log.Printf("audit: failed to persist %s for %s: %v", action, actorID, err)
+		return err
+	}
+	return nil
 }
 
 type ChainVerifyResult struct {

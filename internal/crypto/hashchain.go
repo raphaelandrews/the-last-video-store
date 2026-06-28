@@ -29,11 +29,6 @@ func New() *HashChain {
 }
 
 func (hc *HashChain) Append(action, actorID, targetID, data string) HashChainEntry {
-	// Use nanosecond resolution so two entries created in the same
-	// second still get distinct timestamps. This is critical for the
-	// audit chain because verification sorts by Timestamp to put the
-	// entries back in chain order — equal timestamps would make that
-	// sort non-deterministic and the chain would look broken.
 	now := time.Now().UnixNano()
 	entry := HashChainEntry{
 		Timestamp: now,

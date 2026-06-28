@@ -10,13 +10,13 @@ func (m *Model) adminKey(k string) tea.Cmd {
 	case "a":
 		m.movieForm = pages.NewMovieFormModel(m.adminMovies.ActiveTab())
 		m.screen = scrMovieForm
-		return m.movieForm.Init()
+		return tea.Batch(m.movieForm.Init(), m.loadCatalogOptions())
 	case "enter":
 		mv := m.adminMovies.SelectedMovie()
 		if mv != nil {
 			m.movieForm = pages.NewMovieEditFormModel(mv)
 			m.screen = scrMovieForm
-			return m.movieForm.Init()
+			return tea.Batch(m.movieForm.Init(), m.loadCatalogOptions())
 		}
 	case "s":
 		mv := m.adminMovies.SelectedMovie()

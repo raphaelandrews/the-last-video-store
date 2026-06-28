@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/thelastvideostore/internal/auth"
-	"github.com/thelastvideostore/internal/crypto"
 	"github.com/thelastvideostore/internal/ds/bitmask"
 	"github.com/thelastvideostore/internal/models"
 	"github.com/thelastvideostore/internal/store"
@@ -33,7 +32,10 @@ func seedUsers(s *store.Store) {
 	}
 
 	for _, e := range entries {
-		hash, _ := auth.HashPassword(e.pass)
+		hash, err := auth.HashPassword(e.pass)
+		if err != nil {
+			panic(fmt.Errorf("seed user: hash: %w", err))
+		}
 		now := time.Now().Unix()
 		tier := models.TierByName(e.sub)
 		user := &models.User{
@@ -50,9 +52,8 @@ func seedUsers(s *store.Store) {
 			CreatedAt:     now,
 			UpdatedAt:     now,
 		}
-		s.CreateUser(user)
+		if err := s.CreateUser(user); err != nil {
+			panic(fmt.Errorf("seed user: %s: %w", e.name, err))
+		}
 	}
-
-	_ = crypto.New()
-
 }

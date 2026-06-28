@@ -86,7 +86,7 @@ func (m *Model) gameDetailKey(k string) tea.Cmd {
 		if m.gameDetail != nil && m.gameDetail.ChoosingTime {
 			duration := int(k[0] - '0')
 			m.gameDetail.ChoosingTime = false
-			return m.doGamePlayStart(m.gameDetail.Game.ID, m.gameDetail.Game.Title, duration)
+			return m.doGamePlayStart(m.gameDetail.Game.ID, duration)
 		}
 	case "]":
 		m.gameDetail.MoveRelatedDown()

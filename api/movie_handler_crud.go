@@ -1,0 +1,246 @@
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/thelastvideostore/internal/auth"
+	"github.com/thelastvideostore/internal/models"
+)
+
+func (h *MovieHandler) Create(w http.ResponseWriter, r *http.Request) {
+	var req CreateMovieRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Title == "" {
+		WriteError(w, http.StatusBadRequest, "title is required")
+		return
+	}
+	if req.Year < 1900 || req.Year > time.Now().Year()+5 {
+		WriteError(w, http.StatusBadRequest, "invalid year")
+		return
+	}
+	if req.Genre == "" {
+		WriteError(w, http.StatusBadRequest, "genre is required")
+		return
+	}
+	if req.Format != "VHS" && req.Format != "DVD" && req.Format != "Blu-ray" {
+		WriteError(w, http.StatusBadRequest, "format must be VHS, DVD, or Blu-ray")
+		return
+	}
+	if req.Director == "" {
+		WriteError(w, http.StatusBadRequest, "director is required")
+		return
+	}
+	if len(req.Cast) == 0 {
+		WriteError(w, http.StatusBadRequest, "at least one cast member is required")
+		return
+	}
+	if req.CopiesTotal < 1 {
+		req.CopiesTotal = 1
+	}
+	if req.MediaType == "" {
+		req.MediaType = "movie"
+	}
+
+	movie := &models.Movie{
+		ID:              uuid.NewString(),
+		MediaType:       req.MediaType,
+		Title:           req.Title,
+		Year:            req.Year,
+		Genre:           req.Genre,
+		Format:          req.Format,
+		Platform:        req.Platform,
+		SeasonNumber:    req.SeasonNumber,
+		EpisodeCount:    req.EpisodeCount,
+		Director:        req.Director,
+		Cast:            req.Cast,
+		Synopsis:        req.Synopsis,
+		CopiesTotal:     req.CopiesTotal,
+		CopiesAvailable: req.CopiesTotal,
+		Available:       true,
+		IsNewRelease:    req.IsNewRelease,
+		RentalPrice:     req.RentalPrice,
+		CreatedAt:       time.Now().Unix(),
+	}
+
+	if err := h.store.CreateMovie(movie); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to create movie")
+		return
+	}
+
+	user := GetUser(r)
+	auth.AppendAuditEntry(h.store, h.hc, models.ActionAddMovie, user.ID, movie.ID, movie.Title)
+
+	WriteJSON(w, http.StatusCreated, movie.ToResponse())
+}
+
+func (h *MovieHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	movie, err := h.store.GetMovieByID(id)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, "movie not found")
+		return
+	}
+
+	var req UpdateMovieRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.MediaType != nil {
+		movie.MediaType = *req.MediaType
+	}
+	if req.Title != nil {
+		movie.Title = *req.Title
+	}
+	if req.Year != nil {
+		if *req.Year < 1900 || *req.Year > time.Now().Year()+5 {
+			WriteError(w, http.StatusBadRequest, "invalid year")
+			return
+		}
+		movie.Year = *req.Year
+	}
+	if req.Genre != nil {
+		movie.Genre = *req.Genre
+	}
+	if req.Format != nil {
+		if *req.Format != "VHS" && *req.Format != "DVD" && *req.Format != "Blu-ray" {
+			WriteError(w, http.StatusBadRequest, "format must be VHS, DVD, or Blu-ray")
+			return
+		}
+		movie.Format = *req.Format
+	}
+	if req.Platform != nil {
+		movie.Platform = *req.Platform
+	}
+	if req.SeasonNumber != nil {
+		movie.SeasonNumber = *req.SeasonNumber
+	}
+	if req.EpisodeCount != nil {
+		movie.EpisodeCount = *req.EpisodeCount
+	}
+	if req.Director != nil {
+		movie.Director = *req.Director
+	}
+	if req.Cast != nil {
+		movie.Cast = *req.Cast
+	}
+	if req.Synopsis != nil {
+		movie.Synopsis = *req.Synopsis
+	}
+	if req.CopiesTotal != nil {
+		movie.CopiesTotal = *req.CopiesTotal
+	}
+	if req.RentalPrice != nil {
+		movie.RentalPrice = *req.RentalPrice
+	}
+	if req.IsNewRelease != nil {
+		movie.IsNewRelease = *req.IsNewRelease
+	}
+
+	if err := h.store.UpdateMovie(movie); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to update movie")
+		return
+	}
+
+	user := GetUser(r)
+	auth.AppendAuditEntry(h.store, h.hc, models.ActionEditMovie, user.ID, movie.ID, movie.Title)
+
+	WriteJSON(w, http.StatusOK, movie.ToResponse())
+}
+
+func (h *MovieHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	movie, err := h.store.GetMovieByID(id)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, "movie not found")
+		return
+	}
+
+	if err := h.store.DeleteMovie(id); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to delete movie")
+		return
+	}
+
+	user := GetUser(r)
+	auth.AppendAuditEntry(h.store, h.hc, models.ActionDeleteMovie, user.ID, id, movie.Title)
+
+	WriteJSON(w, http.StatusOK, SuccessResponse{Message: "movie deleted"})
+}
+
+func (h *MovieHandler) AddStaffPick(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if _, err := h.store.GetMovieByID(id); err != nil {
+		WriteError(w, http.StatusNotFound, "movie not found")
+		return
+	}
+
+	if err := h.store.AddStaffPick(id); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to add staff pick")
+		return
+	}
+
+	user := GetUser(r)
+	auth.AppendAuditEntry(h.store, h.hc, models.ActionAddStaffPick, user.ID, id, "")
+
+	WriteJSON(w, http.StatusOK, StaffPickResponse{StaffPick: true})
+}
+
+func (h *MovieHandler) RemoveStaffPick(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if err := h.store.RemoveStaffPick(id); err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to remove staff pick")
+		return
+	}
+
+	user := GetUser(r)
+	auth.AppendAuditEntry(h.store, h.hc, models.ActionRemoveStaffPick, user.ID, id, "")
+
+	WriteJSON(w, http.StatusOK, StaffPickResponse{StaffPick: false})
+}
+
+type CatalogOptions struct {
+	Genres  []string `json:"genres"`
+	Formats []string `json:"formats"`
+}
+
+func (h *MovieHandler) Options(w http.ResponseWriter, r *http.Request) {
+	genres, err := h.store.ListGenres()
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to list genres")
+		return
+	}
+	formats, err := h.store.ListFormats()
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "failed to list formats")
+		return
+	}
+	wantFormats := []string{"Blu-ray", "DVD", "VHS"}
+	have := make(map[string]struct{}, len(formats))
+	for _, f := range formats {
+		have[f] = struct{}{}
+	}
+	for _, f := range wantFormats {
+		if _, ok := have[f]; !ok {
+			formats = append(formats, f)
+			have[f] = struct{}{}
+		}
+	}
+	if genres == nil {
+		genres = []string{}
+	}
+	if formats == nil {
+		formats = []string{}
+	}
+	WriteJSON(w, http.StatusOK, CatalogOptions{Genres: genres, Formats: formats})
+}

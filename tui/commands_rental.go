@@ -12,8 +12,8 @@ import (
 
 func (m *Model) doReturn(rentalID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"rental_id":"` + rentalID + `"}`
-		resp, err := m.apiPost("/api/v1/rentals/return", body)
+		body, _ := json.Marshal(map[string]string{"rental_id": rentalID})
+		resp, err := m.apiPost("/api/v1/rentals/return", string(body))
 		if err != nil {
 			m.rentals.Status = err.Error()
 			return nil
@@ -81,8 +81,8 @@ func (m *Model) loadMyPlaySessions() tea.Cmd {
 
 func (m *Model) doExtendRental(rentalID string) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"rental_id":"` + rentalID + `"}`
-		resp, err := m.apiPost("/api/v1/rentals/extend", body)
+		body, _ := json.Marshal(map[string]string{"rental_id": rentalID})
+		resp, err := m.apiPost("/api/v1/rentals/extend", string(body))
 		if err != nil {
 			m.rentals.Status = err.Error()
 			return nil
@@ -96,9 +96,6 @@ func (m *Model) doExtendRental(rentalID string) tea.Cmd {
 		}
 		json.NewDecoder(resp.Body).Decode(&r)
 		m.rentals.Status = r.Message
-		if m.userResp != nil {
-			m.userResp.PopcornPoints -= 30
-		}
 		return m.loadRentals()()
 	}
 }

@@ -95,8 +95,11 @@ func (m *Model) loadLastChance() tea.Cmd {
 func (m *Model) doRent(movieID string) tea.Cmd {
 	return func() tea.Msg {
 		useTicket := m.detail != nil && m.detail.UseTicket
-		body := fmt.Sprintf(`{"movie_id":"%s","use_ticket":%v}`, movieID, useTicket)
-		resp, err := m.apiPost("/api/v1/rentals/rent", body)
+		body, _ := json.Marshal(map[string]interface{}{
+			"movie_id":   movieID,
+			"use_ticket": useTicket,
+		})
+		resp, err := m.apiPost("/api/v1/rentals/rent", string(body))
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
@@ -140,8 +143,8 @@ func (m *Model) doRent(movieID string) tea.Cmd {
 
 func (m *Model) doAddToWishlist(movieID string, fromDetail bool) tea.Cmd {
 	return func() tea.Msg {
-		body := `{"movie_id":"` + movieID + `"}`
-		resp, err := m.apiPost("/api/v1/wishlist", body)
+		body, _ := json.Marshal(map[string]string{"movie_id": movieID})
+		resp, err := m.apiPost("/api/v1/wishlist", string(body))
 		if err != nil {
 			if fromDetail {
 				m.detail.ErrMsg = err.Error()

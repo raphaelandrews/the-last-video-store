@@ -60,9 +60,6 @@ type loadSnackBarOrdersMsg struct {
 type loadSnackBarManageMsg struct {
 	items []models.SnackBarItem
 }
-type loadGameSessionsMsg struct {
-	sessions []models.GameSession
-}
 type gameRefreshMsg struct{}
 type loadCatalogOptionsMsg struct {
 	genres  []string

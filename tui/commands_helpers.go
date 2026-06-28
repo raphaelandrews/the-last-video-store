@@ -42,22 +42,6 @@ func canDemote(current string) (string, bool) {
 	return "", false
 }
 
-func nextTier(current string) string {
-	next, _ := canPromote(current)
-	if next == "" {
-		return strings.ToLower(current)
-	}
-	return next
-}
-
-func prevTier(current string) string {
-	prev, _ := canDemote(current)
-	if prev == "" {
-		return strings.ToLower(current)
-	}
-	return prev
-}
-
 func parseCast(s string) []string {
 	if s == "" {
 		return nil

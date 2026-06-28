@@ -8,7 +8,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/thelastvideostore/internal/models"
-	"github.com/thelastvideostore/tui/components"
 	"github.com/thelastvideostore/tui/styles"
 )
 
@@ -258,7 +257,7 @@ func buildRow(mv models.MovieResponse, selected bool) table.Row {
 	if selected {
 		title = "▸ " + title
 	}
-	format := stripAnsi(components.FormatBadge(mv.Format))
+	format := styles.FormatBadge(mv.Format)
 	meta := ""
 	switch mv.MediaType {
 	case "series":
@@ -292,23 +291,4 @@ func staffPickMark(b bool) string {
 		return "★"
 	}
 	return ""
-}
-
-func stripAnsi(s string) string {
-	var b strings.Builder
-	inEscape := false
-	for _, r := range s {
-		if r == 0x1b {
-			inEscape = true
-			continue
-		}
-		if inEscape {
-			if r == 'm' {
-				inEscape = false
-			}
-			continue
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
 }

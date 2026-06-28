@@ -2,8 +2,6 @@ package tui
 
 import (
 	"encoding/json"
-	"net/http"
-	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/thelastvideostore/internal/models"
@@ -13,10 +11,7 @@ import (
 func (m *Model) doSubmitTOTP(tempToken, code string) tea.Cmd {
 	return func() tea.Msg {
 		body, _ := json.Marshal(map[string]string{"code": code})
-		req, _ := http.NewRequest("POST", m.baseURL+"/api/v1/auth/login/totp", strings.NewReader(string(body)))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+tempToken)
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := m.apiPostWithToken("/api/v1/auth/login/totp", string(body), tempToken)
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
@@ -46,7 +41,7 @@ func (m *Model) doSubmitTOTP(tempToken, code string) tea.Cmd {
 func (m *Model) doLogin(u, p string) tea.Cmd {
 	return func() tea.Msg {
 		body, _ := json.Marshal(map[string]string{"username": u, "password": p})
-		resp, err := http.Post(m.baseURL+"/api/v1/auth/login", "application/json", strings.NewReader(string(body)))
+		resp, err := m.apiPostWithToken("/api/v1/auth/login", string(body), "")
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
@@ -85,7 +80,7 @@ func (m *Model) doRegister(u, p string) tea.Cmd {
 			return pages.ErrorMsg{Message: "Password must be at least 6 characters"}
 		}
 		body, _ := json.Marshal(map[string]string{"username": u, "password": p})
-		resp, err := http.Post(m.baseURL+"/api/v1/auth/register", "application/json", strings.NewReader(string(body)))
+		resp, err := m.apiPostWithToken("/api/v1/auth/register", string(body), "")
 		if err != nil {
 			return pages.ErrorMsg{Message: err.Error()}
 		}
